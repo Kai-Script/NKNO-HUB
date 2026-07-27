@@ -1,13 +1,13 @@
 -- ====================================================
---    GUI-СКРИПТ: FLY + NOCLIP + FLING
---    С ПЕРЕТАСКИВАНИЕМ ПО ЭКРАНУ (DRAGGABLE)
---    Стиль как у RHub / Infinite Yield
+--    MM2 MEGA-ЧИТ: АВТОФАРМ + ESP + SPEED + FLY + NOCLIP + FLING
+--    С ПЕРЕТАСКИВАЕМЫМ GUI
 -- ====================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
@@ -16,62 +16,74 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 -- ===== ПЕРЕМЕННЫЕ =====
 local flyEnabled = false
 local noclipEnabled = false
+local flingEnabled = false
 local flySpeed = 50
+local walkSpeed = 16
 local bodyVelocity = nil
 local bodyGyro = nil
 local dragObject = nil
-local dragInput = nil
 local dragStart = nil
 local startPos = nil
 
--- ===== СОЗДАНИЕ GUI =====
+-- ===== ESP ПЕРЕМЕННЫЕ =====
+local espEnabled = false
+local espObjects = {}
+local espColorMurderer = Color3.fromRGB(255, 0, 0)    -- Красный
+local espColorSheriff = Color3.fromRGB(0, 100, 255)   -- Синий
+local espColorHero = Color3.fromRGB(0, 255, 0)        -- Зелёный
+local espColorInnocent = Color3.fromRGB(255, 255, 255) -- Белый
+
+-- ===== АВТОФАРМ ПЕРЕМЕННЫЕ =====
+local autoFarmEnabled = false
+local autoFarmRange = 50
+local collectedCoins = 0
+
+-- ===== GUI =====
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RHubGUI"
+screenGui.Name = "MM2CheatGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- ===== ГЛАВНОЕ ОКНО =====
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-mainFrame.BackgroundTransparency = 0.15
+mainFrame.Size = UDim2.new(0, 350, 0, 550)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -275)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(80, 80, 255)
+mainFrame.BorderColor3 = Color3.fromRGB(255, 50, 50)
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 
--- Скругление углов
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = mainFrame
 
--- ===== ЗАГОЛОВОК (для перетаскивания) =====
+-- ===== ЗАГОЛОВОК =====
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 30)
-titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-titleBar.BackgroundTransparency = 0.3
+titleBar.Size = UDim2.new(1, 0, 0, 35)
+titleBar.BackgroundColor3 = Color3.fromRGB(60, 20, 30)
+titleBar.BackgroundTransparency = 0.2
 titleBar.Parent = mainFrame
 
 local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 12)
 titleCorner.Parent = titleBar
 
--- ===== ЗАГОЛОВОК ТЕКСТ =====
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -60, 1, 0)
+titleLabel.Size = UDim2.new(1, -70, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "🔹 RHub Control 🔹"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Text = "🔪 MM2 ULTRA CHEAT 🔪"
+titleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 titleLabel.TextScaled = true
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = titleBar
 
--- ===== КНОПКА ЗАКРЫТИЯ =====
+-- Кнопка закрытия
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 1, -4)
 closeBtn.Position = UDim2.new(1, -35, 0, 2)
@@ -90,7 +102,7 @@ closeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
 end)
 
--- ===== КНОПКА СВЁРТЫВАНИЯ =====
+-- Кнопка свёртывания
 local minimizeBtn = Instance.new("TextButton")
 minimizeBtn.Size = UDim2.new(0, 30, 1, -4)
 minimizeBtn.Position = UDim2.new(1, -70, 0, 2)
@@ -109,45 +121,46 @@ local isMinimized = false
 minimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
     if isMinimized then
-        mainFrame:TweenSize(UDim2.new(0, 300, 0, 30), "Out", "Quad", 0.3)
+        mainFrame:TweenSize(UDim2.new(0, 350, 0, 35), "Out", "Quad", 0.3)
         minimizeBtn.Text = "□"
     else
-        mainFrame:TweenSize(UDim2.new(0, 300, 0, 400), "Out", "Quad", 0.3)
+        mainFrame:TweenSize(UDim2.new(0, 350, 0, 550), "Out", "Quad", 0.3)
         minimizeBtn.Text = "─"
     end
 end)
 
--- ===== ОСНОВНОЙ КОНТЕЙНЕР =====
-local contentFrame = Instance.new("Frame")
-contentFrame.Name = "ContentFrame"
-contentFrame.Size = UDim2.new(1, -20, 1, -50)
-contentFrame.Position = UDim2.new(0, 10, 0, 40)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
+-- ===== СКРОЛЛИНГ КОНТЕЙНЕР =====
+local scrollContainer = Instance.new("ScrollingFrame")
+scrollContainer.Size = UDim2.new(1, -20, 1, -55)
+scrollContainer.Position = UDim2.new(0, 10, 0, 45)
+scrollContainer.BackgroundTransparency = 1
+scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollContainer.ScrollBarThickness = 6
+scrollContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
+scrollContainer.Parent = mainFrame
 
-local contentLayout = Instance.new("UIListLayout")
-contentLayout.Padding = UDim.new(0, 8)
-contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-contentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-contentLayout.Parent = contentFrame
+local scrollLayout = Instance.new("UIListLayout")
+scrollLayout.Padding = UDim.new(0, 6)
+scrollLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+scrollLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+scrollLayout.Parent = scrollContainer
 
 -- ===== ФУНКЦИЯ СОЗДАНИЯ КНОПКИ =====
-local function createButton(text, color, callback)
+local function createButton(text, color, callback, width)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Size = UDim2.new(width or 1, 0, 0, 38)
     btn.BackgroundColor3 = color
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamSemibold
     btn.AutoButtonColor = false
-    btn.Parent = contentFrame
+    btn.Parent = scrollContainer
     
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 8)
     btnCorner.Parent = btn
     
-    -- Эффект наведения
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.3}):Play()
     end)
@@ -160,35 +173,144 @@ local function createButton(text, color, callback)
 end
 
 -- ===== СОЗДАНИЕ КНОПОК =====
--- Кнопка FLY
-local flyBtn = createButton("🪁 FLY (ВКЛ)", Color3.fromRGB(0, 120, 255), function()
+
+-- FLY
+local flyBtn = createButton("🪁 FLY", Color3.fromRGB(0, 120, 255), function()
     toggleFly()
-    flyBtn.Text = flyEnabled and "🪁 FLY (ВЫКЛ)" or "🪁 FLY (ВКЛ)"
+    flyBtn.Text = flyEnabled and "🪁 FLY (ON)" or "🪁 FLY (OFF)"
     flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 120, 255)
 end)
 
--- Кнопка NOCLIP
-local noclipBtn = createButton("🧊 NOCLIP (ВКЛ)", Color3.fromRGB(0, 200, 100), function()
+-- NOCLIP
+local noclipBtn = createButton("🧊 NOCLIP", Color3.fromRGB(0, 200, 100), function()
     toggleNoclip()
-    noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ВЫКЛ)" or "🧊 NOCLIP (ВКЛ)"
+    noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ON)" or "🧊 NOCLIP (OFF)"
     noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 200, 100)
 end)
 
--- Кнопка FLING (с текстовым полем для ввода имени)
+-- ESP
+local espBtn = createButton("👁️ ESP", Color3.fromRGB(150, 0, 200), function()
+    espEnabled = not espEnabled
+    espBtn.Text = espEnabled and "👁️ ESP (ON)" or "👁️ ESP (OFF)"
+    espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(150, 0, 200)
+    if not espEnabled then
+        clearESP()
+    end
+end)
+
+-- АВТОФАРМ
+local farmBtn = createButton("💰 AUTO FARM", Color3.fromRGB(255, 180, 0), function()
+    autoFarmEnabled = not autoFarmEnabled
+    farmBtn.Text = autoFarmEnabled and "💰 AUTO FARM (ON)" or "💰 AUTO FARM (OFF)"
+    farmBtn.BackgroundColor3 = autoFarmEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(255, 180, 0)
+end)
+
+-- ===== SPEED CONTROL =====
+local speedFrame = Instance.new("Frame")
+speedFrame.Size = UDim2.new(1, 0, 0, 50)
+speedFrame.BackgroundTransparency = 1
+speedFrame.Parent = scrollContainer
+
+local speedLayout = Instance.new("UIListLayout")
+speedLayout.FillDirection = Enum.FillDirection.Vertical
+speedLayout.Padding = UDim.new(0, 2)
+speedLayout.Parent = speedFrame
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(1, 0, 0, 20)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "⚡ Speed: 16 (Walk) | Fly: 50"
+speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedLabel.TextScaled = true
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.Parent = speedFrame
+
+local speedSlider = Instance.new("TextBox")
+speedSlider.Size = UDim2.new(1, 0, 0, 25)
+speedSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+speedSlider.Text = "16"
+speedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedSlider.TextScaled = true
+speedSlider.Font = Enum.Font.Gotham
+speedSlider.Parent = speedFrame
+
+local sliderCorner = Instance.new("UICorner")
+sliderCorner.CornerRadius = UDim.new(0, 8)
+sliderCorner.Parent = speedSlider
+
+speedSlider.FocusLost:Connect(function()
+    local newSpeed = tonumber(speedSlider.Text)
+    if newSpeed and newSpeed >= 10 and newSpeed <= 140 then
+        walkSpeed = newSpeed
+        Humanoid.WalkSpeed = walkSpeed
+        speedLabel.Text = "⚡ Speed: " .. walkSpeed .. " | Fly: " .. flySpeed
+        sendMessage("[SPEED] Скорость ходьбы: " .. walkSpeed)
+    else
+        speedSlider.Text = tostring(walkSpeed)
+        sendMessage("[SPEED] Введите число от 10 до 140!")
+    end
+end)
+
+-- ===== FLY SPEED CONTROL =====
+local flySpeedFrame = Instance.new("Frame")
+flySpeedFrame.Size = UDim2.new(1, 0, 0, 50)
+flySpeedFrame.BackgroundTransparency = 1
+flySpeedFrame.Parent = scrollContainer
+
+local flySpeedLayout = Instance.new("UIListLayout")
+flySpeedLayout.FillDirection = Enum.FillDirection.Vertical
+flySpeedLayout.Padding = UDim.new(0, 2)
+flySpeedLayout.Parent = flySpeedFrame
+
+local flySpeedLabel = Instance.new("TextLabel")
+flySpeedLabel.Size = UDim2.new(1, 0, 0, 20)
+flySpeedLabel.BackgroundTransparency = 1
+flySpeedLabel.Text = "✈️ Fly Speed: 50"
+flySpeedLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+flySpeedLabel.TextScaled = true
+flySpeedLabel.Font = Enum.Font.Gotham
+flySpeedLabel.Parent = flySpeedFrame
+
+local flySpeedSlider = Instance.new("TextBox")
+flySpeedSlider.Size = UDim2.new(1, 0, 0, 25)
+flySpeedSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+flySpeedSlider.Text = "50"
+flySpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+flySpeedSlider.TextScaled = true
+flySpeedSlider.Font = Enum.Font.Gotham
+flySpeedSlider.Parent = flySpeedFrame
+
+local flySliderCorner = Instance.new("UICorner")
+flySliderCorner.CornerRadius = UDim.new(0, 8)
+flySliderCorner.Parent = flySpeedSlider
+
+flySpeedSlider.FocusLost:Connect(function()
+    local newSpeed = tonumber(flySpeedSlider.Text)
+    if newSpeed and newSpeed >= 10 and newSpeed <= 140 then
+        flySpeed = newSpeed
+        flySpeedLabel.Text = "✈️ Fly Speed: " .. flySpeed
+        speedLabel.Text = "⚡ Speed: " .. walkSpeed .. " | Fly: " .. flySpeed
+        sendMessage("[FLY SPEED] Скорость полёта: " .. flySpeed)
+    else
+        flySpeedSlider.Text = tostring(flySpeed)
+        sendMessage("[FLY SPEED] Введите число от 10 до 140!")
+    end
+end)
+
+-- ===== FLING =====
 local flingFrame = Instance.new("Frame")
 flingFrame.Size = UDim2.new(1, 0, 0, 40)
 flingFrame.BackgroundTransparency = 1
-flingFrame.Parent = contentFrame
+flingFrame.Parent = scrollContainer
 
 local flingLayout = Instance.new("UIListLayout")
 flingLayout.FillDirection = Enum.FillDirection.Horizontal
 flingLayout.Padding = UDim.new(0, 5)
 flingLayout.Parent = flingFrame
 
--- Поле ввода имени
 local nameBox = Instance.new("TextBox")
 nameBox.Size = UDim2.new(0.6, 0, 1, 0)
-nameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+nameBox.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
 nameBox.Text = "имя игрока"
 nameBox.TextColor3 = Color3.fromRGB(200, 200, 200)
 nameBox.TextScaled = true
@@ -200,10 +322,9 @@ local nameCorner = Instance.new("UICorner")
 nameCorner.CornerRadius = UDim.new(0, 8)
 nameCorner.Parent = nameBox
 
--- Кнопка FLING
 local flingBtn = Instance.new("TextButton")
 flingBtn.Size = UDim2.new(0.4, 0, 1, 0)
-flingBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+flingBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 0)
 flingBtn.Text = "💥 FLING"
 flingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 flingBtn.TextScaled = true
@@ -219,80 +340,35 @@ flingBtn.MouseButton1Click:Connect(function()
     if target then
         flingPlayer(target)
     else
-        SendMessage("[FLING] Игрок не найден!")
+        sendMessage("[FLING] Игрок не найден!")
     end
 end)
 
--- Кнопка FLING ALL
-local flingAllBtn = createButton("💥 FLING ALL (ВСЕХ)", Color3.fromRGB(200, 50, 0), function()
+-- FLING ALL
+createButton("💥 FLING ALL", Color3.fromRGB(200, 50, 0), function()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             flingPlayer(player)
         end
     end
-    SendMessage("[FLING] Все игроки отброшены!")
+    sendMessage("[FLING] Все отброшены!")
 end)
 
--- Ползунок скорости
-local speedFrame = Instance.new("Frame")
-speedFrame.Size = UDim2.new(1, 0, 0, 30)
-speedFrame.BackgroundTransparency = 1
-speedFrame.Parent = contentFrame
+-- Статистика монет
+local coinLabel = Instance.new("TextLabel")
+coinLabel.Size = UDim2.new(1, 0, 0, 25)
+coinLabel.BackgroundTransparency = 1
+coinLabel.Text = "🪙 Собрано монет: 0"
+coinLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+coinLabel.TextScaled = true
+coinLabel.Font = Enum.Font.GothamBold
+coinLabel.Parent = scrollContainer
 
-local speedLayout = Instance.new("UIListLayout")
-speedLayout.FillDirection = Enum.FillDirection.Horizontal
-speedLayout.Padding = UDim.new(0, 5)
-speedLayout.Parent = speedFrame
-
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0.4, 0, 1, 0)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "Скорость: 50"
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.TextScaled = true
-speedLabel.Font = Enum.Font.Gotham
-speedLabel.Parent = speedFrame
-
-local speedSlider = Instance.new("TextBox")
-speedSlider.Size = UDim2.new(0.6, 0, 1, 0)
-speedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-speedSlider.Text = "50"
-speedSlider.TextColor3 = Color3.fromRGB(200, 200, 200)
-speedSlider.TextScaled = true
-speedSlider.Font = Enum.Font.Gotham
-speedSlider.Parent = speedFrame
-
-local sliderCorner = Instance.new("UICorner")
-sliderCorner.CornerRadius = UDim.new(0, 8)
-sliderCorner.Parent = speedSlider
-
-speedSlider.FocusLost:Connect(function()
-    local newSpeed = tonumber(speedSlider.Text)
-    if newSpeed then
-        flySpeed = newSpeed
-        speedLabel.Text = "Скорость: " .. flySpeed
-        SendMessage("[SPEED] Скорость установлена: " .. flySpeed)
-    else
-        speedSlider.Text = tostring(flySpeed)
-    end
-end)
-
--- Кнопка HELP
-createButton("❓ HELP", Color3.fromRGB(100, 100, 100), function()
-    SendMessage("=== КОМАНДЫ ===")
-    SendMessage("fly - вкл/выкл полёт (WASD/Space/Shift)")
-    SendMessage("noclip - вкл/выкл проход сквозь стены")
-    SendMessage("fling [имя] - отбросить игрока")
-    SendMessage("flingall - отбросить всех")
-    SendMessage("speed [число] - скорость полёта")
-end)
-
--- ===== ПЕРЕТАСКИВАНИЕ ОКНА =====
+-- ===== ПЕРЕТАСКИВАНИЕ =====
 titleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragStart = input.Position
         startPos = mainFrame.Position
-        
         dragObject = mainFrame
         dragObject.Parent:SetTopLevel(true)
     end
@@ -317,8 +393,9 @@ titleBar.InputEnded:Connect(function(input)
     end
 end)
 
--- ===== ФУНКЦИИ (FLY, NOCLIP, FLING) =====
-function SendMessage(text)
+-- ===== ФУНКЦИИ =====
+
+function sendMessage(text)
     local chat = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
     if chat then
         local sayMessage = chat:FindFirstChild("SayMessageRequest")
@@ -328,9 +405,9 @@ function SendMessage(text)
     end
 end
 
+-- ===== FLY =====
 function toggleFly()
     flyEnabled = not flyEnabled
-    
     if flyEnabled then
         bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
@@ -343,29 +420,29 @@ function toggleFly()
         bodyGyro.Parent = RootPart
         
         Humanoid.PlatformStand = true
-        SendMessage("[FLY] ВКЛЮЧЁН")
+        sendMessage("[FLY] ON")
     else
         if bodyVelocity then bodyVelocity:Destroy() end
         if bodyGyro then bodyGyro:Destroy() end
         Humanoid.PlatformStand = false
-        SendMessage("[FLY] ВЫКЛЮЧЁН")
+        sendMessage("[FLY] OFF")
     end
 end
 
+-- ===== NOCLIP =====
 function toggleNoclip()
     noclipEnabled = not noclipEnabled
-    
     for _, part in pairs(Character:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = not noclipEnabled
         end
     end
-    SendMessage(noclipEnabled and "[NOCLIP] ВКЛЮЧЁН" or "[NOCLIP] ВЫКЛЮЧЁН")
+    sendMessage(noclipEnabled and "[NOCLIP] ON" or "[NOCLIP] OFF")
 end
 
+-- ===== FLING =====
 function flingPlayer(targetPlayer)
     if not targetPlayer or not targetPlayer.Character then return end
-    
     local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return end
     
@@ -381,9 +458,8 @@ function flingPlayer(targetPlayer)
     bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
     bv.Velocity = force
     bv.Parent = targetRoot
-    
     game:GetService("Debris"):AddItem(bv, 0.5)
-    SendMessage("[FLING] " .. targetPlayer.Name .. " отброшен!")
+    sendMessage("[FLING] " .. targetPlayer.Name .. " отброшен!")
 end
 
 function findPlayer(name)
@@ -397,48 +473,253 @@ function findPlayer(name)
     return found
 end
 
+-- ===== ESP =====
+function getPlayerRole(player)
+    -- Проверяем наличие инструментов (нож у убийцы, пистолет у шерифа)
+    local character = player.Character
+    if not character then return "Innocent" end
+    
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") then
+            local toolName = tool.Name:lower()
+            if toolName:find("knife") or toolName:find("murder") or toolName:find("blade") then
+                return "Murderer"
+            elseif toolName:find("gun") or toolName:find("pistol") or toolName:find("sheriff") then
+                return "Sheriff"
+            end
+        end
+    end
+    
+    -- Проверяем наличие специальных эффектов (Hero)
+    for _, effect in pairs(character:GetChildren()) do
+        if effect.Name:lower():find("hero") or effect.Name:lower():find("glow") then
+            return "Hero"
+        end
+    end
+    
+    return "Innocent"
+end
+
+function getRoleColor(role)
+    if role == "Murderer" then return espColorMurderer
+    elseif role == "Sheriff" then return espColorSheriff
+    elseif role == "Hero" then return espColorHero
+    else return espColorInnocent end
+end
+
+function createESP(player)
+    if not player or player == LocalPlayer then return end
+    if espObjects[player] then return end
+    
+    local character = player.Character
+    if not character then return end
+    
+    local role = getPlayerRole(player)
+    local color = getRoleColor(role)
+    
+    -- Создаём BillboardGui над головой игрока
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 150, 0, 50)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = character
+    
+    -- Фон
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.5
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = color
+    frame.Parent = billboard
+    
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 8)
+    frameCorner.Parent = frame
+    
+    -- Имя игрока
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.6, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name .. " [" .. role .. "]"
+    nameLabel.TextColor3 = color
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Parent = frame
+    
+    -- Расстояние
+    local distLabel = Instance.new("TextLabel")
+    distLabel.Size = UDim2.new(1, 0, 0.4, 0)
+    distLabel.Position = UDim2.new(0, 0, 0.6, 0)
+    distLabel.BackgroundTransparency = 1
+    distLabel.Text = "0m"
+    distLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    distLabel.TextScaled = true
+    distLabel.Font = Enum.Font.Gotham
+    distLabel.Parent = frame
+    
+    -- Линия к игроку (через часть)
+    local linePart = Instance.new("Part")
+    linePart.Size = Vector3.new(0.1, 0.1, 0.1)
+    linePart.Anchored = true
+    linePart.CanCollide = false
+    linePart.Transparency = 0.5
+    linePart.BrickColor = BrickColor.new(color)
+    linePart.Material = Enum.Material.Neon
+    linePart.Parent = character
+    
+    local attachment = Instance.new("Attachment")
+    attachment.Parent = linePart
+    
+    local beam = Instance.new("Beam")
+    beam.Attachment0 = attachment
+    beam.Width0 = 0.2
+    beam.Width1 = 0.2
+    beam.Color = ColorSequence.new(color)
+    beam.Transparency = NumberSequence.new(0.5)
+    beam.Parent = linePart
+    
+    espObjects[player] = {
+        Billboard = billboard,
+        NameLabel = nameLabel,
+        DistLabel = distLabel,
+        LinePart = linePart,
+        Beam = beam,
+        Character = character
+    }
+end
+
+function clearESP()
+    for player, data in pairs(espObjects) do
+        if data.Billboard then data.Billboard:Destroy() end
+        if data.LinePart then data.LinePart:Destroy() end
+    end
+    espObjects = {}
+end
+
+function updateESP()
+    if not espEnabled then return end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not espObjects[player] or espObjects[player].Character ~= player.Character then
+                createESP(player)
+            end
+            
+            local data = espObjects[player]
+            if data then
+                -- Обновляем расстояние
+                local dist = (RootPart.Position - (player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character.HumanoidRootPart.Position or Vector3.new(0,0,0))).Magnitude
+                if data.DistLabel then
+                    data.DistLabel.Text = math.floor(dist) .. "m"
+                end
+                
+                -- Обновляем роль
+                local role = getPlayerRole(player)
+                local color = getRoleColor(role)
+                if data.NameLabel then
+                    data.NameLabel.Text = player.Name .. " [" .. role .. "]"
+                    data.NameLabel.TextColor3 = color
+                end
+                if data.Billboard and data.Billboard.Frame then
+                    data.Billboard.Frame.BorderColor3 = color
+                end
+                if data.Beam then
+                    data.Beam.Color = ColorSequence.new(color)
+                end
+            end
+        end
+    end
+end
+
+-- ===== АВТОФАРМ МОНЕТ =====
+function findCoins()
+    local coins = {}
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("Part") and obj.Name:lower():find("coin") then
+            table.insert(coins, obj)
+        end
+    end
+    return coins
+end
+
+function autoFarmCoins()
+    if not autoFarmEnabled then return end
+    
+    local coins = findCoins()
+    local nearest = nil
+    local nearestDist = autoFarmRange
+    
+    for _, coin in pairs(coins) do
+        local dist = (RootPart.Position - coin.Position).Magnitude
+        if dist < nearestDist then
+            nearestDist = dist
+            nearest = coin
+        end
+    end
+    
+    if nearest then
+        -- Телепортируемся к монете
+        RootPart.CFrame = CFrame.new(nearest.Position + Vector3.new(0, 3, 0))
+        collectedCoins = collectedCoins + 1
+        coinLabel.Text = "🪙 Собрано монет: " .. collectedCoins
+    end
+end
+
 -- ===== ОБНОВЛЕНИЕ ПОЛЁТА =====
 RunService.Heartbeat:Connect(function()
-    if not flyEnabled then return end
-    if not Character or not Character.Parent then return end
+    -- Fly
+    if flyEnabled then
+        if not Character or not Character.Parent then return end
+        
+        local moveDirection = Vector3.new(0, 0, 0)
+        local forward = Character.Head.CFrame.LookVector
+        local right = Character.Head.CFrame.RightVector
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + forward
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - forward
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - right
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + right
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        end
+        
+        if moveDirection.Magnitude > 0 then
+            moveDirection = moveDirection.Unit * flySpeed
+        end
+        
+        if bodyVelocity then
+            bodyVelocity.Velocity = moveDirection
+        end
+        if bodyGyro then
+            bodyGyro.CFrame = RootPart.CFrame
+        end
+    end
     
-    local moveDirection = Vector3.new(0, 0, 0)
-    local forward = Character.Head.CFrame.LookVector
-    local right = Character.Head.CFrame.RightVector
-    
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-        moveDirection = moveDirection + forward
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-        moveDirection = moveDirection - forward
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-        moveDirection = moveDirection - right
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-        moveDirection = moveDirection + right
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-        moveDirection = moveDirection + Vector3.new(0, 1, 0)
-    end
-    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-        moveDirection = moveDirection - Vector3.new(0, 1, 0)
+    -- Auto Farm
+    if autoFarmEnabled then
+        autoFarmCoins()
     end
     
-    if moveDirection.Magnitude > 0 then
-        moveDirection = moveDirection.Unit * flySpeed
-    end
-    
-    if bodyVelocity then
-        bodyVelocity.Velocity = moveDirection
-    end
-    
-    if bodyGyro then
-        bodyGyro.CFrame = RootPart.CFrame
+    -- ESP
+    if espEnabled then
+        updateESP()
     end
 end)
 
--- ===== ОБНОВЛЕНИЕ NOCLIP ПРИ ДОБАВЛЕНИИ ЧАСТЕЙ =====
+-- ===== ОБНОВЛЕНИЕ NOCLIP =====
 Character.ChildAdded:Connect(function(child)
     if noclipEnabled and child:IsA("BasePart") then
         child.CanCollide = false
@@ -457,12 +738,39 @@ LocalPlayer.Chatted:Connect(function(message)
     
     if command == "fly" then
         toggleFly()
-        flyBtn.Text = flyEnabled and "🪁 FLY (ВЫКЛ)" or "🪁 FLY (ВКЛ)"
+        flyBtn.Text = flyEnabled and "🪁 FLY (ON)" or "🪁 FLY (OFF)"
         flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 120, 255)
     elseif command == "noclip" then
         toggleNoclip()
-        noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ВЫКЛ)" or "🧊 NOCLIP (ВКЛ)"
+        noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ON)" or "🧊 NOCLIP (OFF)"
         noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 200, 100)
+    elseif command == "esp" then
+        espEnabled = not espEnabled
+        espBtn.Text = espEnabled and "👁️ ESP (ON)" or "👁️ ESP (OFF)"
+        espBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(150, 0, 200)
+        if not espEnabled then clearESP() end
+    elseif command == "farm" then
+        autoFarmEnabled = not autoFarmEnabled
+        farmBtn.Text = autoFarmEnabled and "💰 AUTO FARM (ON)" or "💰 AUTO FARM (OFF)"
+        farmBtn.BackgroundColor3 = autoFarmEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(255, 180, 0)
+    elseif command == "speed" and #args >= 2 then
+        local newSpeed = tonumber(args[2])
+        if newSpeed and newSpeed >= 10 and newSpeed <= 140 then
+            walkSpeed = newSpeed
+            Humanoid.WalkSpeed = walkSpeed
+            speedSlider.Text = tostring(walkSpeed)
+            speedLabel.Text = "⚡ Speed: " .. walkSpeed .. " | Fly: " .. flySpeed
+            sendMessage("[SPEED] Скорость: " .. walkSpeed)
+        end
+    elseif command == "flyspeed" and #args >= 2 then
+        local newSpeed = tonumber(args[2])
+        if newSpeed and newSpeed >= 10 and newSpeed <= 140 then
+            flySpeed = newSpeed
+            flySpeedSlider.Text = tostring(flySpeed)
+            flySpeedLabel.Text = "✈️ Fly Speed: " .. flySpeed
+            speedLabel.Text = "⚡ Speed: " .. walkSpeed .. " | Fly: " .. flySpeed
+            sendMessage("[FLY SPEED] Скорость полёта: " .. flySpeed)
+        end
     elseif command == "fling" and #args >= 2 then
         local target = findPlayer(args[2])
         if target then flingPlayer(target) end
@@ -472,13 +780,16 @@ LocalPlayer.Chatted:Connect(function(message)
                 flingPlayer(player)
             end
         end
-    elseif command == "speed" and #args >= 2 then
-        local newSpeed = tonumber(args[2])
-        if newSpeed then
-            flySpeed = newSpeed
-            speedLabel.Text = "Скорость: " .. flySpeed
-            speedSlider.Text = tostring(flySpeed)
-            SendMessage("[SPEED] Скорость: " .. flySpeed)
-        end
+    elseif command == "help" then
+        sendMessage("=== MM2 ULTRA CHEAT ===")
+        sendMessage("fly - полёт | noclip - проход сквозь стены")
+        sendMessage("esp - ESP игроков | farm - автофарм монет")
+        sendMessage("speed [10-140] - скорость ходьбы")
+        sendMessage("flyspeed [10-140] - скорость полёта")
+        sendMessage("fling [имя] - отбросить | flingall - всех")
     end
 end)
+
+-- ===== ИНИЦИАЛИЗАЦИЯ =====
+sendMessage("🔪 MM2 ULTRA CHEAT загружен! Напишите 'help' в чат")
+print("✅ MM2 Cheat loaded! Commands: fly, noclip, esp, farm, speed, flyspeed, fling, flingall")
