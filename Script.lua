@@ -1,772 +1,484 @@
--- ════════════════════════════════════════════════════════════
---  ZETA HUB v6.0 - FULLY WORKING
---  Для игры: +1 Speed Keyboard Escape
---  by KaiScritps
--- ════════════════════════════════════════════════════════════
-
-print("🔥 ЗАГРУЗКА ZETA HUB v6.0...")
+-- ====================================================
+--    GUI-СКРИПТ: FLY + NOCLIP + FLING
+--    С ПЕРЕТАСКИВАНИЕМ ПО ЭКРАНУ (DRAGGABLE)
+--    Стиль как у RHub / Infinite Yield
+-- ====================================================
 
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local userInput = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-if not player then
-    print("❌ Игрок не найден!")
-    return
+-- ===== ПЕРЕМЕННЫЕ =====
+local flyEnabled = false
+local noclipEnabled = false
+local flySpeed = 50
+local bodyVelocity = nil
+local bodyGyro = nil
+local dragObject = nil
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+-- ===== СОЗДАНИЕ GUI =====
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RHubGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- ===== ГЛАВНОЕ ОКНО =====
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(80, 80, 255)
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+-- Скругление углов
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- ===== ЗАГОЛОВОК (для перетаскивания) =====
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+titleBar.BackgroundTransparency = 0.3
+titleBar.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
+-- ===== ЗАГОЛОВОК ТЕКСТ =====
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -60, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "🔹 RHub Control 🔹"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = titleBar
+
+-- ===== КНОПКА ЗАКРЫТИЯ =====
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 1, -4)
+closeBtn.Position = UDim2.new(1, -35, 0, 2)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextScaled = true
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 6)
+closeCorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
+
+-- ===== КНОПКА СВЁРТЫВАНИЯ =====
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 30, 1, -4)
+minimizeBtn.Position = UDim2.new(1, -70, 0, 2)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 50)
+minimizeBtn.Text = "─"
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.TextScaled = true
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.Parent = titleBar
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 6)
+minCorner.Parent = minimizeBtn
+
+local isMinimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        mainFrame:TweenSize(UDim2.new(0, 300, 0, 30), "Out", "Quad", 0.3)
+        minimizeBtn.Text = "□"
+    else
+        mainFrame:TweenSize(UDim2.new(0, 300, 0, 400), "Out", "Quad", 0.3)
+        minimizeBtn.Text = "─"
+    end
+end)
+
+-- ===== ОСНОВНОЙ КОНТЕЙНЕР =====
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -20, 1, -50)
+contentFrame.Position = UDim2.new(0, 10, 0, 40)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.Padding = UDim.new(0, 8)
+contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+contentLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+contentLayout.Parent = contentFrame
+
+-- ===== ФУНКЦИЯ СОЗДАНИЯ КНОПКИ =====
+local function createButton(text, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamSemibold
+    btn.AutoButtonColor = false
+    btn.Parent = contentFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    -- Эффект наведения
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.3}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    end)
+    
+    btn.MouseButton1Click:Connect(callback)
+    return btn
 end
 
--- Ждем загрузки
-repeat task.wait() until player and player.Character
-print("✅ Игрок: " .. player.Name)
+-- ===== СОЗДАНИЕ КНОПОК =====
+-- Кнопка FLY
+local flyBtn = createButton("🪁 FLY (ВКЛ)", Color3.fromRGB(0, 120, 255), function()
+    toggleFly()
+    flyBtn.Text = flyEnabled and "🪁 FLY (ВЫКЛ)" or "🪁 FLY (ВКЛ)"
+    flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 120, 255)
+end)
 
--- Удаляем старые GUI
-local oldGui = player.PlayerGui:FindFirstChild("ZetaHub")
-if oldGui then oldGui:Destroy() end
-local oldLoad = player.PlayerGui:FindFirstChild("LoadingScreen")
-if oldLoad then oldLoad:Destroy() end
-local oldKey = player.PlayerGui:FindFirstChild("KeySystem")
-if oldKey then oldKey:Destroy() end
+-- Кнопка NOCLIP
+local noclipBtn = createButton("🧊 NOCLIP (ВКЛ)", Color3.fromRGB(0, 200, 100), function()
+    toggleNoclip()
+    noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ВЫКЛ)" or "🧊 NOCLIP (ВКЛ)"
+    noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 200, 100)
+end)
 
--- ════════════════════════════════════════════════════════════
---  АНИМИРОВАННАЯ ЗАГРУЗКА
--- ════════════════════════════════════════════════════════════
+-- Кнопка FLING (с текстовым полем для ввода имени)
+local flingFrame = Instance.new("Frame")
+flingFrame.Size = UDim2.new(1, 0, 0, 40)
+flingFrame.BackgroundTransparency = 1
+flingFrame.Parent = contentFrame
 
-local loadGui = Instance.new("ScreenGui")
-loadGui.Name = "LoadingScreen"
-loadGui.ResetOnSpawn = false
-loadGui.Parent = player.PlayerGui
+local flingLayout = Instance.new("UIListLayout")
+flingLayout.FillDirection = Enum.FillDirection.Horizontal
+flingLayout.Padding = UDim.new(0, 5)
+flingLayout.Parent = flingFrame
 
-local loadBg = Instance.new("Frame")
-loadBg.Size = UDim2.new(1, 0, 1, 0)
-loadBg.BackgroundColor3 = Color3.fromRGB(8, 8, 25)
-loadBg.Parent = loadGui
+-- Поле ввода имени
+local nameBox = Instance.new("TextBox")
+nameBox.Size = UDim2.new(0.6, 0, 1, 0)
+nameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+nameBox.Text = "имя игрока"
+nameBox.TextColor3 = Color3.fromRGB(200, 200, 200)
+nameBox.TextScaled = true
+nameBox.Font = Enum.Font.Gotham
+nameBox.ClearTextOnFocus = false
+nameBox.Parent = flingFrame
 
--- Частицы
-for i = 1, 30 do
-    local p = Instance.new("Frame")
-    p.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
-    p.Position = UDim2.new(math.random(), 0, math.random(), 0)
-    p.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    p.BackgroundTransparency = 0.8
-    p.BorderSizePixel = 0
-    p.Parent = loadBg
-    TweenService:Create(p, TweenInfo.new(math.random(3, 6), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {
-        Position = UDim2.new(math.random(), 0, math.random(), 0)
-    }):Play()
+local nameCorner = Instance.new("UICorner")
+nameCorner.CornerRadius = UDim.new(0, 8)
+nameCorner.Parent = nameBox
+
+-- Кнопка FLING
+local flingBtn = Instance.new("TextButton")
+flingBtn.Size = UDim2.new(0.4, 0, 1, 0)
+flingBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+flingBtn.Text = "💥 FLING"
+flingBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flingBtn.TextScaled = true
+flingBtn.Font = Enum.Font.GothamSemibold
+flingBtn.Parent = flingFrame
+
+local flingCorner = Instance.new("UICorner")
+flingCorner.CornerRadius = UDim.new(0, 8)
+flingCorner.Parent = flingBtn
+
+flingBtn.MouseButton1Click:Connect(function()
+    local target = findPlayer(nameBox.Text)
+    if target then
+        flingPlayer(target)
+    else
+        SendMessage("[FLING] Игрок не найден!")
+    end
+end)
+
+-- Кнопка FLING ALL
+local flingAllBtn = createButton("💥 FLING ALL (ВСЕХ)", Color3.fromRGB(200, 50, 0), function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            flingPlayer(player)
+        end
+    end
+    SendMessage("[FLING] Все игроки отброшены!")
+end)
+
+-- Ползунок скорости
+local speedFrame = Instance.new("Frame")
+speedFrame.Size = UDim2.new(1, 0, 0, 30)
+speedFrame.BackgroundTransparency = 1
+speedFrame.Parent = contentFrame
+
+local speedLayout = Instance.new("UIListLayout")
+speedLayout.FillDirection = Enum.FillDirection.Horizontal
+speedLayout.Padding = UDim.new(0, 5)
+speedLayout.Parent = speedFrame
+
+local speedLabel = Instance.new("TextLabel")
+speedLabel.Size = UDim2.new(0.4, 0, 1, 0)
+speedLabel.BackgroundTransparency = 1
+speedLabel.Text = "Скорость: 50"
+speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedLabel.TextScaled = true
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.Parent = speedFrame
+
+local speedSlider = Instance.new("TextBox")
+speedSlider.Size = UDim2.new(0.6, 0, 1, 0)
+speedSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+speedSlider.Text = "50"
+speedSlider.TextColor3 = Color3.fromRGB(200, 200, 200)
+speedSlider.TextScaled = true
+speedSlider.Font = Enum.Font.Gotham
+speedSlider.Parent = speedFrame
+
+local sliderCorner = Instance.new("UICorner")
+sliderCorner.CornerRadius = UDim.new(0, 8)
+sliderCorner.Parent = speedSlider
+
+speedSlider.FocusLost:Connect(function()
+    local newSpeed = tonumber(speedSlider.Text)
+    if newSpeed then
+        flySpeed = newSpeed
+        speedLabel.Text = "Скорость: " .. flySpeed
+        SendMessage("[SPEED] Скорость установлена: " .. flySpeed)
+    else
+        speedSlider.Text = tostring(flySpeed)
+    end
+end)
+
+-- Кнопка HELP
+createButton("❓ HELP", Color3.fromRGB(100, 100, 100), function()
+    SendMessage("=== КОМАНДЫ ===")
+    SendMessage("fly - вкл/выкл полёт (WASD/Space/Shift)")
+    SendMessage("noclip - вкл/выкл проход сквозь стены")
+    SendMessage("fling [имя] - отбросить игрока")
+    SendMessage("flingall - отбросить всех")
+    SendMessage("speed [число] - скорость полёта")
+end)
+
+-- ===== ПЕРЕТАСКИВАНИЕ ОКНА =====
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        dragObject = mainFrame
+        dragObject.Parent:SetTopLevel(true)
+    end
+end)
+
+titleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragObject then
+        local delta = input.Position - dragStart
+        dragObject.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and dragObject then
+        dragObject.Parent:SetTopLevel(false)
+        dragObject = nil
+    end
+end)
+
+-- ===== ФУНКЦИИ (FLY, NOCLIP, FLING) =====
+function SendMessage(text)
+    local chat = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+    if chat then
+        local sayMessage = chat:FindFirstChild("SayMessageRequest")
+        if sayMessage then
+            sayMessage:FireServer(text, "All")
+        end
+    end
 end
 
--- Лого
-local logo = Instance.new("TextLabel")
-logo.Size = UDim2.new(0, 350, 0, 70)
-logo.Position = UDim2.new(0.5, -175, 0.3, -35)
-logo.BackgroundTransparency = 1
-logo.Text = "⚡ ZETA HUB"
-logo.TextColor3 = Color3.fromRGB(255, 215, 0)
-logo.TextSize = 50
-logo.Font = Enum.Font.GothamBold
-logo.Parent = loadBg
-
-local sub = Instance.new("TextLabel")
-sub.Size = UDim2.new(0, 250, 0, 25)
-sub.Position = UDim2.new(0.5, -125, 0.3, 40)
-sub.BackgroundTransparency = 1
-sub.Text = "PREMIUM v6.0"
-sub.TextColor3 = Color3.fromRGB(180, 180, 255)
-sub.TextSize = 16
-sub.Font = Enum.Font.Gotham
-sub.Parent = loadBg
-
--- Спиннер
-local spinner = Instance.new("Frame")
-spinner.Size = UDim2.new(0, 50, 0, 50)
-spinner.Position = UDim2.new(0.5, -25, 0.5, -25)
-spinner.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-spinner.BackgroundTransparency = 0.9
-spinner.BorderSizePixel = 3
-spinner.BorderColor3 = Color3.fromRGB(255, 215, 0)
-spinner.Parent = loadBg
-TweenService:Create(spinner, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {
-    Rotation = 360
-}):Play()
-
-local loadText = Instance.new("TextLabel")
-loadText.Size = UDim2.new(0, 300, 0, 25)
-loadText.Position = UDim2.new(0.5, -150, 0.5, 45)
-loadText.BackgroundTransparency = 1
-loadText.Text = "Загрузка..."
-loadText.TextColor3 = Color3.fromRGB(200, 200, 200)
-loadText.TextSize = 14
-loadText.Font = Enum.Font.Gotham
-loadText.Parent = loadBg
-
-local barBg = Instance.new("Frame")
-barBg.Size = UDim2.new(0, 250, 0, 4)
-barBg.Position = UDim2.new(0.5, -125, 0.5, 70)
-barBg.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-barBg.BorderSizePixel = 0
-barBg.Parent = loadBg
-
-local bar = Instance.new("Frame")
-bar.Size = UDim2.new(0, 0, 1, 0)
-bar.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-bar.BorderSizePixel = 0
-bar.Parent = barBg
-
-local progress = 0
-
-local function updateLoad(text, prog)
-    loadText.Text = text
-    if prog then progress = prog end
-    if progress < 100 then progress = progress + 5 end
-    if progress > 100 then progress = 100 end
-    TweenService:Create(bar, TweenInfo.new(0.3), {
-        Size = UDim2.new(progress / 100, 0, 1, 0)
-    }):Play()
+function toggleFly()
+    flyEnabled = not flyEnabled
+    
+    if flyEnabled then
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = RootPart
+        
+        bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+        bodyGyro.CFrame = RootPart.CFrame
+        bodyGyro.Parent = RootPart
+        
+        Humanoid.PlatformStand = true
+        SendMessage("[FLY] ВКЛЮЧЁН")
+    else
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+        Humanoid.PlatformStand = false
+        SendMessage("[FLY] ВЫКЛЮЧЁН")
+    end
 end
 
--- ════════════════════════════════════════════════════════════
---  СИСТЕМА КЛЮЧЕЙ
--- ════════════════════════════════════════════════════════════
-
-local function showKeySystem()
-    updateLoad("Проверка ключа...", 30)
-    task.wait(0.5)
+function toggleNoclip()
+    noclipEnabled = not noclipEnabled
     
-    loadGui:Destroy()
-    
-    local keyGui = Instance.new("ScreenGui")
-    keyGui.Name = "KeySystem"
-    keyGui.ResetOnSpawn = false
-    keyGui.Parent = player.PlayerGui
-    
-    local overlay = Instance.new("Frame")
-    overlay.Size = UDim2.new(1, 0, 1, 0)
-    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    overlay.BackgroundTransparency = 0.7
-    overlay.Parent = keyGui
-    
-    local keyFrame = Instance.new("Frame")
-    keyFrame.Size = UDim2.new(0, 400, 0, 300)
-    keyFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-    keyFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 30)
-    keyFrame.BorderSizePixel = 2
-    keyFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
-    keyFrame.ClipsDescendants = true
-    keyFrame.Parent = overlay
-    
-    -- Анимация появления
-    keyFrame.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(keyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 400, 0, 300),
-        Position = UDim2.new(0.5, -200, 0.5, -150)
-    }):Play()
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 50)
-    title.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    title.Text = "🔐 ВВЕДИТЕ КЛЮЧ"
-    title.TextColor3 = Color3.fromRGB(0, 0, 0)
-    title.TextSize = 22
-    title.Font = Enum.Font.GothamBold
-    title.Parent = keyFrame
-    
-    local lock = Instance.new("TextLabel")
-    lock.Size = UDim2.new(0, 60, 0, 60)
-    lock.Position = UDim2.new(0.5, -30, 0, 70)
-    lock.BackgroundTransparency = 1
-    lock.Text = "🔒"
-    lock.TextSize = 40
-    lock.Parent = keyFrame
-    
-    local input = Instance.new("TextBox")
-    input.Size = UDim2.new(0, 220, 0, 40)
-    input.Position = UDim2.new(0.5, -110, 0, 150)
-    input.BackgroundColor3 = Color3.fromRGB(25, 25, 50)
-    input.BorderSizePixel = 2
-    input.BorderColor3 = Color3.fromRGB(255, 215, 0)
-    input.Text = ""
-    input.TextColor3 = Color3.fromRGB(255, 255, 255)
-    input.TextSize = 16
-    input.PlaceholderText = "Введите ключ..."
-    input.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-    input.Font = Enum.Font.Gotham
-    input.Parent = keyFrame
-    
-    local submit = Instance.new("TextButton")
-    submit.Size = UDim2.new(0, 180, 0, 40)
-    submit.Position = UDim2.new(0.5, -90, 0, 210)
-    submit.Text = "✅ ПОДТВЕРДИТЬ"
-    submit.TextColor3 = Color3.fromRGB(0, 0, 0)
-    submit.TextSize = 16
-    submit.Font = Enum.Font.GothamBold
-    submit.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    submit.BorderSizePixel = 0
-    submit.Parent = keyFrame
-    
-    local error = Instance.new("TextLabel")
-    error.Size = UDim2.new(1, 0, 0, 25)
-    error.Position = UDim2.new(0, 0, 0, 255)
-    error.BackgroundTransparency = 1
-    error.Text = ""
-    error.TextColor3 = Color3.fromRGB(255, 100, 100)
-    error.TextSize = 13
-    error.Font = Enum.Font.Gotham
-    error.Parent = keyFrame
-    
-    local function checkKey()
-        if input.Text == "ZetaHub" then
-            error.Text = "✅ Ключ принят!"
-            error.TextColor3 = Color3.fromRGB(100, 255, 100)
-            task.wait(0.3)
-            keyGui:Destroy()
-            createMainUI()
-        else
-            error.Text = "❌ НЕВЕРНЫЙ КЛЮЧ!"
-            error.TextColor3 = Color3.fromRGB(255, 100, 100)
-            -- Встряска
-            for i = 1, 3 do
-                keyFrame.Position = UDim2.new(0.5, -200 + math.random(-10, 10), 0.5, -150)
-                task.wait(0.05)
-            end
-            keyFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-            input.Text = ""
+    for _, part in pairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not noclipEnabled
         end
     end
-    
-    submit.MouseButton1Click:Connect(checkKey)
-    input.FocusLost:Connect(function(enter)
-        if enter then checkKey() end
-    end)
+    SendMessage(noclipEnabled and "[NOCLIP] ВКЛЮЧЁН" or "[NOCLIP] ВЫКЛЮЧЁН")
 end
 
--- ════════════════════════════════════════════════════════════
---  АВТОФАРМ КУБКОВ
--- ════════════════════════════════════════════════════════════
-
-local isFarming = false
-local farmSpeed = 0.3
-local farmLoop = nil
-local wins = 0
-local farmStatusText = nil
-local winsLabel = nil
-
-function startFarm()
-    if isFarming then return end
-    isFarming = true
-    print("🟢 Автофарм запущен!")
+function flingPlayer(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return end
     
-    -- Ищем объекты для фарма
-    local function findFarmObjects()
-        local objects = {}
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Part") or obj:IsA("MeshPart") then
-                local name = obj.Name:lower()
-                if name:find("win") or name:find("point") or name:find("goal") or name:find("finish") or name:find("checkpoint") then
-                    table.insert(objects, obj)
-                end
-            end
-        end
-        return objects
-    end
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
     
-    farmLoop = RunService.Heartbeat:Connect(function()
-        if not isFarming then return end
-        
-        local character = player.Character
-        if not character then return end
-        
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-        
-        local humanoid = character:FindFirstChildWhichIsA("Humanoid")
-        if not humanoid then return end
-        
-        -- Находим ближайший объект для фарма
-        local farmObjects = findFarmObjects()
-        local closest = nil
-        local closestDist = math.huge
-        
-        for _, obj in ipairs(farmObjects) do
-            if obj and obj.Position then
-                local dist = (hrp.Position - obj.Position).Magnitude
-                if dist < closestDist then
-                    closestDist = dist
-                    closest = obj
-                end
-            end
-        end
-        
-        if closest then
-            -- Телепортируемся к объекту
-            hrp.CFrame = CFrame.new(closest.Position + Vector3.new(0, 3, 0))
-            task.wait(0.1)
-            
-            -- Симулируем нажатие для победы
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
-            task.wait(0.05)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
-            
-            wins = wins + 1
-            if winsLabel then
-                winsLabel.Text = "🏆 " .. wins
-            end
-            if farmStatusText then
-                farmStatusText.Text = "🟢 Фарм активен | Побед: " .. wins
-            end
-            print("🏆 Победа #" .. wins)
-        else
-            -- Если объектов нет, просто бегаем
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, nil)
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
-            task.wait(0.1)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, nil)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
-        end
-        
-        task.wait(farmSpeed)
-    end)
+    local direction = (targetRoot.Position - RootPart.Position).Unit
+    local randomOffset = Vector3.new(
+        math.random(-10, 10),
+        math.random(5, 20),
+        math.random(-10, 10)
+    )
+    local force = (direction + randomOffset) * 5000
+    
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+    bv.Velocity = force
+    bv.Parent = targetRoot
+    
+    game:GetService("Debris"):AddItem(bv, 0.5)
+    SendMessage("[FLING] " .. targetPlayer.Name .. " отброшен!")
 end
 
-function stopFarm()
-    if not isFarming then return end
-    isFarming = false
-    if farmLoop then
-        farmLoop:Disconnect()
-        farmLoop = nil
+function findPlayer(name)
+    local found = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        if string.lower(player.Name):find(string.lower(name)) then
+            found = player
+            break
+        end
     end
-    if farmStatusText then
-        farmStatusText.Text = "🔴 Фарм выключен"
-    end
-    print("🔴 Автофарм остановлен")
+    return found
 end
 
--- ════════════════════════════════════════════════════════════
---  ОСНОВНОЙ GUI
--- ════════════════════════════════════════════════════════════
-
-function createMainUI()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ZetaHub"
-    gui.ResetOnSpawn = false
-    gui.Parent = player.PlayerGui
+-- ===== ОБНОВЛЕНИЕ ПОЛЁТА =====
+RunService.Heartbeat:Connect(function()
+    if not flyEnabled then return end
+    if not Character or not Character.Parent then return end
     
-    -- Главное окно
-    local main = Instance.new("Frame")
-    main.Size = UDim2.new(0, 420, 0, 550)
-    main.Position = UDim2.new(0.5, -210, 0.5, -275)
-    main.BackgroundColor3 = Color3.fromRGB(8, 8, 25)
-    main.BorderSizePixel = 2
-    main.BorderColor3 = Color3.fromRGB(255, 215, 0)
-    main.ClipsDescendants = true
-    main.Parent = gui
+    local moveDirection = Vector3.new(0, 0, 0)
+    local forward = Character.Head.CFrame.LookVector
+    local right = Character.Head.CFrame.RightVector
     
-    -- Анимация появления
-    main.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-        Size = UDim2.new(0, 420, 0, 550),
-        Position = UDim2.new(0.5, -210, 0.5, -275)
-    }):Play()
-    
-    -- Верхняя панель
-    local top = Instance.new("Frame")
-    top.Size = UDim2.new(1, 0, 0, 50)
-    top.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-    top.BorderSizePixel = 0
-    top.Parent = main
-    
-    local logo = Instance.new("TextLabel")
-    logo.Size = UDim2.new(0.6, 0, 1, 0)
-    logo.Position = UDim2.new(0, 10, 0, 0)
-    logo.BackgroundTransparency = 1
-    logo.Text = "⚡ ZETA HUB"
-    logo.TextColor3 = Color3.fromRGB(0, 0, 0)
-    logo.TextSize = 22
-    logo.TextXAlignment = Enum.TextXAlignment.Left
-    logo.Font = Enum.Font.GothamBold
-    logo.Parent = top
-    
-    -- Кнопки
-    local minBtn = Instance.new("TextButton")
-    minBtn.Size = UDim2.new(0, 30, 0, 30)
-    minBtn.Position = UDim2.new(1, -65, 0.5, -15)
-    minBtn.Text = "─"
-    minBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    minBtn.TextSize = 18
-    minBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    minBtn.BackgroundTransparency = 0.3
-    minBtn.BorderSizePixel = 0
-    minBtn.Parent = top
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -30, 0.5, -15)
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    closeBtn.TextSize = 18
-    closeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    closeBtn.BackgroundTransparency = 0.3
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Parent = top
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        stopFarm()
-        TweenService:Create(main, TweenInfo.new(0.3), { Size = UDim2.new(0, 0, 0, 0) }):Play()
-        task.wait(0.3)
-        gui:Destroy()
-    end)
-    
-    -- Статус бар
-    local status = Instance.new("Frame")
-    status.Size = UDim2.new(1, 0, 0, 30)
-    status.Position = UDim2.new(0, 0, 0, 50)
-    status.BackgroundColor3 = Color3.fromRGB(15, 15, 35)
-    status.BorderSizePixel = 0
-    status.Parent = main
-    
-    local statusText = Instance.new("TextLabel")
-    statusText.Size = UDim2.new(0.5, -10, 1, 0)
-    statusText.Position = UDim2.new(0, 10, 0, 0)
-    statusText.BackgroundTransparency = 1
-    statusText.Text = "🟢 Онлайн"
-    statusText.TextColor3 = Color3.fromRGB(150, 255, 150)
-    statusText.TextSize = 13
-    statusText.TextXAlignment = Enum.TextXAlignment.Left
-    statusText.Font = Enum.Font.Gotham
-    statusText.Parent = status
-    
-    winsLabel = Instance.new("TextLabel")
-    winsLabel.Size = UDim2.new(0.45, 0, 1, 0)
-    winsLabel.Position = UDim2.new(0.55, 0, 0, 0)
-    winsLabel.BackgroundTransparency = 1
-    winsLabel.Text = "🏆 0"
-    winsLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    winsLabel.TextSize = 14
-    winsLabel.TextXAlignment = Enum.TextXAlignment.Right
-    winsLabel.Font = Enum.Font.GothamBold
-    winsLabel.Parent = status
-    
-    -- Вкладки
-    local tabContainer = Instance.new("Frame")
-    tabContainer.Size = UDim2.new(1, 0, 0, 40)
-    tabContainer.Position = UDim2.new(0, 0, 0, 80)
-    tabContainer.BackgroundColor3 = Color3.fromRGB(10, 10, 28)
-    tabContainer.BorderSizePixel = 0
-    tabContainer.Parent = main
-    
-    local tabs = {"⚔️ ФАРМ", "⚡ НАСТРОЙКИ"}
-    local tabButtons = {}
-    local tabContents = {}
-    
-    local content = Instance.new("Frame")
-    content.Size = UDim2.new(1, 0, 1, -120)
-    content.Position = UDim2.new(0, 0, 0, 120)
-    content.BackgroundTransparency = 1
-    content.Parent = main
-    
-    for i = 1, 2 do
-        local tc = Instance.new("ScrollingFrame")
-        tc.Size = UDim2.new(1, 0, 1, 0)
-        tc.BackgroundTransparency = 1
-        tc.CanvasSize = UDim2.new(0, 0, 0, 400)
-        tc.ScrollBarThickness = 3
-        tc.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
-        tc.Visible = (i == 1)
-        tc.Parent = content
-        
-        local inner = Instance.new("Frame")
-        inner.Size = UDim2.new(1, 0, 0, 400)
-        inner.BackgroundTransparency = 1
-        inner.Parent = tc
-        
-        tabContents[i] = inner
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+        moveDirection = moveDirection + forward
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+        moveDirection = moveDirection - forward
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+        moveDirection = moveDirection - right
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+        moveDirection = moveDirection + right
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        moveDirection = moveDirection + Vector3.new(0, 1, 0)
+    end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+        moveDirection = moveDirection - Vector3.new(0, 1, 0)
     end
     
-    for i, name in ipairs(tabs) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.5, 0, 1, 0)
-        btn.Position = UDim2.new((i-1) * 0.5, 0, 0, 0)
-        btn.Text = name
-        btn.TextColor3 = (i == 1) and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(150, 150, 150)
-        btn.TextSize = 14
-        btn.BackgroundTransparency = 1
-        btn.Font = Enum.Font.GothamSemibold
-        btn.Parent = tabContainer
-        tabButtons[i] = btn
-        
-        btn.MouseButton1Click:Connect(function()
-            for j, tc in pairs(tabContents) do
-                tc.Visible = (j == i)
-            end
-            for j, b in pairs(tabButtons) do
-                b.TextColor3 = (j == i) and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(150, 150, 150)
-            end
-        end)
+    if moveDirection.Magnitude > 0 then
+        moveDirection = moveDirection.Unit * flySpeed
     end
     
-    -- ════════════════════════════════════════════════════════
-    --  ВКЛАДКА ФАРМ
-    -- ════════════════════════════════════════════════════════
-    
-    local farmTab = tabContents[1]
-    local y = 10
-    
-    local section = Instance.new("TextLabel")
-    section.Size = UDim2.new(0.92, 0, 0, 30)
-    section.Position = UDim2.new(0.04, 0, 0, y)
-    section.BackgroundTransparency = 1
-    section.Text = "🤖 АВТОФАРМ КУБКОВ"
-    section.TextColor3 = Color3.fromRGB(255, 215, 0)
-    section.TextSize = 16
-    section.TextXAlignment = Enum.TextXAlignment.Left
-    section.Font = Enum.Font.GothamBold
-    section.Parent = farmTab
-    y = y + 35
-    
-    farmStatusText = Instance.new("TextLabel")
-    farmStatusText.Size = UDim2.new(0.92, 0, 0, 30)
-    farmStatusText.Position = UDim2.new(0.04, 0, 0, y)
-    farmStatusText.BackgroundTransparency = 1
-    farmStatusText.Text = "🔴 Фарм выключен"
-    farmStatusText.TextColor3 = Color3.fromRGB(255, 100, 100)
-    farmStatusText.TextSize = 15
-    farmStatusText.TextXAlignment = Enum.TextXAlignment.Center
-    farmStatusText.Font = Enum.Font.Gotham
-    farmStatusText.Parent = farmTab
-    y = y + 35
-    
-    local farmBtn = Instance.new("TextButton")
-    farmBtn.Size = UDim2.new(0.92, 0, 0, 40)
-    farmBtn.Position = UDim2.new(0.04, 0, 0, y)
-    farmBtn.Text = "▶️ ЗАПУСТИТЬ ФАРМ"
-    farmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    farmBtn.TextSize = 16
-    farmBtn.Font = Enum.Font.GothamBold
-    farmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-    farmBtn.BorderSizePixel = 0
-    farmBtn.Parent = farmTab
-    
-    local farming = false
-    
-    farmBtn.MouseButton1Click:Connect(function()
-        farming = not farming
-        if farming then
-            farmBtn.Text = "⏹️ ОСТАНОВИТЬ ФАРМ"
-            farmBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            startFarm()
-        else
-            farmBtn.Text = "▶️ ЗАПУСТИТЬ ФАРМ"
-            farmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            stopFarm()
-        end
-    end)
-    y = y + 45
-    
-    local speedBtn = Instance.new("TextButton")
-    speedBtn.Size = UDim2.new(0.92, 0, 0, 35)
-    speedBtn.Position = UDim2.new(0.04, 0, 0, y)
-    speedBtn.Text = "🚀 Ускорить фарм"
-    speedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    speedBtn.TextSize = 14
-    speedBtn.Font = Enum.Font.Gotham
-    speedBtn.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
-    speedBtn.BorderSizePixel = 0
-    speedBtn.Parent = farmTab
-    
-    speedBtn.MouseButton1Click:Connect(function()
-        if farmSpeed > 0.05 then
-            farmSpeed = farmSpeed / 1.5
-            statusText.Text = "⚡ Скорость: " .. string.format("%.2f", farmSpeed)
-        end
-    end)
-    y = y + 40
-    
-    local resetBtn = Instance.new("TextButton")
-    resetBtn.Size = UDim2.new(0.92, 0, 0, 35)
-    resetBtn.Position = UDim2.new(0.04, 0, 0, y)
-    resetBtn.Text = "🔄 Сбросить скорость"
-    resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    resetBtn.TextSize = 14
-    resetBtn.Font = Enum.Font.Gotham
-    resetBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
-    resetBtn.BorderSizePixel = 0
-    resetBtn.Parent = farmTab
-    
-    resetBtn.MouseButton1Click:Connect(function()
-        farmSpeed = 0.3
-        statusText.Text = "🟢 Онлайн"
-    end)
-    
-    -- ════════════════════════════════════════════════════════
-    --  ВКЛАДКА НАСТРОЙКИ
-    -- ════════════════════════════════════════════════════════
-    
-    local settingsTab = tabContents[2]
-    y = 10
-    
-    local section2 = Instance.new("TextLabel")
-    section2.Size = UDim2.new(0.92, 0, 0, 30)
-    section2.Position = UDim2.new(0.04, 0, 0, y)
-    section2.BackgroundTransparency = 1
-    section2.Text = "⚡ БЫСТРЫЕ НАСТРОЙКИ"
-    section2.TextColor3 = Color3.fromRGB(255, 215, 0)
-    section2.TextSize = 16
-    section2.TextXAlignment = Enum.TextXAlignment.Left
-    section2.Font = Enum.Font.GothamBold
-    section2.Parent = settingsTab
-    y = y + 35
-    
-    local function createSettingBtn(text, y, color, callback)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.92, 0, 0, 38)
-        btn.Position = UDim2.new(0.04, 0, 0, y)
-        btn.Text = text
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 14
-        btn.Font = Enum.Font.Gotham
-        btn.BackgroundColor3 = color or Color3.fromRGB(30, 30, 55)
-        btn.BorderSizePixel = 1
-        btn.BorderColor3 = Color3.fromRGB(255, 215, 0)
-        btn.Parent = settingsTab
-        
-        btn.MouseButton1Click:Connect(callback)
-        return btn
+    if bodyVelocity then
+        bodyVelocity.Velocity = moveDirection
     end
     
-    createSettingBtn("👤 Телепорт в центр", y, Color3.fromRGB(0, 100, 200), function()
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0)
-            statusText.Text = "✅ Телепорт выполнен"
-        end
-    end)
-    y = y + 43
-    
-    createSettingBtn("🏃 Супер-скорость (x5)", y, Color3.fromRGB(0, 200, 100), function()
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 80
-                humanoid.JumpPower = 100
-                statusText.Text = "✅ Скорость увеличена!"
-            end
-        end
-    end)
-    y = y + 43
-    
-    createSettingBtn("💫 Мега-прыжок", y, Color3.fromRGB(150, 0, 200), function()
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-            if humanoid then
-                humanoid.JumpPower = 150
-                statusText.Text = "✅ Прыжок увеличен!"
-            end
-        end
-    end)
-    y = y + 43
-    
-    createSettingBtn("🛡️ Сброс скорости", y, Color3.fromRGB(200, 50, 50), function()
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildWhichIsA("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 16
-                humanoid.JumpPower = 50
-                statusText.Text = "🟢 Скорость сброшена"
-            end
-        end
-    end)
-    
-    -- ════════════════════════════════════════════════════════
-    --  ПЕРЕТАСКИВАНИЕ
-    -- ════════════════════════════════════════════════════════
-    
-    local dragStart, startPos, dragging = nil, nil, false
-    main.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = main.Position
-        end
-    end)
-    main.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    userInput.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-    
-    -- Свертывание
-    local minimized = false
-    minBtn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        if minimized then
-            main.Size = UDim2.new(0, 160, 0, 40)
-            main.Position = UDim2.new(0.5, -80, 0.9, -20)
-            content.Visible = false
-            status.Visible = false
-            tabContainer.Visible = false
-            top.Size = UDim2.new(1, 0, 1, 0)
-            minBtn.Text = "➕"
-        else
-            main.Size = UDim2.new(0, 420, 0, 550)
-            main.Position = UDim2.new(0.5, -210, 0.5, -275)
-            content.Visible = true
-            status.Visible = true
-            tabContainer.Visible = true
-            top.Size = UDim2.new(1, 0, 0, 50)
-            minBtn.Text = "─"
-        end
-    end)
-    
-    -- Горячие клавиши
-    userInput.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if input.KeyCode == Enum.KeyCode.F1 then
-            main.Visible = not main.Visible
-        end
-        if input.KeyCode == Enum.KeyCode.F2 then
-            farming = not farming
-            if farming then
-                farmBtn.Text = "⏹️ ОСТАНОВИТЬ ФАРМ"
-                farmBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                startFarm()
-            else
-                farmBtn.Text = "▶️ ЗАПУСТИТЬ ФАРМ"
-                farmBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-                stopFarm()
-            end
-        end
-    end)
-    
-    print("✅ ZETA HUB ЗАГРУЖЕН!")
-    print("📌 F1 - Показать/Скрыть")
-    print("📌 F2 - Вкл/Выкл фарм")
-end
+    if bodyGyro then
+        bodyGyro.CFrame = RootPart.CFrame
+    end
+end)
 
--- ════════════════════════════════════════════════════════════
---  ЗАПУСК
--- ════════════════════════════════════════════════════════════
+-- ===== ОБНОВЛЕНИЕ NOCLIP ПРИ ДОБАВЛЕНИИ ЧАСТЕЙ =====
+Character.ChildAdded:Connect(function(child)
+    if noclipEnabled and child:IsA("BasePart") then
+        child.CanCollide = false
+    end
+end)
 
--- Анимация загрузки
-updateLoad("Инициализация...", 10)
-task.wait(0.3)
-updateLoad("Загрузка модулей...", 25)
-task.wait(0.3)
-updateLoad("Подключение к серверу...", 40)
-task.wait(0.3)
-updateLoad("Проверка лицензии...", 55)
-task.wait(0.3)
-
--- Показываем систему ключей
-showKeySystem()
+-- ===== ЧАТ КОМАНДЫ =====
+LocalPlayer.Chatted:Connect(function(message)
+    local args = {}
+    for word in string.gmatch(message, "%S+") do
+        table.insert(args, word)
+    end
+    
+    if #args == 0 then return end
+    local command = string.lower(args[1])
+    
+    if command == "fly" then
+        toggleFly()
+        flyBtn.Text = flyEnabled and "🪁 FLY (ВЫКЛ)" or "🪁 FLY (ВКЛ)"
+        flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 120, 255)
+    elseif command == "noclip" then
+        toggleNoclip()
+        noclipBtn.Text = noclipEnabled and "🧊 NOCLIP (ВЫКЛ)" or "🧊 NOCLIP (ВКЛ)"
+        noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(0, 200, 100)
+    elseif command == "fling" and #args >= 2 then
+        local target = findPlayer(args[2])
+        if target then flingPlayer(target) end
+    elseif command == "flingall" then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                flingPlayer(player)
+            end
+        end
+    elseif command == "speed" and #args >= 2 then
+        local newSpeed = tonumber(args[2])
+        if newSpeed then
+            flySpeed = newSpeed
+            speedLabel.Text = "Скорость: " .. flySpeed
+            speedSlider.Text = tostring(flySpeed)
+            SendMessage("[SPEED] Скорость: " .. flySpeed)
+        end
+    end
+end)
