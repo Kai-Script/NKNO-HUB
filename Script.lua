@@ -23,6 +23,7 @@ do
             ThemeTab="Темы",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
+            MusicTab="Музыка",
             AutoFarmToggle="Авто Фарм",
             SpeedLabel="Скорость: %d",
             DistLabel="WinsFarmer:",
@@ -53,6 +54,7 @@ do
             ThemeTab="Themes",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
+            MusicTab="Music",
             AutoFarmToggle="Auto Farm",
             SpeedLabel="Speed: %d",
             DistLabel="WinsFarmer:",
@@ -81,7 +83,7 @@ do
     local visualParts={};
     local currentWorld="1 World";
     local currentDistance=nil;
-    local currentSpeed=110;
+    local currentSpeed=300; -- начальная скорость, можно регулировать до 450
     local autoFarmActive=false;
     local noClipConnection=nil;
     local godModeConnection=nil;
@@ -526,6 +528,7 @@ do
         if flyBV then toggleManualFly(false);end
         if afkConnection then afkConnection:Disconnect();end
         if checkModelConnection then checkModelConnection:Disconnect();end
+        stopMusic(); -- останавливаем музыку при закрытии
         toggleMenu(false);
         task.wait(0.3);
         ScreenGui:Destroy();
@@ -630,6 +633,176 @@ do
     AdminPage.BackgroundTransparency=1;
     AdminPage.Size=UDim2.new(1,0,1,0);
     AdminPage.Visible=false;
+    -- ===== НОВАЯ ВКЛАДКА MUSIC =====
+    local MusicPage = Instance.new("Frame")
+    MusicPage.Parent = ContentArea
+    MusicPage.BackgroundTransparency = 1
+    MusicPage.Size = UDim2.new(1,0,1,0)
+    MusicPage.Visible = false
+
+    -- Список песен bbno$
+    local songs = {
+        {name = "Lalala", id = 1843688177},
+        {name = "edamame", id = 6800421441},
+        {name = "Whip a Tesla", id = 5792980570},
+        {name = "Nursery", id = 7174288763},
+        {name = "Help Herself", id = 6470924794}
+    }
+
+    local currentSong = nil
+    local soundObject = nil
+    local isMusicPlaying = false
+
+    -- Функция остановки музыки
+    local function stopMusic()
+        if soundObject then
+            soundObject:Stop()
+            soundObject:Destroy()
+            soundObject = nil
+        end
+        isMusicPlaying = false
+    end
+
+    -- Функция воспроизведения
+    local function playSong(songId)
+        stopMusic()
+        soundObject = Instance.new("Sound")
+        soundObject.SoundId = "rbxassetid://" .. songId
+        soundObject.Volume = 0.5
+        soundObject.Looped = true
+        soundObject.Parent = game:GetService("SoundService")
+        soundObject:Play()
+        isMusicPlaying = true
+    end
+
+    -- Контейнер для элементов музыки
+    local MusicContainer = Instance.new("Frame")
+    MusicContainer.Parent = MusicPage
+    MusicContainer.BackgroundTransparency = 1
+    MusicContainer.Size = UDim2.new(0.96,0,1,0)
+
+    -- Заголовок
+    local MusicTitle = Instance.new("TextLabel")
+    MusicTitle.Parent = MusicContainer
+    MusicTitle.BackgroundTransparency = 1
+    MusicTitle.Size = UDim2.new(1,0,0,30)
+    MusicTitle.Font = Enum.Font.GothamBold
+    MusicTitle.Text = "🎵 BBNO$ MUSIC PLAYER"
+    MusicTitle.TextColor3 = Color3.fromRGB(255,255,255)
+    MusicTitle.TextSize = 18
+    MusicTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Кнопка вкл/выкл
+    local MusicToggleFrame = Instance.new("Frame")
+    MusicToggleFrame.Parent = MusicContainer
+    MusicToggleFrame.BackgroundColor3 = Color3.fromRGB(16,16,23)
+    MusicToggleFrame.BackgroundTransparency = 0.15
+    MusicToggleFrame.Position = UDim2.new(0,0,0,40)
+    MusicToggleFrame.Size = UDim2.new(1,0,0,50)
+    Instance.new("UICorner", MusicToggleFrame).CornerRadius = UDim.new(0,10)
+
+    local MusicToggleLabel = Instance.new("TextLabel")
+    MusicToggleLabel.Parent = MusicToggleFrame
+    MusicToggleLabel.BackgroundTransparency = 1
+    MusicToggleLabel.Position = UDim2.new(0,16,0,0)
+    MusicToggleLabel.Size = UDim2.new(0.7,0,1,0)
+    MusicToggleLabel.Font = Enum.Font.GothamBold
+    MusicToggleLabel.Text = "Включить музыку"
+    MusicToggleLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    MusicToggleLabel.TextSize = 15
+    MusicToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local MusicSwitchBG = Instance.new("TextButton")
+    MusicSwitchBG.Parent = MusicToggleFrame
+    MusicSwitchBG.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    MusicSwitchBG.Position = UDim2.new(1, -65,0.5, -14)
+    MusicSwitchBG.Size = UDim2.new(0,50,0,28)
+    MusicSwitchBG.Text = ""
+    Instance.new("UICorner", MusicSwitchBG).CornerRadius = UDim.new(0,14)
+
+    local MusicSwitchDot = Instance.new("Frame")
+    MusicSwitchDot.Parent = MusicSwitchBG
+    MusicSwitchDot.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    MusicSwitchDot.Position = UDim2.new(0,3,0.5, -11)
+    MusicSwitchDot.Size = UDim2.new(0,22,0,22)
+    Instance.new("UICorner", MusicSwitchDot).CornerRadius = UDim.new(0,11)
+
+    local musicEnabled = false
+    MusicSwitchBG.MouseButton1Click:Connect(function()
+        musicEnabled = not musicEnabled
+        if musicEnabled then
+            TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,197,94)}):Play()
+            TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,25,0.5, -11)}):Play()
+            if currentSong then
+                playSong(currentSong.id)
+            elseif #songs > 0 then
+                currentSong = songs[1]
+                playSong(currentSong.id)
+            end
+        else
+            TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40,40,55)}):Play()
+            TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,3,0.5, -11)}):Play()
+            stopMusic()
+        end
+    end)
+
+    -- Список песен
+    local SongList = Instance.new("ScrollingFrame")
+    SongList.Parent = MusicContainer
+    SongList.BackgroundColor3 = Color3.fromRGB(14,14,20)
+    SongList.BackgroundTransparency = 0.15
+    SongList.Position = UDim2.new(0,0,0,105)
+    SongList.Size = UDim2.new(1,0,1, -115)
+    SongList.CanvasSize = UDim2.new(0,0,0,0)
+    SongList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    SongList.ScrollBarThickness = 4
+    SongList.BorderSizePixel = 0
+    Instance.new("UICorner", SongList).CornerRadius = UDim.new(0,10)
+
+    local SongListLayout = Instance.new("UIListLayout")
+    SongListLayout.Parent = SongList
+    SongListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    SongListLayout.Padding = UDim.new(0,6)
+
+    local SongListPadding = Instance.new("UIPadding")
+    SongListPadding.Parent = SongList
+    SongListPadding.PaddingTop = UDim.new(0,6)
+    SongListPadding.PaddingLeft = UDim.new(0,6)
+
+    for _, song in ipairs(songs) do
+        local btn = Instance.new("TextButton")
+        btn.Parent = SongList
+        btn.BackgroundColor3 = Color3.fromRGB(20,20,28)
+        btn.BackgroundTransparency = 0.15
+        btn.Size = UDim2.new(1, -6,0,40)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.Text = "▶ " .. song.name
+        btn.TextColor3 = Color3.fromRGB(200,200,220)
+        btn.TextSize = 15
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+        
+        btn.MouseButton1Click:Connect(function()
+            currentSong = song
+            if musicEnabled then
+                playSong(song.id)
+            else
+                musicEnabled = true
+                TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,197,94)}):Play()
+                TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,25,0.5, -11)}):Play()
+                playSong(song.id)
+            end
+            for _, child in ipairs(SongList:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child.BackgroundColor3 = Color3.fromRGB(20,20,28)
+                end
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(34,197,94)
+        end)
+    end
+
+    -- ===== КОНЕЦ ВКЛАДКИ MUSIC =====
+
     local tabButtons={};
     local function createTabButton(text,page)
         local btn=Instance.new("TextButton");
@@ -651,6 +824,7 @@ do
             MovementPage.Visible=page==MovementPage ;
             ThemePage.Visible=page==ThemePage ;
             AdminPage.Visible=page==AdminPage ;
+            MusicPage.Visible=page==MusicPage ;
         end);
         table.insert(tabButtons,btn);
         return btn;
@@ -659,6 +833,7 @@ do
     local movementTabBtn=createTabButton("Moovement",MovementPage);
     local themeTabBtn=createTabButton("Theme",ThemePage);
     local adminTabBtn=createTabButton("AdminPanel",AdminPage);
+    local musicTabBtn=createTabButton("Music",MusicPage); -- новая кнопка
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
@@ -998,9 +1173,8 @@ do
             btn.BackgroundColor3=Color3.fromRGB(30,30,42);
             btn.TextColor3=Color3.fromRGB(255,255,255);
             buildDistanceOptions();
-            local maxSpd=110;
-            if (currentWorld=="2 World") then maxSpd=190;
-            elseif (currentWorld=="Bbnos World") then maxSpd=300;end
+            -- Устанавливаем максимальную скорость 450 для всех миров
+            local maxSpd = 450
             if (currentSpeed>maxSpd) then currentSpeed=maxSpd;end
             SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
             TweenService:Create(SliderFillAuto,TweenInfo.new(0.2),{Size=UDim2.new(currentSpeed/maxSpd ,0,1,0)}):Play();
@@ -1082,9 +1256,7 @@ do
     local draggingSliderAuto=false;
     local function updateSpeedAuto(input)
         local fraction=math.clamp((input.Position.X-SliderTrack.AbsolutePosition.X)/SliderTrack.AbsoluteSize.X ,0,1);
-        local maxSpd=110;
-        if (currentWorld=="2 World") then maxSpd=190;
-        elseif (currentWorld=="Bbnos World") then maxSpd=300;end
+        local maxSpd = 450  -- теперь всегда 450
         currentSpeed=math.floor(fraction * maxSpd );
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         TweenService:Create(SliderFillAuto,TweenInfo.new(0.05),{Size=UDim2.new(fraction,0,1,0)}):Play();
@@ -1446,45 +1618,3 @@ do
         if ( #savedPositions>0) then
             local copyStr=table.concat(savedPositions,"\n");
             if setclipboard then setclipboard(copyStr);end
-            CopyBtn.Text=L("Copied");
-            task.delay(1.5,function() CopyBtn.Text=L("CopyPosBtn");end);
-        else
-            CopyBtn.Text=L("EmptyList");
-            task.delay(1.5,function() CopyBtn.Text=L("CopyPosBtn");end);
-        end
-    end);
-    _G.UpdateColors=function(col)
-        accentColor=col;
-        SliderFillAuto.BackgroundColor3=col;
-        FlySpeedFill.BackgroundColor3=col;
-        CheckPosBtn.BackgroundColor3=col;
-        UnlockBtn.BackgroundColor3=col;
-        refreshPositionUI();
-    end;
-    _G.ApplyLanguage=function()
-        ThemeTitle.Text=L("ThemeTitle");
-        WorldLabel.Text=string.format(L("WorldLabel"),currentWorld);
-        autoFarmTabBtn.Text=L("AutoFarmTab");
-        themeTabBtn.Text=L("ThemeTab");
-        movementTabBtn.Text=L("MovementTab");
-        adminTabBtn.Text=L("AdminTab");
-        ToggleLabel.Text=L("AutoFarmToggle");
-        SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
-        FlySpeedLabelUI.Text=string.format(L("FlySpeedLabel"),flySpeed);
-        DistLabel.Text=L("DistLabel");
-        CheckPosBtn.Text=L("SavePosBtn");
-        CopyBtn.Text=L("CopyPosBtn");
-        AdminTitleLabel.Text=L("AdminTitle");
-        KeyInput.PlaceholderText=L("EnterKey");
-        UnlockBtn.Text=L("UnlockBtn");
-        CheckPosToggleLabel.Text=L("CheckPosToggle");
-        CheckModelToggleLabel.Text=L("CheckModelToggle");
-        InfJumpLabel.Text=L("InfJumpToggle");
-        FlyLabel.Text=L("FlyToggle");
-        for i,rowText in ipairs(ThemeRows) do
-            if L("Themes")[i] then rowText.Text=L("Themes")[i];end
-        end
-        buildDistanceOptions();
-    end;
-    buildDistanceOptions();
-end
