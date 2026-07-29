@@ -44,13 +44,14 @@ do
             FlyToggle="Fly (Джойстик/WASD)",
             FlySpeedLabel="Скорость полета: %d",
             Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"},
-            -- Новые переводы для Scripts
             ScriptsTab="Скрипты",
             MM2Script="Murder Mystery 2",
             SpeedScript="+1 Speed Keyboard",
             RunScript="Запустить",
             EnterScriptURL="Введите URL скрипта...",
-            ScriptLoaded="Скрипт загружен и выполнен!"
+            ScriptLoaded="Скрипт загружен и выполнен!",
+            -- для окна выбора скрипта
+            SelectScript="Выберите скрипт для запуска"
         },
         EN={
             ChooseLang="Choose language",
@@ -81,13 +82,14 @@ do
             FlyToggle="Fly (Joystick/WASD)",
             FlySpeedLabel="Fly Speed: %d",
             Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"},
-            -- Новые переводы для Scripts
             ScriptsTab="Scripts",
             MM2Script="Murder Mystery 2",
             SpeedScript="+1 Speed Keyboard",
             RunScript="Run",
             EnterScriptURL="Enter script URL...",
-            ScriptLoaded="Script loaded and executed!"
+            ScriptLoaded="Script loaded and executed!",
+            -- для окна выбора скрипта
+            SelectScript="Select script to run"
         }
     };
     local function L(key) return Locales[lang][key];end 
@@ -485,12 +487,108 @@ do
             TweenService:Create(LangScale,TweenInfo.new(0.25,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Scale=0}):Play();
             task.wait(0.2);
             LangFrame.Visible=false;
-            ToggleWidget.Visible=true;
-            toggleMenu(true);
+            -- показываем окно выбора скрипта
+            ScriptSelectFrame.Visible=true;
+            local scriptScale=ScriptSelectScale;
+            scriptScale.Scale=0.8;
+            TweenService:Create(scriptScale,TweenInfo.new(0.4,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Scale=1}):Play();
         end);
     end
     buildLangButton("RU","Русский",65,"RU");
     buildLangButton("EN","English",205,"EN");
+
+    -- ===== НОВОЕ ОКНО ВЫБОРА СКРИПТА =====
+    local ScriptSelectFrame=Instance.new("Frame");
+    ScriptSelectFrame.Name="ScriptSelectFrame";
+    ScriptSelectFrame.Parent=ScreenGui;
+    ScriptSelectFrame.BackgroundColor3=Color3.fromRGB(12,12,18);
+    ScriptSelectFrame.BackgroundTransparency=0.15;
+    ScriptSelectFrame.AnchorPoint=Vector2.new(0.5,0.5);
+    ScriptSelectFrame.Position=UDim2.new(0.5,0,0.5,0);
+    ScriptSelectFrame.Size=UDim2.new(0,420,0,280);
+    ScriptSelectFrame.Visible=false;
+    Instance.new("UICorner",ScriptSelectFrame).CornerRadius=UDim.new(0,14);
+    Instance.new("UIStroke",ScriptSelectFrame).Color=Color3.fromRGB(45,45,60);
+    local ScriptSelectScale=Instance.new("UIScale",ScriptSelectFrame);
+    ScriptSelectScale.Scale=0.8;
+
+    local ScriptTitle=Instance.new("TextLabel");
+    ScriptTitle.Parent=ScriptSelectFrame;
+    ScriptTitle.BackgroundTransparency=1;
+    ScriptTitle.Position=UDim2.new(0,0,0,25);
+    ScriptTitle.Size=UDim2.new(1,0,0,30);
+    ScriptTitle.Font=Enum.Font.GothamBold;
+    ScriptTitle.Text=L("SelectScript");
+    ScriptTitle.TextColor3=Color3.fromRGB(255,255,255);
+    ScriptTitle.TextSize=18;
+
+    -- Функция для создания кнопки выбора скрипта
+    local function buildScriptButton(emoji, text, posX, url)
+        local Btn=Instance.new("TextButton");
+        Btn.Parent=ScriptSelectFrame;
+        Btn.BackgroundColor3=Color3.fromRGB(20,20,28);
+        Btn.BackgroundTransparency=0.15;
+        Btn.Position=UDim2.new(0,posX,0,80);
+        Btn.Size=UDim2.new(0,140,0,140);
+        Btn.Text="";
+        Instance.new("UICorner",Btn).CornerRadius=UDim.new(1,0);
+        Instance.new("UIStroke",Btn).Color=Color3.fromRGB(45,45,65);
+        local EmojiLabel=Instance.new("TextLabel");
+        EmojiLabel.Parent=Btn;
+        EmojiLabel.BackgroundTransparency=1;
+        EmojiLabel.Size=UDim2.new(1,0,1,0);
+        EmojiLabel.Font=Enum.Font.Gotham;
+        EmojiLabel.Text=emoji;
+        EmojiLabel.TextSize=70;
+        local TextLabel=Instance.new("TextLabel");
+        TextLabel.Parent=Btn;
+        TextLabel.BackgroundTransparency=1;
+        TextLabel.Position=UDim2.new(0,0,1,10);
+        TextLabel.Size=UDim2.new(1,0,0,20);
+        TextLabel.Font=Enum.Font.GothamSemibold;
+        TextLabel.Text=text;
+        TextLabel.TextColor3=Color3.fromRGB(200,200,220);
+        TextLabel.TextSize=15;
+        Btn.MouseButton1Click:Connect(function()
+            -- Запускаем скрипт по URL
+            if url and url~="" then
+                pcall(function()
+                    local func=loadstring(game:HttpGet(url));
+                    if func then
+                        func();
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title="Script Loader",
+                            Text=L("ScriptLoaded"),
+                            Duration=4
+                        });
+                    else
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title="Error",
+                            Text="Invalid script",
+                            Duration=4
+                        });
+                    end
+                end)
+            end
+            -- Закрываем окно выбора скрипта и открываем хаб
+            TweenService:Create(ScriptSelectScale,TweenInfo.new(0.25,Enum.EasingStyle.Quart,Enum.EasingDirection.In),{Scale=0}):Play();
+            task.wait(0.2);
+            ScriptSelectFrame.Visible=false;
+            ToggleWidget.Visible=true;
+            toggleMenu(true);
+        end);
+        return Btn;
+    end
+
+    -- ЗДЕСЬ ВСТАВЬ РЕАЛЬНЫЕ ССЫЛКИ НА СКРИПТЫ
+    local mm2Url = "https://pastebin.com/raw/XXXXX"    -- Murder Mystery 2
+    local speedUrl = "https://pastebin.com/raw/YYYYY"  -- +1 Speed Keyboard
+
+    buildScriptButton("🗡️", L("MM2Script"), 30, mm2Url);
+    buildScriptButton("⚡", L("SpeedScript"), 250, speedUrl);
+
+    -- ===== КОНЕЦ ОКНА ВЫБОРА СКРИПТА =====
+
     local dragging,dragInput,dragStart,startPos;
     MainFrame.InputBegan:Connect(function(input)
         if ((input.UserInputType==Enum.UserInputType.MouseButton1) or (input.UserInputType==Enum.UserInputType.Touch)) then
@@ -804,17 +902,13 @@ do
         btn.TextSize=15;
         Instance.new("UICorner",btn).CornerRadius=UDim.new(0,10);
         btn.MouseButton1Click:Connect(function()
-            -- Вставляем URL в поле и сразу запускаем
             ScriptURLBox.Text = url;
             RunScriptBtn.MouseButton1Click:Fire();
         end);
         return btn;
     end
 
-    -- ЗДЕСЬ ЗАМЕНИТЕ ССЫЛКИ НА РЕАЛЬНЫЕ URL ВАШИХ СКРИПТОВ
-    local mm2Url = "https://pastebin.com/raw/XXXXX"    -- ссылка на Murder Mystery 2 скрипт
-    local speedUrl = "https://pastebin.com/raw/YYYYY"  -- ссылка на +1 Speed Keyboard скрипт
-
+    -- Используем те же переменные mm2Url и speedUrl
     createQuickScriptBtn(L("MM2Script"), mm2Url, 0);
     createQuickScriptBtn(L("SpeedScript"), speedUrl, 50);
     -- ===== КОНЕЦ БЛОКА SCRIPTS =====
@@ -1586,7 +1680,7 @@ do
         FlySpeedFill.BackgroundColor3=col;
         CheckPosBtn.BackgroundColor3=col;
         UnlockBtn.BackgroundColor3=col;
-        RunScriptBtn.BackgroundColor3=col; -- тоже меняем цвет
+        RunScriptBtn.BackgroundColor3=col;
         refreshPositionUI();
     end;
     _G.ApplyLanguage=function()
@@ -1596,7 +1690,7 @@ do
         themeTabBtn.Text=L("ThemeTab");
         movementTabBtn.Text=L("MovementTab");
         adminTabBtn.Text=L("AdminTab");
-        scriptsTabBtn.Text=L("ScriptsTab"); -- обновляем текст вкладки
+        scriptsTabBtn.Text=L("ScriptsTab");
         ToggleLabel.Text=L("AutoFarmToggle");
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         FlySpeedLabelUI.Text=string.format(L("FlySpeedLabel"),flySpeed);
@@ -1610,21 +1704,27 @@ do
         CheckModelToggleLabel.Text=L("CheckModelToggle");
         InfJumpLabel.Text=L("InfJumpToggle");
         FlyLabel.Text=L("FlyToggle");
-        -- Обновляем тексты на странице Scripts
         ScriptURLBox.PlaceholderText=L("EnterScriptURL");
         RunScriptBtn.Text=L("RunScript");
-        -- обновить кнопки быстрых скриптов (тексты), но они созданы с L(), поэтому при переключении языка они обновятся при следующем вызове ApplyLanguage?
-        -- они созданы со статическим текстом, поэтому лучше пересоздать их или обновить текст.
-        -- Для простоты пересоздадим их при смене языка.
-        -- Но т.к. это делается редко, можно просто пересоздать кнопки.
-        -- Я добавлю обновление через отдельную функцию, которую вызовем здесь.
-        -- Пересоздадим быстрые кнопки (удалим старые и создадим новые).
+        -- обновляем заголовок окна выбора скрипта
+        ScriptTitle.Text=L("SelectScript");
+        -- обновляем текст кнопок в окне выбора скрипта (пересоздадим кнопки, так как они уже созданы, но текст изменится только при повторном создании)
+        -- удалим старые кнопки выбора скрипта (кроме заголовка)
+        for _, child in ipairs(ScriptSelectFrame:GetChildren()) do
+            if child:IsA("TextButton") then
+                child:Destroy();
+            end
+        end
+        -- заново создаем кнопки с новыми переводами
+        buildScriptButton("🗡️", L("MM2Script"), 30, mm2Url);
+        buildScriptButton("⚡", L("SpeedScript"), 250, speedUrl);
+
+        -- обновляем быстрые кнопки на странице Scripts
         for _, child in ipairs(ScriptsContainer:GetChildren()) do
             if child:IsA("TextButton") and child ~= RunScriptBtn and child ~= ScriptURLBox and child ~= QuickLabel and child ~= ScriptsTitle then
                 child:Destroy();
             end
         end
-        -- заново создаем кнопки с новыми переводами
         createQuickScriptBtn(L("MM2Script"), mm2Url, 0);
         createQuickScriptBtn(L("SpeedScript"), speedUrl, 50);
 
