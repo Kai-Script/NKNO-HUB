@@ -998,10 +998,9 @@ do
             btn.BackgroundColor3=Color3.fromRGB(30,30,42);
             btn.TextColor3=Color3.fromRGB(255,255,255);
             buildDistanceOptions();
-            local maxSpd=110;
-            if (currentWorld=="2 World") then maxSpd=190;
-            elseif (currentWorld=="Bbnos World") then maxSpd=300;end
-            if (currentSpeed>maxSpd) then currentSpeed=maxSpd;end
+            -- Установка максимальной скорости 500 для любого мира
+            local maxSpd = 500;
+            if (currentSpeed>maxSpd) then currentSpeed=maxSpd; end
             SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
             TweenService:Create(SliderFillAuto,TweenInfo.new(0.2),{Size=UDim2.new(currentSpeed/maxSpd ,0,1,0)}):Play();
         end);
@@ -1082,9 +1081,8 @@ do
     local draggingSliderAuto=false;
     local function updateSpeedAuto(input)
         local fraction=math.clamp((input.Position.X-SliderTrack.AbsolutePosition.X)/SliderTrack.AbsoluteSize.X ,0,1);
-        local maxSpd=110;
-        if (currentWorld=="2 World") then maxSpd=190;
-        elseif (currentWorld=="Bbnos World") then maxSpd=300;end
+        -- Максимальная скорость 500 для всех миров
+        local maxSpd = 500;
         currentSpeed=math.floor(fraction * maxSpd );
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         TweenService:Create(SliderFillAuto,TweenInfo.new(0.05),{Size=UDim2.new(fraction,0,1,0)}):Play();
