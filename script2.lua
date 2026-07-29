@@ -1,87 +1,103 @@
 --[[
-    NKNO$ HUB
-    Версия 2.0 (Многофункциональный)
+    NKNO$ HUB - Полное управление через GUI
     Discord: https://discord.gg/vQUM4JapP
 ]]
 
 local DiscordLink = "https://discord.gg/vQUM4JapP"
+local HubName = "NKNO$ HUB"
 
--- ========== Службы ==========
+-- Сервисы
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local LP = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
-local GuiService = game:GetService("GuiService")
+local HttpService = game:GetService("HttpService")
 
--- ========== Переменные состояния ==========
-local Settings = {
+-- Состояния функций
+local Features = {
     GodMode = false,
-    SpeedHack = false,
-    SpeedMultiplier = 2,
     InfiniteJump = false,
+    SpeedHack = false,
     AntiAFK = false,
-    ESPEnabled = false,
-    ESPColor = Color3.fromRGB(255, 0, 0),
-    TeleportToPlayer = nil,
+    ESP = false,
+    Fly = false,
+    NoClip = false,
+    AutoFarm = false,
+    Teleport = false,
 }
 
--- ========== Создание GUI ==========
+local Settings = {
+    SpeedMultiplier = 2,
+    ESPColor = Color3.fromRGB(255, 0, 0),
+    TeleportTarget = nil,
+}
+
+-- Хранилище для подключений
+local Connections = {}
+
+-- Функция для уведомлений
+local function Notify(text, duration)
+    duration = duration or 3
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = HubName,
+        Text = text,
+        Duration = duration,
+    })
+end
+
+-- ===== GUI =====
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NKNO$HUB"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = LP:WaitForChild("PlayerGui")
 
--- Затемнение
 local Background = Instance.new("Frame")
 Background.Size = UDim2.new(1, 0, 1, 0)
 Background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Background.BackgroundTransparency = 0.7
+Background.BackgroundTransparency = 0.6
 Background.BorderSizePixel = 0
 Background.Parent = ScreenGui
 
--- Главное окно
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 550, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -275, 0.5, -210)
+MainFrame.Size = UDim2.new(0, 550, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -275, 0.5, -250)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-MainFrame.BackgroundTransparency = 0.1
+MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = MainFrame
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = MainFrame
 
 -- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 50)
 Title.Position = UDim2.new(0, 0, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "NKNO$ HUB"
+Title.Text = HubName
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
--- Кнопка закрытия
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 30, 0, 30)
-CloseButton.Position = UDim2.new(1, -40, 0, 8)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "✕"
-CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseButton.TextSize = 24
-CloseButton.Font = Enum.Font.SourceSans
-CloseButton.Parent = MainFrame
-
-CloseButton.MouseButton1Click:Connect(function()
+-- Закрытие
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 8)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.TextSize = 24
+CloseBtn.Font = Enum.Font.SourceSans
+CloseBtn.Parent = MainFrame
+CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Линия
 local Line = Instance.new("Frame")
 Line.Size = UDim2.new(0.95, 0, 0, 2)
 Line.Position = UDim2.new(0.025, 0, 0, 50)
@@ -89,9 +105,9 @@ Line.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 Line.BorderSizePixel = 0
 Line.Parent = MainFrame
 
--- Дискорд ссылка
+-- Дискорд
 local DiscordLabel = Instance.new("TextLabel")
-DiscordLabel.Size = UDim2.new(1, -20, 0, 25)
+DiscordLabel.Size = UDim2.new(0.7, 0, 0, 25)
 DiscordLabel.Position = UDim2.new(0, 10, 0, 55)
 DiscordLabel.BackgroundTransparency = 1
 DiscordLabel.Text = "Discord: " .. DiscordLink
@@ -101,38 +117,35 @@ DiscordLabel.Font = Enum.Font.SourceSans
 DiscordLabel.TextXAlignment = Enum.TextXAlignment.Left
 DiscordLabel.Parent = MainFrame
 
--- Кнопка копирования
-local CopyButton = Instance.new("TextButton")
-CopyButton.Size = UDim2.new(0, 120, 0, 25)
-CopyButton.Position = UDim2.new(1, -130, 0, 55)
-CopyButton.BackgroundColor3 = Color3.fromRGB(66, 133, 244)
-CopyButton.Text = "Копировать"
-CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CopyButton.TextSize = 14
-CopyButton.Font = Enum.Font.Gotham
-CopyButton.Parent = MainFrame
-
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0, 100, 0, 25)
+CopyBtn.Position = UDim2.new(1, -110, 0, 55)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(66, 133, 244)
+CopyBtn.Text = "Копировать"
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.TextSize = 14
+CopyBtn.Font = Enum.Font.Gotham
+CopyBtn.Parent = MainFrame
 local CopyCorner = Instance.new("UICorner")
 CopyCorner.CornerRadius = UDim.new(0, 6)
-CopyCorner.Parent = CopyButton
-
-CopyButton.MouseButton1Click:Connect(function()
+CopyCorner.Parent = CopyBtn
+CopyBtn.MouseButton1Click:Connect(function()
     setclipboard(DiscordLink)
-    CopyButton.Text = "Скопировано!"
+    CopyBtn.Text = "Скопировано!"
     task.wait(1.5)
-    CopyButton.Text = "Копировать"
+    CopyBtn.Text = "Копировать"
 end)
 
--- ========== Вкладки ==========
+-- Вкладки
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 40)
 TabContainer.Position = UDim2.new(0, 10, 0, 85)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local Tabs = {"Игрок", "Визуал", "Телепорт", "Настройки"}
+local TabNames = {"Основные", "Визуал", "Телепорт", "Настройки"}
 local TabButtons = {}
-local CurrentTab = "Игрок"
+local CurrentTab = "Основные"
 
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -135)
@@ -140,18 +153,17 @@ ContentContainer.Position = UDim2.new(0, 10, 0, 130)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.Parent = MainFrame
 
--- Функция создания вкладок
+-- Функция создания вкладки
 local function CreateTab(name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.25, -2, 1, 0)
-    btn.Position = UDim2.new((#TabButtons) * 0.25, 0, 0, 0)
+    btn.Position = UDim2.new(#TabButtons * 0.25, 0, 0, 0)
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextScaled = true
     btn.Font = Enum.Font.Gotham
     btn.Parent = TabContainer
-
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 6)
     btnCorner.Parent = btn
@@ -162,7 +174,6 @@ local function CreateTab(name)
     content.Visible = (name == CurrentTab)
     content.Parent = ContentContainer
 
-    -- Скроллинг, если много элементов
     local ScrollingFrame = Instance.new("ScrollingFrame")
     ScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
     ScrollingFrame.BackgroundTransparency = 1
@@ -176,12 +187,10 @@ local function CreateTab(name)
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     UIListLayout.Parent = ScrollingFrame
 
-    local yOffset = 0
-
-    -- Функция добавления кнопки-переключателя
-    local function AddToggle(label, settingKey, callback)
+    -- Функция создания тогла
+    local function AddToggle(label, featureKey, description)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, 0, 0, 35)
+        frame.Size = UDim2.new(1, 0, 0, 40)
         frame.BackgroundTransparency = 1
         frame.Parent = ScrollingFrame
 
@@ -196,16 +205,28 @@ local function CreateTab(name)
         text.Font = Enum.Font.SourceSans
         text.Parent = frame
 
+        if description then
+            local desc = Instance.new("TextLabel")
+            desc.Size = UDim2.new(0.6, 0, 0, 16)
+            desc.Position = UDim2.new(0, 0, 1, -16)
+            desc.BackgroundTransparency = 1
+            desc.Text = description
+            desc.TextColor3 = Color3.fromRGB(150, 150, 150)
+            desc.TextSize = 12
+            desc.TextXAlignment = Enum.TextXAlignment.Left
+            desc.Font = Enum.Font.SourceSans
+            desc.Parent = frame
+        end
+
         local toggle = Instance.new("TextButton")
         toggle.Size = UDim2.new(0, 80, 0, 30)
         toggle.Position = UDim2.new(1, -90, 0.5, -15)
         toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        toggle.Text = "Вкл"
+        toggle.Text = "Выкл"
         toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
         toggle.TextSize = 14
         toggle.Font = Enum.Font.Gotham
         toggle.Parent = frame
-
         local toggleCorner = Instance.new("UICorner")
         toggleCorner.CornerRadius = UDim.new(0, 6)
         toggleCorner.Parent = toggle
@@ -213,19 +234,19 @@ local function CreateTab(name)
         local state = false
         toggle.MouseButton1Click:Connect(function()
             state = not state
+            Features[featureKey] = state
             toggle.BackgroundColor3 = state and Color3.fromRGB(66, 133, 244) or Color3.fromRGB(60, 60, 70)
             toggle.Text = state and "Вкл" or "Выкл"
-            if settingKey then Settings[settingKey] = state end
-            if callback then callback(state) end
+            Notify(label .. (state and " включена" or " выключена"), 2)
         end)
 
-        return toggle, frame
+        return toggle
     end
 
-    -- Функция добавления слайдера
+    -- Функция создания слайдера
     local function AddSlider(label, settingKey, min, max, default, callback)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, 0, 0, 50)
+        frame.Size = UDim2.new(1, 0, 0, 55)
         frame.BackgroundTransparency = 1
         frame.Parent = ScrollingFrame
 
@@ -253,7 +274,7 @@ local function CreateTab(name)
 
         local slider = Instance.new("Frame")
         slider.Size = UDim2.new(1, 0, 0, 6)
-        slider.Position = UDim2.new(0, 0, 0, 30)
+        slider.Position = UDim2.new(0, 0, 0, 35)
         slider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
         slider.BorderSizePixel = 0
         slider.Parent = frame
@@ -271,7 +292,7 @@ local function CreateTab(name)
             val = math.round(val)
             fill.Size = UDim2.new(rel, 0, 1, 0)
             valueLabel.Text = tostring(val)
-            if settingKey then Settings[settingKey] = val end
+            Settings[settingKey] = val
             if callback then callback(val) end
         end
 
@@ -286,14 +307,14 @@ local function CreateTab(name)
                 dragging = false
             end
         end)
-        UserInputService.InputChanged:Connect(function(input)
+        UIS.InputChanged:Connect(function(input)
             if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
                 updateSlider(input.Position.X)
             end
         end)
     end
 
-    -- Функция добавления простой кнопки
+    -- Функция создания кнопки
     local function AddButton(label, callback)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
@@ -303,82 +324,21 @@ local function CreateTab(name)
         btn.TextSize = 16
         btn.Font = Enum.Font.Gotham
         btn.Parent = ScrollingFrame
-
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 6)
         btnCorner.Parent = btn
-
         btn.MouseButton1Click:Connect(callback)
         return btn
     end
 
     -- Заполнение вкладок
-    if name == "Игрок" then
-        AddToggle("Бессмертие (God Mode)", "GodMode", function(state)
-            if state then
-                -- Простейший God Mode через изменение Humanoid
-                local char = LocalPlayer.Character
-                if char then
-                    local hum = char:FindFirstChild("Humanoid")
-                    if hum then
-                        hum:BreakJointsOnDeath = false
-                        hum.MaxHealth = math.huge
-                        hum.Health = math.huge
-                    end
-                end
-                -- Следим за появлением персонажа
-                local con
-                con = LocalPlayer.CharacterAdded:Connect(function(newChar)
-                    task.wait(0.5)
-                    local hum = newChar:FindFirstChild("Humanoid")
-                    if hum then
-                        hum.BreakJointsOnDeath = false
-                        hum.MaxHealth = math.huge
-                        hum.Health = math.huge
-                    end
-                end)
-                if not Settings._godCon then Settings._godCon = {} end
-                Settings._godCon[1] = con
-            else
-                -- Отключаем
-                local char = LocalPlayer.Character
-                if char then
-                    local hum = char:FindFirstChild("Humanoid")
-                    if hum then
-                        hum.BreakJointsOnDeath = true
-                        hum.MaxHealth = 100
-                        hum.Health = 100
-                    end
-                end
-                if Settings._godCon and Settings._godCon[1] then
-                    Settings._godCon[1]:Disconnect()
-                    Settings._godCon[1] = nil
-                end
-            end
-        end)
-
-        AddToggle("Бесконечный прыжок", "InfiniteJump", function(state)
-            if state then
-                local con
-                con = UserInputService.JumpRequest:Connect(function()
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                    end
-                end)
-                if not Settings._jumpCon then Settings._jumpCon = {} end
-                Settings._jumpCon[1] = con
-            else
-                if Settings._jumpCon and Settings._jumpCon[1] then
-                    Settings._jumpCon[1]:Disconnect()
-                    Settings._jumpCon[1] = nil
-                end
-            end
-        end)
-
+    if name == "Основные" then
+        AddToggle("Бессмертие (God Mode)", "GodMode", "Защита от смерти")
+        AddToggle("Бесконечный прыжок", "InfiniteJump", "Прыгайте без ограничений")
+        AddToggle("Скорость (Speed Hack)", "SpeedHack", "Ускоренное передвижение")
         AddSlider("Множитель скорости", "SpeedMultiplier", 1, 10, 2, function(val)
-            if Settings.SpeedHack then
-                -- Обновляем скорость
-                local char = LocalPlayer.Character
+            if Features.SpeedHack then
+                local char = LP.Character
                 if char then
                     local hum = char:FindFirstChild("Humanoid")
                     if hum then
@@ -387,150 +347,19 @@ local function CreateTab(name)
                 end
             end
         end)
-
-        AddToggle("Скорость (Speed Hack)", "SpeedHack", function(state)
-            Settings.SpeedHack = state
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChild("Humanoid")
-                if hum then
-                    if state then
-                        hum.WalkSpeed = 16 * Settings.SpeedMultiplier
-                    else
-                        hum.WalkSpeed = 16
-                    end
-                end
-            end
-        end)
-
-        AddToggle("Анти-АФК", "AntiAFK", function(state)
-            if state then
-                local con
-                con = RunService.Heartbeat:Connect(function()
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton2(Vector2.new())
-                end)
-                if not Settings._afkCon then Settings._afkCon = {} end
-                Settings._afkCon[1] = con
-            else
-                if Settings._afkCon and Settings._afkCon[1] then
-                    Settings._afkCon[1]:Disconnect()
-                    Settings._afkCon[1] = nil
-                end
-            end
-        end)
-
-        AddButton("Изменить имя в игре (Fake Name)", function()
-            local name = game:GetService("TextService"):GetTextSize("Введите новое имя", 16, Enum.Font.SourceSans, Vector2.new(1000, 1000))
-            local input = game:GetService("GuiService"):GetGuiObjectAtPosition()
-            -- Для простоты используем диалог ввода (в некоторых эксплойтах есть)
-            local newName = "NKNO$ Hacker"
-            LocalPlayer.Character.Humanoid.DisplayName = newName
-        end)
+        AddToggle("Анти-АФК", "AntiAFK", "Не даёт выкинуть из игры")
+        AddToggle("Полёт (Fly)", "Fly", "Свободное перемещение в воздухе")
+        AddToggle("Ноклип (NoClip)", "NoClip", "Проход сквозь стены")
+        AddToggle("Авто-фарм (AutoFarm)", "AutoFarm", "Автоматический фарм (для некоторых игр)")
     end
 
     if name == "Визуал" then
-        AddToggle("ESP (Игроки)", "ESPEnabled", function(state)
-            Settings.ESPEnabled = state
-            if state then
-                -- Создаем ESP для всех игроков
-                local function createESP(player)
-                    if player == LocalPlayer then return end
-                    local char = player.Character
-                    if not char then return end
-                    local root = char:FindFirstChild("HumanoidRootPart")
-                    if not root then return end
-
-                    local esp = Instance.new("BillboardGui")
-                    esp.Name = "NKNO$ESP"
-                    esp.Size = UDim2.new(0, 60, 0, 60)
-                    esp.Adornee = root
-                    esp.AlwaysOnTop = true
-                    esp.Parent = char
-
-                    local frame = Instance.new("Frame")
-                    frame.Size = UDim2.new(1, 0, 1, 0)
-                    frame.BackgroundTransparency = 0.5
-                    frame.BackgroundColor3 = Settings.ESPColor
-                    frame.BorderSizePixel = 0
-                    frame.Parent = esp
-
-                    local nameLabel = Instance.new("TextLabel")
-                    nameLabel.Size = UDim2.new(1, 0, 0, 20)
-                    nameLabel.Position = UDim2.new(0, 0, 1, 0)
-                    nameLabel.BackgroundTransparency = 1
-                    nameLabel.Text = player.Name
-                    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    nameLabel.TextScaled = true
-                    nameLabel.Font = Enum.Font.Gotham
-                    nameLabel.Parent = esp
-
-                    local distanceLabel = Instance.new("TextLabel")
-                    distanceLabel.Size = UDim2.new(1, 0, 0, 16)
-                    distanceLabel.Position = UDim2.new(0, 0, 1, 20)
-                    distanceLabel.BackgroundTransparency = 1
-                    distanceLabel.Text = "0 м"
-                    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    distanceLabel.TextSize = 12
-                    distanceLabel.Font = Enum.Font.SourceSans
-                    distanceLabel.Parent = esp
-
-                    -- Обновление расстояния
-                    local updateDist
-                    updateDist = RunService.Heartbeat:Connect(function()
-                        if not root or not root.Parent then
-                            updateDist:Disconnect()
-                            return
-                        end
-                        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                        if myRoot then
-                            local dist = (myRoot.Position - root.Position).Magnitude
-                            distanceLabel.Text = string.format("%.1f м", dist)
-                        end
-                    end)
-                    esp:SetAttribute("UpdateDist", updateDist)
-                end
-
-                -- Для существующих игроков
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    createESP(plr)
-                end
-                -- Для новых
-                local newPlayerCon
-                newPlayerCon = Players.PlayerAdded:Connect(createESP)
-                Settings._espCon = newPlayerCon
-                Settings._espCreated = true
-
-                -- Очистка при удалении игрока
-                local remCon
-                remCon = Players.PlayerRemoving:Connect(function(plr)
-                    local char = plr.Character
-                    if char then
-                        local esp = char:FindFirstChild("NKNO$ESP")
-                        if esp then esp:Destroy() end
-                    end
-                end)
-                Settings._espRemCon = remCon
-            else
-                -- Удаляем ESP
-                for _, plr in ipairs(Players:GetPlayers()) do
-                    local char = plr.Character
-                    if char then
-                        local esp = char:FindFirstChild("NKNO$ESP")
-                        if esp then esp:Destroy() end
-                    end
-                end
-                if Settings._espCon then Settings._espCon:Disconnect() end
-                if Settings._espRemCon then Settings._espRemCon:Disconnect() end
-                Settings._espCreated = false
-            end
-        end)
-
+        AddToggle("ESP (Игроки)", "ESP", "Показывает игроков через стены")
         AddButton("Изменить цвет ESP", function()
-            -- Простой выбор цвета (можно расширить)
             Settings.ESPColor = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255))
-            if Settings.ESPEnabled then
-                -- Обновляем цвет существующих ESP
+            Notify("Цвет ESP изменён", 2)
+            if Features.ESP then
+                -- Обновить существующие ESP
                 for _, plr in ipairs(Players:GetPlayers()) do
                     local char = plr.Character
                     if char then
@@ -543,12 +372,15 @@ local function CreateTab(name)
                 end
             end
         end)
+        AddButton("Показать всех игроков на карте", function()
+            -- Просто пример, можно добавить функцию
+            Notify("Функция в разработке", 2)
+        end)
     end
 
     if name == "Телепорт" then
-        -- Список игроков
-        local function refreshPlayerList()
-            -- Очищаем старые кнопки (кроме первой)
+        local function refreshPlayers()
+            -- Удаляем старые кнопки (кроме кнопки обновления)
             local children = ScrollingFrame:GetChildren()
             for _, child in ipairs(children) do
                 if child:IsA("TextButton") and child.Name ~= "RefreshBtn" then
@@ -557,7 +389,7 @@ local function CreateTab(name)
             end
             local y = 0
             for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= LocalPlayer then
+                if plr ~= LP then
                     local btn = Instance.new("TextButton")
                     btn.Size = UDim2.new(1, 0, 0, 30)
                     btn.Position = UDim2.new(0, 0, 0, y)
@@ -574,16 +406,16 @@ local function CreateTab(name)
                     btn.MouseButton1Click:Connect(function()
                         local targetChar = plr.Character
                         if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                            local myChar = LocalPlayer.Character
+                            local myChar = LP.Character
                             if myChar and myChar:FindFirstChild("HumanoidRootPart") then
                                 myChar.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                                Notify("Телепорт к " .. plr.Name, 2)
                             end
                         end
                     end)
                     y = y + 35
                 end
             end
-            -- Обновляем CanvasSize
             ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, y)
         end
 
@@ -591,7 +423,7 @@ local function CreateTab(name)
         refreshBtn.Name = "RefreshBtn"
         refreshBtn.Size = UDim2.new(1, 0, 0, 30)
         refreshBtn.BackgroundColor3 = Color3.fromRGB(66, 133, 244)
-        refreshBtn.Text = "Обновить список"
+        refreshBtn.Text = "Обновить список игроков"
         refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         refreshBtn.TextSize = 14
         refreshBtn.Font = Enum.Font.Gotham
@@ -599,45 +431,53 @@ local function CreateTab(name)
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 4)
         corner.Parent = refreshBtn
+        refreshBtn.MouseButton1Click:Connect(refreshPlayers)
 
-        refreshBtn.MouseButton1Click:Connect(refreshPlayerList)
-
-        -- Инициализация
-        refreshPlayerList()
-
-        -- Автообновление при входе/выходе
-        local playersCon
-        playersCon = Players.PlayerAdded:Connect(refreshPlayerList)
-        playersCon = Players.PlayerRemoving:Connect(refreshPlayerList)
-        if not Settings._teleportCons then Settings._teleportCons = {} end
-        Settings._teleportCons[1] = playersCon
+        refreshPlayers()
+        Players.PlayerAdded:Connect(refreshPlayers)
+        Players.PlayerRemoving:Connect(refreshPlayers)
     end
 
     if name == "Настройки" then
-        AddButton("Сбросить все настройки", function()
-            Settings.GodMode = false
-            Settings.InfiniteJump = false
-            Settings.SpeedHack = false
-            Settings.SpeedMultiplier = 2
-            Settings.AntiAFK = false
-            Settings.ESPEnabled = false
-            -- Отключаем все активные хуки (просто перезагружаем)
-            ScreenGui:Destroy()
-            -- Перезапускаем скрипт (загружаем заново)
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/script.lua"))()
+        AddButton("Включить все функции", function()
+            for key, _ in pairs(Features) do
+                Features[key] = true
+            end
+            -- Обновить все тогглы
+            for _, child in ipairs(ScrollingFrame:GetChildren()) do
+                if child:IsA("Frame") then
+                    local toggle = child:FindFirstChildOfClass("TextButton")
+                    if toggle and toggle.Text == "Выкл" then
+                        toggle.BackgroundColor3 = Color3.fromRGB(66, 133, 244)
+                        toggle.Text = "Вкл"
+                    end
+                end
+            end
+            Notify("Все функции включены", 3)
+        end)
+
+        AddButton("Выключить все функции", function()
+            for key, _ in pairs(Features) do
+                Features[key] = false
+            end
+            for _, child in ipairs(ScrollingFrame:GetChildren()) do
+                if child:IsA("Frame") then
+                    local toggle = child:FindFirstChildOfClass("TextButton")
+                    if toggle and toggle.Text == "Вкл" then
+                        toggle.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+                        toggle.Text = "Выкл"
+                    end
+                end
+            end
+            Notify("Все функции выключены", 3)
         end)
 
         AddButton("Выгрузить GUI", function()
             ScreenGui:Destroy()
         end)
 
-        AddButton("Показать ссылку Discord", function()
-            print("Discord: " .. DiscordLink)
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "NKNO$ HUB",
-                Text = "Discord: " .. DiscordLink,
-                Duration = 5,
-            })
+        AddButton("Показать Discord ссылку", function()
+            Notify("Discord: " .. DiscordLink, 5)
         end)
     end
 
@@ -660,44 +500,42 @@ local function CreateTab(name)
     return content
 end
 
--- Создание всех вкладок
-for _, tabName in ipairs(Tabs) do
+-- Создание вкладок
+for _, tabName in ipairs(TabNames) do
     CreateTab(tabName)
 end
 
 -- Активация первой вкладки
-TabButtons[1].BackgroundColor3 = Color3.fromRGB(66, 133, 244)
-TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
+if #TabButtons > 0 then
+    TabButtons[1].BackgroundColor3 = Color3.fromRGB(66, 133, 244)
+    TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
+end
 
--- ========== Перемещение окна ==========
-local dragging = false
-local dragInput, dragStart, startPos
+-- ===== Реализация функций =====
 
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
+-- God Mode
+local function updateGodMode(state)
+    local char = LP.Character
+    if char then
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            if state then
+                hum.BreakJointsOnDeath = false
+                hum.MaxHealth = math.huge
+                hum.Health = math.huge
+            else
+                hum.BreakJointsOnDeath = true
+                hum.MaxHealth = 100
+                hum.Health = 100
             end
-        end)
+        end
     end
-end)
+end
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
-
--- ========== Фоновые задачи ==========
--- Автоматическое обновление God Mode при смерти
-LocalPlayer.CharacterAdded:Connect(function(char)
+-- Следим за перерождением
+LP.CharacterAdded:Connect(function(char)
     task.wait(0.5)
-    if Settings.GodMode then
+    if Features.GodMode then
         local hum = char:FindFirstChild("Humanoid")
         if hum then
             hum.BreakJointsOnDeath = false
@@ -705,12 +543,315 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             hum.Health = math.huge
         end
     end
-    if Settings.SpeedHack then
+    if Features.SpeedHack then
         local hum = char:FindFirstChild("Humanoid")
         if hum then
             hum.WalkSpeed = 16 * Settings.SpeedMultiplier
         end
     end
+    if Features.Fly then
+        -- Fly будет включен отдельно
+    end
 end)
 
+-- Бесконечный прыжок
+local function updateInfiniteJump(state)
+    if state then
+        local con
+        con = UIS.JumpRequest:Connect(function()
+            if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                LP.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+        Connections.InfiniteJump = con
+    else
+        if Connections.InfiniteJump then
+            Connections.InfiniteJump:Disconnect()
+            Connections.InfiniteJump = nil
+        end
+    end
+end
+
+-- Скорость
+local function updateSpeed(state)
+    local char = LP.Character
+    if char then
+        local hum = char:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = state and (16 * Settings.SpeedMultiplier) or 16
+        end
+    end
+end
+
+-- Анти-АФК
+local function updateAntiAFK(state)
+    if state then
+        local con
+        con = RunService.Heartbeat:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+        Connections.AntiAFK = con
+    else
+        if Connections.AntiAFK then
+            Connections.AntiAFK:Disconnect()
+            Connections.AntiAFK = nil
+        end
+    end
+end
+
+-- ESP
+local function updateESP(state)
+    if state then
+        local function createESP(plr)
+            if plr == LP then return end
+            local char = plr.Character
+            if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+
+            local esp = Instance.new("BillboardGui")
+            esp.Name = "NKNO$ESP"
+            esp.Size = UDim2.new(0, 60, 0, 60)
+            esp.Adornee = root
+            esp.AlwaysOnTop = true
+            esp.Parent = char
+
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(1, 0, 1, 0)
+            frame.BackgroundTransparency = 0.5
+            frame.BackgroundColor3 = Settings.ESPColor
+            frame.BorderSizePixel = 0
+            frame.Parent = esp
+
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 0, 20)
+            nameLabel.Position = UDim2.new(0, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = plr.Name
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextScaled = true
+            nameLabel.Font = Enum.Font.Gotham
+            nameLabel.Parent = esp
+
+            local distLabel = Instance.new("TextLabel")
+            distLabel.Size = UDim2.new(1, 0, 0, 16)
+            distLabel.Position = UDim2.new(0, 0, 1, 20)
+            distLabel.BackgroundTransparency = 1
+            distLabel.Text = "0 м"
+            distLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+            distLabel.TextSize = 12
+            distLabel.Font = Enum.Font.SourceSans
+            distLabel.Parent = esp
+
+            local updateDist
+            updateDist = RunService.Heartbeat:Connect(function()
+                if not root or not root.Parent then
+                    updateDist:Disconnect()
+                    return
+                end
+                local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                if myRoot then
+                    local dist = (myRoot.Position - root.Position).Magnitude
+                    distLabel.Text = string.format("%.1f м", dist)
+                end
+            end)
+            esp:SetAttribute("UpdateDist", updateDist)
+        end
+
+        -- Создаём для всех игроков
+        for _, plr in ipairs(Players:GetPlayers()) do
+            createESP(plr)
+        end
+
+        -- Для новых
+        local plrAddedCon = Players.PlayerAdded:Connect(createESP)
+        Connections.ESP_Add = plrAddedCon
+
+        -- Удаление при выходе
+        local plrRemovedCon = Players.PlayerRemoving:Connect(function(plr)
+            local char = plr.Character
+            if char then
+                local esp = char:FindFirstChild("NKNO$ESP")
+                if esp then esp:Destroy() end
+            end
+        end)
+        Connections.ESP_Rem = plrRemovedCon
+
+    else
+        -- Удалить все ESP
+        for _, plr in ipairs(Players:GetPlayers()) do
+            local char = plr.Character
+            if char then
+                local esp = char:FindFirstChild("NKNO$ESP")
+                if esp then esp:Destroy() end
+            end
+        end
+        if Connections.ESP_Add then Connections.ESP_Add:Disconnect() end
+        if Connections.ESP_Rem then Connections.ESP_Rem:Disconnect() end
+        Connections.ESP_Add = nil
+        Connections.ESP_Rem = nil
+    end
+end
+
+-- Полёт
+local flying = false
+local flySpeed = 50
+local function updateFly(state)
+    if state then
+        flying = true
+        local char = LP.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.MaxForce = Vector3.new(1, 1, 1) * 100000
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                bodyVelocity.Parent = root
+                Connections.FlyBV = bodyVelocity
+
+                local bodyGyro = Instance.new("BodyGyro")
+                bodyGyro.MaxTorque = Vector3.new(1, 1, 1) * 100000
+                bodyGyro.Parent = root
+                Connections.FlyGyro = bodyGyro
+
+                local con
+                con = RunService.Heartbeat:Connect(function()
+                    if not flying then
+                        con:Disconnect()
+                        return
+                    end
+                    local moveVector = Vector3.new(0, 0, 0)
+                    local forward = root.CFrame.LookVector
+                    local right = root.CFrame.RightVector
+                    local up = Vector3.new(0, 1, 0)
+
+                    if UIS:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + forward end
+                    if UIS:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - forward end
+                    if UIS:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - right end
+                    if UIS:IsKeyDown(Enum.KeyCode.D) then moveVector = moveVector + right end
+                    if UIS:IsKeyDown(Enum.KeyCode.Space) then moveVector = moveVector + up end
+                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveVector = moveVector - up end
+
+                    if moveVector.Magnitude > 0 then
+                        moveVector = moveVector.Unit * flySpeed
+                    end
+
+                    bodyVelocity.Velocity = moveVector
+                    bodyGyro.CFrame = root.CFrame
+                end)
+                Connections.FlyLoop = con
+            end
+        end
+    else
+        flying = false
+        if Connections.FlyBV then Connections.FlyBV:Destroy() end
+        if Connections.FlyGyro then Connections.FlyGyro:Destroy() end
+        if Connections.FlyLoop then Connections.FlyLoop:Disconnect() end
+        Connections.FlyBV = nil
+        Connections.FlyGyro = nil
+        Connections.FlyLoop = nil
+    end
+end
+
+-- Ноклип
+local function updateNoClip(state)
+    if state then
+        local con
+        con = RunService.Stepped:Connect(function()
+            local char = LP.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+        Connections.NoClip = con
+    else
+        if Connections.NoClip then
+            Connections.NoClip:Disconnect()
+            Connections.NoClip = nil
+        end
+        -- Восстановить коллизию
+        local char = LP.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+end
+
+-- Авто-фарм (простой пример - автоматическое нажатие кнопок)
+local function updateAutoFarm(state)
+    if state then
+        local con
+        con = RunService.Heartbeat:Connect(function()
+            -- Здесь можно написать логику для конкретной игры, например, клик по объектам
+            -- Для примера просто имитируем нажатие клавиши E
+            UIS:SetKeyDown(Enum.KeyCode.E)
+            task.wait(0.1)
+            UIS:SetKeyUp(Enum.KeyCode.E)
+        end)
+        Connections.AutoFarm = con
+    else
+        if Connections.AutoFarm then
+            Connections.AutoFarm:Disconnect()
+            Connections.AutoFarm = nil
+        end
+    end
+end
+
+-- ===== Отслеживание изменений тогглов =====
+-- Используем функцию, которая будет вызываться при изменении Features
+-- Можно использовать метатаблицу для автоматического вызова при изменении
+local featureMetatable = {
+    __index = Features,
+    __newindex = function(t, key, value)
+        rawset(t, key, value)
+        -- Вызываем соответствующую функцию
+        if key == "GodMode" then updateGodMode(value) end
+        if key == "InfiniteJump" then updateInfiniteJump(value) end
+        if key == "SpeedHack" then updateSpeed(value) end
+        if key == "AntiAFK" then updateAntiAFK(value) end
+        if key == "ESP" then updateESP(value) end
+        if key == "Fly" then updateFly(value) end
+        if key == "NoClip" then updateNoClip(value) end
+        if key == "AutoFarm" then updateAutoFarm(value) end
+    end
+}
+
+setmetatable(Features, featureMetatable)
+
+-- ===== Перемещение окна =====
+local dragging = false
+local dragStart, startPos
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ===== Загрузка завершена =====
+Notify("NKNO$ HUB загружен! Discord: " .. DiscordLink, 5)
 print("NKNO$ HUB загружен! Discord: " .. DiscordLink)
