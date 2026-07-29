@@ -43,7 +43,14 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Джойстик/WASD)",
             FlySpeedLabel="Скорость полета: %d",
-            Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"}
+            Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"},
+            -- Новые переводы для Scripts
+            ScriptsTab="Скрипты",
+            MM2Script="Murder Mystery 2",
+            SpeedScript="+1 Speed Keyboard",
+            RunScript="Запустить",
+            EnterScriptURL="Введите URL скрипта...",
+            ScriptLoaded="Скрипт загружен и выполнен!"
         },
         EN={
             ChooseLang="Choose language",
@@ -73,7 +80,14 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Joystick/WASD)",
             FlySpeedLabel="Fly Speed: %d",
-            Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"}
+            Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"},
+            -- Новые переводы для Scripts
+            ScriptsTab="Scripts",
+            MM2Script="Murder Mystery 2",
+            SpeedScript="+1 Speed Keyboard",
+            RunScript="Run",
+            EnterScriptURL="Enter script URL...",
+            ScriptLoaded="Script loaded and executed!"
         }
     };
     local function L(key) return Locales[lang][key];end 
@@ -630,6 +644,14 @@ do
     AdminPage.BackgroundTransparency=1;
     AdminPage.Size=UDim2.new(1,0,1,0);
     AdminPage.Visible=false;
+    -- ===== ДОБАВЛЕНА НОВАЯ СТРАНИЦА ДЛЯ СКРИПТОВ =====
+    local ScriptsPage=Instance.new("Frame");
+    ScriptsPage.Parent=ContentArea;
+    ScriptsPage.BackgroundTransparency=1;
+    ScriptsPage.Size=UDim2.new(1,0,1,0);
+    ScriptsPage.Visible=false;
+    -- ================================================
+
     local tabButtons={};
     local function createTabButton(text,page)
         local btn=Instance.new("TextButton");
@@ -651,6 +673,7 @@ do
             MovementPage.Visible=page==MovementPage ;
             ThemePage.Visible=page==ThemePage ;
             AdminPage.Visible=page==AdminPage ;
+            ScriptsPage.Visible=page==ScriptsPage ;
         end);
         table.insert(tabButtons,btn);
         return btn;
@@ -659,6 +682,9 @@ do
     local movementTabBtn=createTabButton("Moovement",MovementPage);
     local themeTabBtn=createTabButton("Theme",ThemePage);
     local adminTabBtn=createTabButton("AdminPanel",AdminPage);
+    -- ===== НОВАЯ ВКЛАДКА =====
+    local scriptsTabBtn=createTabButton("Scripts",ScriptsPage);
+    -- =========================
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
@@ -691,6 +717,107 @@ do
         })
     end)
     -- ===== КОНЕЦ БЛОКА DISCORD =====
+
+    -- ===== НАЧАЛО БЛОКА SCRIPTS (содержимое страницы) =====
+    local ScriptsContainer=Instance.new("Frame");
+    ScriptsContainer.Parent=ScriptsPage;
+    ScriptsContainer.BackgroundTransparency=1;
+    ScriptsContainer.Position=UDim2.new(0,10,0,10);
+    ScriptsContainer.Size=UDim2.new(1, -20,1, -20);
+
+    local ScriptsTitle=Instance.new("TextLabel");
+    ScriptsTitle.Parent=ScriptsContainer;
+    ScriptsTitle.BackgroundTransparency=1;
+    ScriptsTitle.Size=UDim2.new(1,0,0,30);
+    ScriptsTitle.Font=Enum.Font.GothamBold;
+    ScriptsTitle.Text="📦 Script Loader";
+    ScriptsTitle.TextColor3=Color3.fromRGB(255,255,255);
+    ScriptsTitle.TextSize=18;
+    ScriptsTitle.TextXAlignment=Enum.TextXAlignment.Left;
+
+    -- Поле ввода URL
+    local ScriptURLBox=Instance.new("TextBox");
+    ScriptURLBox.Parent=ScriptsContainer;
+    ScriptURLBox.BackgroundColor3=Color3.fromRGB(16,16,23);
+    ScriptURLBox.BackgroundTransparency=0.15;
+    ScriptURLBox.Position=UDim2.new(0,0,0,40);
+    ScriptURLBox.Size=UDim2.new(1,0,0,44);
+    ScriptURLBox.Font=Enum.Font.GothamSemibold;
+    ScriptURLBox.TextColor3=Color3.fromRGB(255,255,255);
+    ScriptURLBox.TextSize=15;
+    ScriptURLBox.PlaceholderText=L("EnterScriptURL");
+    ScriptURLBox.ClearTextOnFocus=false;
+    Instance.new("UICorner",ScriptURLBox).CornerRadius=UDim.new(0,10);
+
+    -- Кнопка Run
+    local RunScriptBtn=Instance.new("TextButton");
+    RunScriptBtn.Parent=ScriptsContainer;
+    RunScriptBtn.BackgroundColor3=accentColor;
+    RunScriptBtn.Position=UDim2.new(0,0,0,94);
+    RunScriptBtn.Size=UDim2.new(1,0,0,44);
+    RunScriptBtn.Font=Enum.Font.GothamBold;
+    RunScriptBtn.TextColor3=Color3.fromRGB(255,255,255);
+    RunScriptBtn.TextSize=16;
+    RunScriptBtn.Text=L("RunScript");
+    Instance.new("UICorner",RunScriptBtn).CornerRadius=UDim.new(0,10);
+
+    RunScriptBtn.MouseButton1Click:Connect(function()
+        local url=ScriptURLBox.Text;
+        if url and url~="" then
+            local success, err = pcall(function()
+                local scriptFunc = loadstring(game:HttpGet(url));
+                if scriptFunc then
+                    scriptFunc();
+                    game:GetService("StarterGui"):SetCore("SendNotification", {Title="Script", Text=L("ScriptLoaded"), Duration=3});
+                else
+                    game:GetService("StarterGui"):SetCore("SendNotification", {Title="Error", Text="Invalid script", Duration=3});
+                end
+            end);
+            if not success then
+                game:GetService("StarterGui"):SetCore("SendNotification", {Title="Error", Text="Failed to load script", Duration=3});
+            end
+        end
+    end);
+
+    -- Предустановленные кнопки
+    local QuickLabel=Instance.new("TextLabel");
+    QuickLabel.Parent=ScriptsContainer;
+    QuickLabel.BackgroundTransparency=1;
+    QuickLabel.Position=UDim2.new(0,0,0,150);
+    QuickLabel.Size=UDim2.new(1,0,0,20);
+    QuickLabel.Font=Enum.Font.GothamSemibold;
+    QuickLabel.Text="⚡ Quick Launch:";
+    QuickLabel.TextColor3=Color3.fromRGB(200,200,220);
+    QuickLabel.TextSize=14;
+    QuickLabel.TextXAlignment=Enum.TextXAlignment.Left;
+
+    local function createQuickScriptBtn(text, url, yOffset)
+        local btn=Instance.new("TextButton");
+        btn.Parent=ScriptsContainer;
+        btn.BackgroundColor3=Color3.fromRGB(20,20,28);
+        btn.BackgroundTransparency=0.15;
+        btn.Position=UDim2.new(0,0,0,180 + yOffset);
+        btn.Size=UDim2.new(1,0,0,40);
+        btn.Font=Enum.Font.GothamBold;
+        btn.Text=text;
+        btn.TextColor3=Color3.fromRGB(255,255,255);
+        btn.TextSize=15;
+        Instance.new("UICorner",btn).CornerRadius=UDim.new(0,10);
+        btn.MouseButton1Click:Connect(function()
+            -- Вставляем URL в поле и сразу запускаем
+            ScriptURLBox.Text = url;
+            RunScriptBtn.MouseButton1Click:Fire();
+        end);
+        return btn;
+    end
+
+    -- ЗДЕСЬ ЗАМЕНИТЕ ССЫЛКИ НА РЕАЛЬНЫЕ URL ВАШИХ СКРИПТОВ
+    local mm2Url = "https://pastebin.com/raw/XXXXX"    -- ссылка на Murder Mystery 2 скрипт
+    local speedUrl = "https://pastebin.com/raw/YYYYY"  -- ссылка на +1 Speed Keyboard скрипт
+
+    createQuickScriptBtn(L("MM2Script"), mm2Url, 0);
+    createQuickScriptBtn(L("SpeedScript"), speedUrl, 50);
+    -- ===== КОНЕЦ БЛОКА SCRIPTS =====
 
     local ThemeScroll=Instance.new("ScrollingFrame");
     ThemeScroll.Parent=ThemePage;
@@ -1459,6 +1586,7 @@ do
         FlySpeedFill.BackgroundColor3=col;
         CheckPosBtn.BackgroundColor3=col;
         UnlockBtn.BackgroundColor3=col;
+        RunScriptBtn.BackgroundColor3=col; -- тоже меняем цвет
         refreshPositionUI();
     end;
     _G.ApplyLanguage=function()
@@ -1468,6 +1596,7 @@ do
         themeTabBtn.Text=L("ThemeTab");
         movementTabBtn.Text=L("MovementTab");
         adminTabBtn.Text=L("AdminTab");
+        scriptsTabBtn.Text=L("ScriptsTab"); -- обновляем текст вкладки
         ToggleLabel.Text=L("AutoFarmToggle");
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         FlySpeedLabelUI.Text=string.format(L("FlySpeedLabel"),flySpeed);
@@ -1481,6 +1610,24 @@ do
         CheckModelToggleLabel.Text=L("CheckModelToggle");
         InfJumpLabel.Text=L("InfJumpToggle");
         FlyLabel.Text=L("FlyToggle");
+        -- Обновляем тексты на странице Scripts
+        ScriptURLBox.PlaceholderText=L("EnterScriptURL");
+        RunScriptBtn.Text=L("RunScript");
+        -- обновить кнопки быстрых скриптов (тексты), но они созданы с L(), поэтому при переключении языка они обновятся при следующем вызове ApplyLanguage?
+        -- они созданы со статическим текстом, поэтому лучше пересоздать их или обновить текст.
+        -- Для простоты пересоздадим их при смене языка.
+        -- Но т.к. это делается редко, можно просто пересоздать кнопки.
+        -- Я добавлю обновление через отдельную функцию, которую вызовем здесь.
+        -- Пересоздадим быстрые кнопки (удалим старые и создадим новые).
+        for _, child in ipairs(ScriptsContainer:GetChildren()) do
+            if child:IsA("TextButton") and child ~= RunScriptBtn and child ~= ScriptURLBox and child ~= QuickLabel and child ~= ScriptsTitle then
+                child:Destroy();
+            end
+        end
+        -- заново создаем кнопки с новыми переводами
+        createQuickScriptBtn(L("MM2Script"), mm2Url, 0);
+        createQuickScriptBtn(L("SpeedScript"), speedUrl, 50);
+
         for i,rowText in ipairs(ThemeRows) do
             if L("Themes")[i] then rowText.Text=L("Themes")[i];end
         end
