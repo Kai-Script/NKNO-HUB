@@ -23,7 +23,6 @@ do
             ThemeTab="Темы",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
-            MusicTab="Музыка",
             AutoFarmToggle="Авто Фарм",
             SpeedLabel="Скорость: %d",
             DistLabel="WinsFarmer:",
@@ -54,7 +53,6 @@ do
             ThemeTab="Themes",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
-            MusicTab="Music",
             AutoFarmToggle="Auto Farm",
             SpeedLabel="Speed: %d",
             DistLabel="WinsFarmer:",
@@ -83,7 +81,7 @@ do
     local visualParts={};
     local currentWorld="1 World";
     local currentDistance=nil;
-    local currentSpeed=300; -- начальная скорость
+    local currentSpeed=110;
     local autoFarmActive=false;
     local noClipConnection=nil;
     local godModeConnection=nil;
@@ -108,9 +106,9 @@ do
             ["+400k wins"]={Vector3.new( -399.4,504.7, -57.6),Vector3.new( -398.1,499.8,209.2),Vector3.new( -417.6,501.4,445.3)},
             ["+1,5m wins"]={Vector3.new( -399.4,504.7, -57.6),Vector3.new( -398.1,499.8,209.2),Vector3.new( -396.3,499.8,450),Vector3.new( -398.5,499.7,465.5),Vector3.new( -343.3,499.7,464.7),Vector3.new( -349.3,526.8,576.9),Vector3.new( -454.1,526.8,574.8),Vector3.new( -455.3,551.8,485.5),Vector3.new( -454.8,553.8,467.6),Vector3.new( -350,553.8,464.7),Vector3.new( -349.6,553.8,477.8),Vector3.new( -347.2,580.8,574.4),Vector3.new( -452.8,580.8,577),Vector3.new( -453.2,580.8,565.6),Vector3.new( -454.1,605.9,485.4),Vector3.new( -454.7,607.8,467.2),Vector3.new( -400.6,607.8,467.7),Vector3.new( -399.4,607.6,621.4),Vector3.new( -399.3,607.6,672.4),Vector3.new( -401.2,607.2,825.2),Vector3.new( -401,607.2,859.3),Vector3.new( -317,607.2,1013.9),Vector3.new( -312.5,607.2,1149.9),Vector3.new( -400.4,607.2,1248.3),Vector3.new( -411.5,607.4,1264.2),Vector3.new( -413.7,609,1260.5)},
             ["+2,5m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1697.2),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -417.3,621,2415.6)},
-            ["+4m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1695.9),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -417.3,620.8,2650.8)},
-            ["+6m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1695.9),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -398.7,623.1,2666.7),Vector3.new( -403,623.1,3093.9),Vector3.new( -417.3,621.2,3158.6)},
-            ["+10m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1695.9),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -398.7,623.1,2666.7),Vector3.new( -403,623.1,3093.9),Vector3.new( -401.7,623.1,3172.2),Vector3.new( -399,623.1,3325.1),Vector3.new( -346,623.1,3324.2),Vector3.new( -196.7,623.1,3330.7),Vector3.new( -191.2,623.1,3256.3),Vector3.new( -114.2,623.1,3261.9),Vector3.new( -116.3,623.1,3412.3),Vector3.new( -257.5,623.1,3409.8),Vector3.new( -261,623.1,3608.9),Vector3.new( -529.8,623.1,3607.1),Vector3.new( -535.7,623.1,3790.1),Vector3.new( -118.6,623.1,3798.5),Vector3.new( -119.2,623.1,3867.5),Vector3.new( -59.9,621.2,3883.2)},
+            ["+4m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1697.2),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -417.3,620.8,2650.8)},
+            ["+6m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1697.2),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -398.7,623.1,2666.7),Vector3.new( -403,623.1,3093.9),Vector3.new( -417.3,621.2,3158.6)},
+            ["+10m wins"]={Vector3.new( -398.3,504.7, -55.6),Vector3.new( -395.6,499.8,207.1),Vector3.new( -393.8,499.8,451.7),Vector3.new( -348.7,499.7,467.9),Vector3.new( -348.3,526.8,575.4),Vector3.new( -454.6,526.8,574.6),Vector3.new( -451.9,553.8,467.1),Vector3.new( -347.8,553.8,467.5),Vector3.new( -349.7,580.8,577.1),Vector3.new( -452.2,580.8,574.6),Vector3.new( -452.4,607.8,467.3),Vector3.new( -397.4,607.8,466.1),Vector3.new( -398.8,607.6,621.8),Vector3.new( -400.2,607.2,858),Vector3.new( -300.5,607.2,911.8),Vector3.new( -311.3,607.2,1134.4),Vector3.new( -398.4,607.2,1246.4),Vector3.new( -398.1,618.4,1331.4),Vector3.new( -399,607.2,1429.9),Vector3.new( -390.3,607.2,1475.1),Vector3.new( -363,628,1543.5),Vector3.new( -363.2,628,1602.1),Vector3.new( -361.4,605.1,1697.2),Vector3.new( -361.8,605.1,1752.7),Vector3.new( -362.1,616.7,1792.1),Vector3.new( -398.3,607.2,1860.9),Vector3.new( -397,607.7,1924.8),Vector3.new( -398,619.3,1960),Vector3.new( -398.2,607.2,2040.1),Vector3.new( -398.3,607.2,2097.8),Vector3.new( -398.4,619,2140.1),Vector3.new( -398.6,607.2,2216.9),Vector3.new( -398.5,607.2,2270.2),Vector3.new( -398.4,618.6,2316.5),Vector3.new( -399.6,623.1,2365.9),Vector3.new( -399.7,623.1,2433.8),Vector3.new( -399.7,623.1,2636.1),Vector3.new( -398.7,623.1,2666.7),Vector3.new( -403,623.1,3093.9),Vector3.new( -401.7,623.1,3172.2),Vector3.new( -399,623.1,3325.1),Vector3.new( -346,623.1,3324.2),Vector3.new( -196.7,623.1,3330.7),Vector3.new( -191.2,623.1,3256.3),Vector3.new( -114.2,623.1,3261.9),Vector3.new( -116.3,623.1,3412.3),Vector3.new( -257.5,623.1,3409.8),Vector3.new( -261,623.1,3608.9),Vector3.new( -529.8,623.1,3607.1),Vector3.new( -535.7,623.1,3790.1),Vector3.new( -118.6,623.1,3798.5),Vector3.new( -119.2,623.1,3867.5),Vector3.new( -59.9,621.2,3883.2)},
             ["+15m wins"]={Vector3.new( -396.7,504.7, -54.7),Vector3.new( -396.5,499.8,450.4),Vector3.new( -396.1,499.7,466.2),Vector3.new( -346.2,499.7,465),Vector3.new( -347.7,526.8,575.3),Vector3.new( -454.8,526.8,574.9),Vector3.new( -454,553.8,469.2),Vector3.new( -349.9,553.8,467.2),Vector3.new( -348.2,580.8,576.5),Vector3.new( -450.7,580.8,577.1),Vector3.new( -450,607.8,466.3),Vector3.new( -403.6,607.8,466.9),Vector3.new( -400.4,607.6,622.8),Vector3.new( -400.5,607.2,859.9),Vector3.new( -309.8,607.2,918.2),Vector3.new( -307,607.2,1192.4),Vector3.new( -400.3,607.2,1247.9),Vector3.new( -400.5,618.9,1332.9),Vector3.new( -400.7,607.2,1431.3),Vector3.new( -360.7,628,1544.8),Vector3.new( -362.1,628,1604.5),Vector3.new( -360,605.1,1695.9),Vector3.new( -362.9,617,1793.1),Vector3.new( -400.5,607.2,1860.4),Vector3.new( -400,607.2,1921.3),Vector3.new( -400.1,619.3,1960.1),Vector3.new( -400.3,607.2,2040),Vector3.new( -400.5,607.2,2099.5),Vector3.new( -400.6,619.3,2141.1),Vector3.new( -400.8,607.2,2218),Vector3.new( -400.9,607.2,2276.1),Vector3.new( -400.3,618.6,2316.2),Vector3.new( -398.8,623.1,2433.6),Vector3.new( -395.9,623.1,2668.2),Vector3.new( -401,623.1,3174.8),Vector3.new( -400.7,623.1,3332.6),Vector3.new( -181.5,623.1,3331.3),Vector3.new( -181.7,623.1,3261.6),Vector3.new( -106.9,623.1,3261.4),Vector3.new( -114.6,623.1,3437.5),Vector3.new( -268,623.1,3441.3),Vector3.new( -265.2,623.1,3611.6),Vector3.new( -531.9,623.1,3620),Vector3.new( -535.2,623.1,3801.1),Vector3.new( -130.8,623.1,3799.8),Vector3.new( -130.7,623.1,3864.4),Vector3.new( -46.1,623.2,3864.2),Vector3.new(1189.7,623.4,3865.5),Vector3.new(1228.4,621.6,3908.9)},
             ["+25m wins"]={Vector3.new( -396.7,504.7, -54.7),Vector3.new( -396.5,499.8,450.4),Vector3.new( -396.1,499.7,466.2),Vector3.new( -346.2,499.7,465),Vector3.new( -347.7,526.8,575.3),Vector3.new( -454.8,526.8,574.9),Vector3.new( -454,553.8,469.2),Vector3.new( -349.9,553.8,467.2),Vector3.new( -348.2,580.8,576.5),Vector3.new( -450.7,580.8,577.1),Vector3.new( -450,607.8,466.3),Vector3.new( -403.6,607.8,466.9),Vector3.new( -400.4,607.6,622.8),Vector3.new( -400.5,607.2,859.9),Vector3.new( -309.8,607.2,918.2),Vector3.new( -307,607.2,1192.4),Vector3.new( -400.3,607.2,1247.9),Vector3.new( -400.5,618.9,1332.9),Vector3.new( -400.7,607.2,1431.3),Vector3.new( -360.7,628,1544.8),Vector3.new( -362.1,628,1604.5),Vector3.new( -360,605.1,1695.9),Vector3.new( -362.9,617,1793.1),Vector3.new( -400.5,607.2,1860.4),Vector3.new( -400,607.2,1921.3),Vector3.new( -400.1,619.3,1960.1),Vector3.new( -400.3,607.2,2040),Vector3.new( -400.5,607.2,2099.5),Vector3.new( -400.6,619.3,2141.1),Vector3.new( -400.8,607.2,2218),Vector3.new( -400.9,607.2,2276.1),Vector3.new( -400.3,618.6,2316.2),Vector3.new( -398.8,623.1,2433.6),Vector3.new( -395.9,623.1,2668.2),Vector3.new( -401,623.1,3174.8),Vector3.new( -400.7,623.1,3332.6),Vector3.new( -181.5,623.1,3331.3),Vector3.new( -181.7,623.1,3261.6),Vector3.new( -106.9,623.1,3261.4),Vector3.new( -114.6,623.1,3437.5),Vector3.new( -268,623.1,3441.3),Vector3.new( -265.2,623.1,3611.6),Vector3.new( -531.9,623.1,3620),Vector3.new( -535.2,623.1,3801.1),Vector3.new( -130.8,623.1,3799.8),Vector3.new( -130.7,623.1,3864.4),Vector3.new( -46.1,623.2,3864.2),Vector3.new(1189.7,623.4,3865.5),Vector3.new(1263.6,623.4,3864.6),Vector3.new(1327.3,600,3862.8),Vector3.new(1565,622.1,3789.3),Vector3.new(1770.8,638.8,3940.2),Vector3.new(1971.2,615.5,3805.8),Vector3.new(2115.6,614.4,3954.5),Vector3.new(2313.9,603,3869.1),Vector3.new(2400.2,625.5,3887.9)},
             ["+40m wins"]={Vector3.new( -396.7,504.7, -54.7),Vector3.new( -396.5,499.8,450.4),Vector3.new( -396.1,499.7,466.2),Vector3.new( -346.2,499.7,465),Vector3.new( -347.7,526.8,575.3),Vector3.new( -454.8,526.8,574.9),Vector3.new( -454,553.8,469.2),Vector3.new( -349.9,553.8,467.2),Vector3.new( -348.2,580.8,576.5),Vector3.new( -450.7,580.8,577.1),Vector3.new( -450,607.8,466.3),Vector3.new( -403.6,607.8,466.9),Vector3.new( -400.4,607.6,622.8),Vector3.new( -400.5,607.2,859.9),Vector3.new( -309.8,607.2,918.2),Vector3.new( -307,607.2,1192.4),Vector3.new( -400.3,607.2,1247.9),Vector3.new( -400.5,618.9,1332.9),Vector3.new( -400.7,607.2,1431.3),Vector3.new( -360.7,628,1544.8),Vector3.new( -362.1,628,1604.5),Vector3.new( -360,605.1,1695.9),Vector3.new( -362.9,617,1793.1),Vector3.new( -400.5,607.2,1860.4),Vector3.new( -400,607.2,1921.3),Vector3.new( -400.1,619.3,1960.1),Vector3.new( -400.3,607.2,2040),Vector3.new( -400.5,607.2,2099.5),Vector3.new( -400.6,619.3,2141.1),Vector3.new( -400.8,607.2,2218),Vector3.new( -400.9,607.2,2276.1),Vector3.new( -400.3,618.6,2316.2),Vector3.new( -398.8,623.1,2433.6),Vector3.new( -395.9,623.1,2668.2),Vector3.new( -401,623.1,3174.8),Vector3.new( -400.7,623.1,3332.6),Vector3.new( -181.5,623.1,3331.3),Vector3.new( -181.7,623.1,3261.6),Vector3.new( -106.9,623.1,3261.4),Vector3.new( -114.6,623.1,3437.5),Vector3.new( -268,623.1,3441.3),Vector3.new( -265.2,623.1,3611.6),Vector3.new( -531.9,623.1,3620),Vector3.new( -535.2,623.1,3801.1),Vector3.new( -130.8,623.1,3799.8),Vector3.new( -130.7,623.1,3864.4),Vector3.new( -46.1,623.2,3864.2),Vector3.new(1189.7,623.4,3865.5),Vector3.new(1263.6,623.4,3864.6),Vector3.new(1327.3,600,3862.8),Vector3.new(1565,622.1,3789.3),Vector3.new(1770.8,638.8,3940.2),Vector3.new(1971.2,615.5,3805.8),Vector3.new(2115.6,614.4,3954.5),Vector3.new(2313.9,603,3869.1),Vector3.new(2384,627.4,3868.7),Vector3.new(2418.4,627.4,3868.8),Vector3.new(2450.3,627.3,3868.2),Vector3.new(2499.6,639.3,3869.5),Vector3.new(2548.9,639.3,3870),Vector3.new(2722.7,634.3,3870),Vector3.new(2749,575.3,3867.8),Vector3.new(2826.7,575.3,3868.8),Vector3.new(2859.8,580.9,3868.9),Vector3.new(2920.1,605.2,3869.2),Vector3.new(2960.3,576.3,3870.3),Vector3.new(3005.1,576.3,3869.4),Vector3.new(3048.9,591.6,3869.5),Vector3.new(3171.6,577.4,3868.7),Vector3.new(3215.8,592.3,3874.4),Vector3.new(3269.2,590.6,3887.9)},
@@ -528,7 +526,6 @@ do
         if flyBV then toggleManualFly(false);end
         if afkConnection then afkConnection:Disconnect();end
         if checkModelConnection then checkModelConnection:Disconnect();end
-        stopMusic();
         toggleMenu(false);
         task.wait(0.3);
         ScreenGui:Destroy();
@@ -633,168 +630,6 @@ do
     AdminPage.BackgroundTransparency=1;
     AdminPage.Size=UDim2.new(1,0,1,0);
     AdminPage.Visible=false;
-    -- ===== MUSIC PAGE =====
-    local MusicPage = Instance.new("Frame")
-    MusicPage.Parent = ContentArea
-    MusicPage.BackgroundTransparency = 1
-    MusicPage.Size = UDim2.new(1,0,1,0)
-    MusicPage.Visible = false
-
-    local songs = {
-        {name = "Lalala", id = 1843688177},
-        {name = "edamame", id = 6800421441},
-        {name = "Whip a Tesla", id = 5792980570},
-        {name = "Nursery", id = 7174288763},
-        {name = "Help Herself", id = 6470924794}
-    }
-
-    local currentSong = nil
-    local soundObject = nil
-    local isMusicPlaying = false
-
-    local function stopMusic()
-        if soundObject then
-            soundObject:Stop()
-            soundObject:Destroy()
-            soundObject = nil
-        end
-        isMusicPlaying = false
-    end
-
-    local function playSong(songId)
-        stopMusic()
-        soundObject = Instance.new("Sound")
-        soundObject.SoundId = "rbxassetid://" .. songId
-        soundObject.Volume = 0.5
-        soundObject.Looped = true
-        soundObject.Parent = game:GetService("SoundService")
-        soundObject:Play()
-        isMusicPlaying = true
-    end
-
-    local MusicContainer = Instance.new("Frame")
-    MusicContainer.Parent = MusicPage
-    MusicContainer.BackgroundTransparency = 1
-    MusicContainer.Size = UDim2.new(0.96,0,1,0)
-
-    local MusicTitle = Instance.new("TextLabel")
-    MusicTitle.Parent = MusicContainer
-    MusicTitle.BackgroundTransparency = 1
-    MusicTitle.Size = UDim2.new(1,0,0,30)
-    MusicTitle.Font = Enum.Font.GothamBold
-    MusicTitle.Text = "🎵 BBNO$ MUSIC PLAYER"
-    MusicTitle.TextColor3 = Color3.fromRGB(255,255,255)
-    MusicTitle.TextSize = 18
-    MusicTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-    local MusicToggleFrame = Instance.new("Frame")
-    MusicToggleFrame.Parent = MusicContainer
-    MusicToggleFrame.BackgroundColor3 = Color3.fromRGB(16,16,23)
-    MusicToggleFrame.BackgroundTransparency = 0.15
-    MusicToggleFrame.Position = UDim2.new(0,0,0,40)
-    MusicToggleFrame.Size = UDim2.new(1,0,0,50)
-    Instance.new("UICorner", MusicToggleFrame).CornerRadius = UDim.new(0,10)
-
-    local MusicToggleLabel = Instance.new("TextLabel")
-    MusicToggleLabel.Parent = MusicToggleFrame
-    MusicToggleLabel.BackgroundTransparency = 1
-    MusicToggleLabel.Position = UDim2.new(0,16,0,0)
-    MusicToggleLabel.Size = UDim2.new(0.7,0,1,0)
-    MusicToggleLabel.Font = Enum.Font.GothamBold
-    MusicToggleLabel.Text = "Включить музыку"
-    MusicToggleLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    MusicToggleLabel.TextSize = 15
-    MusicToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local MusicSwitchBG = Instance.new("TextButton")
-    MusicSwitchBG.Parent = MusicToggleFrame
-    MusicSwitchBG.BackgroundColor3 = Color3.fromRGB(40,40,55)
-    MusicSwitchBG.Position = UDim2.new(1, -65,0.5, -14)
-    MusicSwitchBG.Size = UDim2.new(0,50,0,28)
-    MusicSwitchBG.Text = ""
-    Instance.new("UICorner", MusicSwitchBG).CornerRadius = UDim.new(0,14)
-
-    local MusicSwitchDot = Instance.new("Frame")
-    MusicSwitchDot.Parent = MusicSwitchBG
-    MusicSwitchDot.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    MusicSwitchDot.Position = UDim2.new(0,3,0.5, -11)
-    MusicSwitchDot.Size = UDim2.new(0,22,0,22)
-    Instance.new("UICorner", MusicSwitchDot).CornerRadius = UDim.new(0,11)
-
-    local musicEnabled = false
-    MusicSwitchBG.MouseButton1Click:Connect(function()
-        musicEnabled = not musicEnabled
-        if musicEnabled then
-            TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,197,94)}):Play()
-            TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,25,0.5, -11)}):Play()
-            if currentSong then
-                playSong(currentSong.id)
-            elseif #songs > 0 then
-                currentSong = songs[1]
-                playSong(currentSong.id)
-            end
-        else
-            TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40,40,55)}):Play()
-            TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,3,0.5, -11)}):Play()
-            stopMusic()
-        end
-    end)
-
-    local SongList = Instance.new("ScrollingFrame")
-    SongList.Parent = MusicContainer
-    SongList.BackgroundColor3 = Color3.fromRGB(14,14,20)
-    SongList.BackgroundTransparency = 0.15
-    SongList.Position = UDim2.new(0,0,0,105)
-    SongList.Size = UDim2.new(1,0,1, -115)
-    SongList.CanvasSize = UDim2.new(0,0,0,0)
-    SongList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    SongList.ScrollBarThickness = 4
-    SongList.BorderSizePixel = 0
-    Instance.new("UICorner", SongList).CornerRadius = UDim.new(0,10)
-
-    local SongListLayout = Instance.new("UIListLayout")
-    SongListLayout.Parent = SongList
-    SongListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    SongListLayout.Padding = UDim.new(0,6)
-
-    local SongListPadding = Instance.new("UIPadding")
-    SongListPadding.Parent = SongList
-    SongListPadding.PaddingTop = UDim.new(0,6)
-    SongListPadding.PaddingLeft = UDim.new(0,6)
-
-    for _, song in ipairs(songs) do
-        local btn = Instance.new("TextButton")
-        btn.Parent = SongList
-        btn.BackgroundColor3 = Color3.fromRGB(20,20,28)
-        btn.BackgroundTransparency = 0.15
-        btn.Size = UDim2.new(1, -6,0,40)
-        btn.Font = Enum.Font.GothamSemibold
-        btn.Text = "▶ " .. song.name
-        btn.TextColor3 = Color3.fromRGB(200,200,220)
-        btn.TextSize = 15
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
-        
-        btn.MouseButton1Click:Connect(function()
-            currentSong = song
-            if musicEnabled then
-                playSong(song.id)
-            else
-                musicEnabled = true
-                TweenService:Create(MusicSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,197,94)}):Play()
-                TweenService:Create(MusicSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,25,0.5, -11)}):Play()
-                playSong(song.id)
-            end
-            for _, child in ipairs(SongList:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child.BackgroundColor3 = Color3.fromRGB(20,20,28)
-                end
-            end
-            btn.BackgroundColor3 = Color3.fromRGB(34,197,94)
-        end)
-    end
-    -- ===== END MUSIC =====
-
     local tabButtons={};
     local function createTabButton(text,page)
         local btn=Instance.new("TextButton");
@@ -816,7 +651,6 @@ do
             MovementPage.Visible=page==MovementPage ;
             ThemePage.Visible=page==ThemePage ;
             AdminPage.Visible=page==AdminPage ;
-            MusicPage.Visible=page==MusicPage ;
         end);
         table.insert(tabButtons,btn);
         return btn;
@@ -825,11 +659,10 @@ do
     local movementTabBtn=createTabButton("Moovement",MovementPage);
     local themeTabBtn=createTabButton("Theme",ThemePage);
     local adminTabBtn=createTabButton("AdminPanel",AdminPage);
-    local musicTabBtn=createTabButton("Music",MusicPage);
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
-    -- Discord block
+    -- ===== ДОБАВЛЕН БЛОК DISCORD =====
     local DiscordFrame = Instance.new("Frame")
     DiscordFrame.Parent = Sidebar
     DiscordFrame.BackgroundColor3 = Color3.fromRGB(20,20,28)
@@ -857,6 +690,7 @@ do
             Duration = 4
         })
     end)
+    -- ===== КОНЕЦ БЛОКА DISCORD =====
 
     local ThemeScroll=Instance.new("ScrollingFrame");
     ThemeScroll.Parent=ThemePage;
@@ -1164,7 +998,9 @@ do
             btn.BackgroundColor3=Color3.fromRGB(30,30,42);
             btn.TextColor3=Color3.fromRGB(255,255,255);
             buildDistanceOptions();
-            local maxSpd = 450  -- теперь всегда 450
+            local maxSpd=110;
+            if (currentWorld=="2 World") then maxSpd=190;
+            elseif (currentWorld=="Bbnos World") then maxSpd=300;end
             if (currentSpeed>maxSpd) then currentSpeed=maxSpd;end
             SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
             TweenService:Create(SliderFillAuto,TweenInfo.new(0.2),{Size=UDim2.new(currentSpeed/maxSpd ,0,1,0)}):Play();
@@ -1246,7 +1082,9 @@ do
     local draggingSliderAuto=false;
     local function updateSpeedAuto(input)
         local fraction=math.clamp((input.Position.X-SliderTrack.AbsolutePosition.X)/SliderTrack.AbsoluteSize.X ,0,1);
-        local maxSpd = 450  -- всегда 450
+        local maxSpd=110;
+        if (currentWorld=="2 World") then maxSpd=190;
+        elseif (currentWorld=="Bbnos World") then maxSpd=300;end
         currentSpeed=math.floor(fraction * maxSpd );
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         TweenService:Create(SliderFillAuto,TweenInfo.new(0.05),{Size=UDim2.new(fraction,0,1,0)}):Play();
@@ -1630,7 +1468,6 @@ do
         themeTabBtn.Text=L("ThemeTab");
         movementTabBtn.Text=L("MovementTab");
         adminTabBtn.Text=L("AdminTab");
-        musicTabBtn.Text=L("MusicTab"); -- добавляем для музыки
         ToggleLabel.Text=L("AutoFarmToggle");
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         FlySpeedLabelUI.Text=string.format(L("FlySpeedLabel"),flySpeed);
@@ -1649,21 +1486,5 @@ do
         end
         buildDistanceOptions();
     end;
-
-    -- ===== Горячая клавиша G для открытия/закрытия =====
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.KeyCode == Enum.KeyCode.G then
-            toggleMenu()
-        end
-    end)
-
-    -- ===== Показываем виджет сразу (без выбора языка, но окно языка остаётся) =====
-    -- Если вы хотите сразу скрыть окно выбора языка, раскомментируйте:
-    -- LangFrame.Visible = false
-    -- А виджет показываем:
-    ToggleWidget.Visible = true
-
-    -- Завершаем инициализацию
     buildDistanceOptions();
 end
