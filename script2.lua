@@ -1,5 +1,5 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.4 FINAL (исправлен FOV, ESP, авто-килл, ссылки)
+-- NKNO$ HUB ULTIMATE v5.4 FINAL (ИСПРАВЛЕННЫЙ)
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -14,7 +14,8 @@ local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local Clipboard = game:GetService("Clipboard") -- для копирования ссылок
+local Clipboard = game:GetService("Clipboard")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -25,80 +26,20 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 local SCRIPT_VERSION = "5.4 FINAL"
 local UPDATE_DATE = "31 августа"
 
--- === ИНИЦИАЛИЗАЦИЯ НАСТРОЕК С ВЫБОРОМ ЯЗЫКА ===
+-- === ИНИЦИАЛИЗАЦИЯ НАСТРОЕК (без выбора языка) ===
 if not getgenv().NKNO then getgenv().NKNO = {} end
 local NKNO = getgenv().NKNO
 
-if not NKNO.Language then
-    local choiceGui = Instance.new("ScreenGui")
-    choiceGui.Name = "LanguageChooser"
-    choiceGui.Parent = CoreGui
+-- Язык по умолчанию – русский (можно сменить на "en")
+NKNO.Language = "ru"
 
-    local bg = Instance.new("Frame")
-    bg.Size = UDim2.new(0, 400, 0, 150)
-    bg.Position = UDim2.new(0.5, -200, 0.5, -75)
-    bg.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    bg.BorderSizePixel = 0
-    bg.Parent = choiceGui
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 12)
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.Position = UDim2.new(0, 0, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = "Выберите язык / Choose language"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextSize = 18
-    title.Font = Enum.Font.GothamBold
-    title.Parent = bg
-
-    local btnRu = Instance.new("TextButton")
-    btnRu.Size = UDim2.new(0, 120, 0, 40)
-    btnRu.Position = UDim2.new(0.25, -60, 0.7, -20)
-    btnRu.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    btnRu.Text = "Русский"
-    btnRu.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnRu.TextSize = 16
-    btnRu.Font = Enum.Font.GothamBold
-    btnRu.Parent = bg
-    Instance.new("UICorner", btnRu).CornerRadius = UDim.new(0, 8)
-
-    local btnEn = Instance.new("TextButton")
-    btnEn.Size = UDim2.new(0, 120, 0, 40)
-    btnEn.Position = UDim2.new(0.75, -60, 0.7, -20)
-    btnEn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    btnEn.Text = "English"
-    btnEn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btnEn.TextSize = 16
-    btnEn.Font = Enum.Font.GothamBold
-    btnEn.Parent = bg
-    Instance.new("UICorner", btnEn).CornerRadius = UDim.new(0, 8)
-
-    local selected = false
-    btnRu.MouseButton1Click:Connect(function()
-        NKNO.Language = "ru"
-        selected = true
-        choiceGui:Destroy()
-    end)
-    btnEn.MouseButton1Click:Connect(function()
-        NKNO.Language = "en"
-        selected = true
-        choiceGui:Destroy()
-    end)
-
-    repeat task.wait() until selected
-end
-
-local lang = NKNO.Language
-local function T(ru, en) return lang == "ru" and ru or en end
-
--- === ОСТАЛЬНЫЕ НАСТРОЙКИ ===
+-- Остальные настройки
 NKNO.FarmCoins = NKNO.FarmCoins or false
 NKNO.FarmUnderMap = NKNO.FarmUnderMap or false
 NKNO.FarmMode = NKNO.FarmMode or "Nearest"
 NKNO.FarmSpeed = NKNO.FarmSpeed or 20
 NKNO.AutoGrabGun = NKNO.AutoGrabGun or false
-NKNO.AutoKillMurderer = NKNO.AutoKillMurderer or false  -- НОВАЯ НАСТРОЙКА
+NKNO.AutoKillMurderer = NKNO.AutoKillMurderer or false
 NKNO.ESP = NKNO.ESP or {}
 NKNO.ESP.Murderer = NKNO.ESP.Murderer or false
 NKNO.ESP.Sheriff = NKNO.ESP.Sheriff or false
@@ -109,7 +50,7 @@ NKNO.ESP.DisplayName = NKNO.ESP.DisplayName or false
 NKNO.ESP.NormalName = NKNO.ESP.NormalName or true
 NKNO.ESP.FontSize = NKNO.ESP.FontSize or 14
 NKNO.ForceFieldMaterial = NKNO.ForceFieldMaterial or false
-NKNO.CustomFOV = NKNO.CustomFOV or false  -- переключатель (оставлен, но слайдер всегда меняет)
+NKNO.CustomFOV = NKNO.CustomFOV or false
 NKNO.FOVValue = NKNO.FOVValue or 70
 NKNO.GodMode = NKNO.GodMode or false
 NKNO.AntiFling = NKNO.AntiFling or false
@@ -189,7 +130,6 @@ local function applyJumpPower()
     end
 end
 
--- FOV теперь применяется всегда при изменении слайдера
 local function applyFOV()
     if Workspace.CurrentCamera then
         Workspace.CurrentCamera.FieldOfView = NKNO.FOVValue
@@ -660,20 +600,21 @@ end
 local function autoKillMurderer()
     if not NKNO.AutoKillMurderer then return end
     local sheriff = findSheriff()
-    if sheriff ~= LocalPlayer then return end  -- если игрок не шериф, выходим
+    if sheriff ~= LocalPlayer then return end
     local murderer = findMurderer()
     if not murderer or not murderer.Character then return end
     local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Gun")
     if not gun then return end
-    -- Простая атака: телепортируемся к убийце и кликаем
     local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
     if root and targetRoot then
         root.CFrame = targetRoot.CFrame + Vector3.new(0, 2, 0) * CFrame.Angles(0, math.rad(180), 0)
         task.wait(0.1)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-        task.wait(0.05)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+        end)
     end
 end
 
@@ -754,7 +695,6 @@ local function startFarming()
             if part:IsA("BasePart") then part.CanCollide = false end
         end
     else
-        -- ЛЕЖАНИЕ НА СПИНЕ: сдвиг вниз и поворот на 90° вокруг оси X
         root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
     end
     if hum then
@@ -795,7 +735,6 @@ local function stopFarming()
                 end
                 underMapModeForFarm = false
             else
-                -- ВОЗВРАТ В НОРМАЛЬНОЕ ПОЛОЖЕНИЕ
                 root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0) + Vector3.new(0, 2.5, 0)
             end
         end
@@ -947,16 +886,19 @@ end)
 -- GUI (полный интерфейс)
 -- ============================================================
 
-if CoreGui:FindFirstChild("nkno$ hub") then CoreGui["nkno$ hub"]:Destroy() end
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+if PlayerGui:FindFirstChild("nkno$ hub") then PlayerGui["nkno$ hub"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "nkno$ hub"
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = PlayerGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local accentColor = Color3.fromRGB(0, 150, 255)
 local isMinimized = false
 local isMenuOpen = false
+
+local function T(ru, en) return NKNO.Language == "ru" and ru or en end
 
 -- Тень
 local ShadowFrame = Instance.new("Frame")
@@ -1222,7 +1164,7 @@ ContentArea.Position = UDim2.new(0,185,0,15)
 ContentArea.Size = UDim2.new(1,-200,1,-45)
 
 -- ============================================================
--- НИЖНЯЯ ПАНЕЛЬ (исправлена: ник, скин, кнопки Discord и FUNPAY)
+-- НИЖНЯЯ ПАНЕЛЬ
 -- ============================================================
 local BottomBar = Instance.new("Frame")
 BottomBar.Parent = MainFrame
@@ -1233,7 +1175,6 @@ BottomBar.Size = UDim2.new(1,-200,0,35)
 BottomBar.BorderSizePixel = 0
 Instance.new("UICorner", BottomBar).CornerRadius = UDim.new(0,8)
 
--- Информация о пользователе (слева)
 local UserInfoLabel = Instance.new("TextLabel")
 UserInfoLabel.Parent = BottomBar
 UserInfoLabel.BackgroundTransparency = 1
@@ -1264,7 +1205,7 @@ updateUserInfo()
 LocalPlayer.CharacterAdded:Connect(updateUserInfo)
 Players.PlayerAdded:Connect(updateUserInfo)
 
--- Кнопка DISCORD (новая ссылка)
+-- Кнопка DISCORD
 local DiscordBtn = Instance.new("ImageButton")
 DiscordBtn.Parent = BottomBar
 DiscordBtn.Size = UDim2.new(0,30,0,30)
@@ -1283,12 +1224,14 @@ DiscordLabel.TextSize = 16
 DiscordLabel.Font = Enum.Font.GothamBold
 DiscordBtn.MouseButton1Click:Connect(function()
     local url = "https://discord.gg/HsSSmNf69"
-    GuiService:OpenBrowserWindow(url)
-    Clipboard:Set(url)
+    pcall(function()
+        GuiService:OpenBrowserWindow(url)
+        Clipboard:Set(url)
+    end)
     Notify("Discord", T("Ссылка скопирована и открыта", "Link copied and opened"), 3)
 end)
 
--- Кнопка FUNPAY (по центру)
+-- Кнопка FUNPAY
 local FunpayBtn = Instance.new("TextButton")
 FunpayBtn.Parent = BottomBar
 FunpayBtn.Size = UDim2.new(0, 180, 0, 28)
@@ -1303,12 +1246,12 @@ FunpayBtn.BorderSizePixel = 0
 Instance.new("UICorner", FunpayBtn).CornerRadius = UDim.new(0, 6)
 FunpayBtn.MouseButton1Click:Connect(function()
     local url = "https://funpay.com/users/20877238/"
-    GuiService:OpenBrowserWindow(url)
-    Clipboard:Set(url)
+    pcall(function()
+        GuiService:OpenBrowserWindow(url)
+        Clipboard:Set(url)
+    end)
     Notify("FUNPAY", T("Ссылка на создателя скопирована", "Creator link copied"), 3)
 end)
-
--- Остальной GUI (страницы) – без изменений, кроме добавленных элементов в разделах
 
 -- ============================================================
 -- СТРАНИЦЫ (вкладки) и элементы GUI
@@ -1664,7 +1607,7 @@ createToggle(afScroll, T("Авто-граб пистолета", "Auto Grab Gun"
     NKNO.AutoGrabGun = val
 end)
 
--- === Visuals (исправлен FOV) ===
+-- === Visuals ===
 local visScroll, visLayout = setupPage(VisualsPage)
 createSection(visScroll, T("Визуал", "Visuals"))
 createToggle(visScroll, T("ESP убийцы", "Murderer ESP"), "", NKNO.ESP.Murderer, function(val) NKNO.ESP.Murderer = val end)
@@ -1685,13 +1628,11 @@ createToggle(visScroll, T("ForceField материал", "ForceField Material"),
     if val then applyForceField() else restoreMaterial() end
 end)
 
--- FOV: слайдер всегда применяет, переключатель только для сохранения
 createSection(visScroll, T("Настройки камеры", "Camera Settings"))
 createSlider(visScroll, T("FOV", "FOV"), T("Изменяет обзор (работает всегда)", "Changes field of view (always works)"), 40, 160, NKNO.FOVValue, false, function(val)
     NKNO.FOVValue = val
     applyFOV()
 end)
--- Можно добавить переключатель для включения/отключения авто-применения при старте, но он не обязателен
 
 -- Темы
 createSection(visScroll, T("Цветовая палитра интерфейса", "Interface Color Palette"))
@@ -1745,7 +1686,7 @@ for _, t in ipairs(themeColors) do
     end)
 end
 
--- === Target (добавлена кнопка "Кинуть") ===
+-- === Target ===
 local targetScroll, targetLayout = setupPage(TargetPage)
 createSection(targetScroll, T("Выбор цели", "Target Selection"))
 local function getPlayerNames()
@@ -1768,7 +1709,6 @@ local targetDropdown = createDropdown(targetScroll, T("Выбрать игрок
     end
 end)
 
--- Новая кнопка "Кинуть" (флинг выбранного)
 createButton(targetScroll, T("Кинуть выбранного", "Fling Selected"), T("Зафлингует выбранного игрока", "Fling selected player"), function()
     if NKNO.Flinging then return end
     local sel = NKNO.SelectedPlayer
@@ -1783,7 +1723,7 @@ createButton(targetScroll, T("Кинуть выбранного", "Fling Selecte
     end)
 end)
 
--- === Fling === (оставляем как есть)
+-- === Fling ===
 local flingScroll, flingLayout = setupPage(FlingPage)
 createSection(flingScroll, T("Флинг", "Fling"))
 createButton(flingScroll, T("Флинг убийцы", "Fling Murderer"), T("Зафлингует убийцу", "Fling the murderer"), function()
@@ -1822,7 +1762,7 @@ createButton(flingScroll, T("Остановить флинг", "Stop Fling"), T(
     NKNO.Flinging = false
 end)
 
--- === Settings (добавлен Auto Kill Murderer) ===
+-- === Settings ===
 local setScroll, setLayout = setupPage(SettingsPage)
 createSection(setScroll, T("Настройки", "Settings"))
 createToggle(setScroll, T("Режим Бога", "God Mode"), T("Отключить коллизии", "Disable collisions"), NKNO.GodMode, function(val)
@@ -1847,12 +1787,9 @@ createToggle(setScroll, T("Защита от воды", "Anti Water"), T("Тел
     NKNO.AntiWater = val
     if val then antiSheriff() end
 end)
-
--- НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ: Auto Kill Murderer
 createToggle(setScroll, T("Авто-убийца (шериф)", "Auto Kill Murderer"), T("Автоматически убивать убийцу, если вы шериф", "Auto kill murderer if you are sheriff"), NKNO.AutoKillMurderer, function(val)
     NKNO.AutoKillMurderer = val
 end)
-
 createToggle(setScroll, T("Под картой (ручной)", "UnderMap Mode"), T("Уйти под карту", "Go under map"), NKNO.UnderMap, function(val)
     NKNO.UnderMap = val
     if val then goUnderMap() else returnFromUnderMap() end
@@ -1943,8 +1880,10 @@ createButton(setScroll, T("Убить всех", "Kill All"), T("Убить вс
                     target.Size = Vector3.new(5,5,5)
                     target.CFrame = root.CFrame + root.CFrame.LookVector * 3
                     target.Anchored = true
-                    VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
-                    VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+                    pcall(function()
+                        VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+                        VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+                    end)
                 end
             end
         end
@@ -2000,7 +1939,7 @@ task.spawn(function()
         updateESP()
         autoGrabGun()
         antiSheriff()
-        autoKillMurderer()  -- вызов авто-убийцы
+        autoKillMurderer()
     end
 end)
 
@@ -2029,44 +1968,18 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 if NKNO.AntiFling then startAntiFling() end
-applyFOV() -- применяем FOV при старте
+applyFOV()
 
--- Уведомление с датой обновления
+-- Функция уведомления (безопасная)
 local function Notify(title, desc, duration)
     duration = duration or 3
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 340, 0, 70)
-    frame.Position = UDim2.new(0.5, -170, 0.85, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-    frame.BorderSizePixel = 0
-    frame.BackgroundTransparency = 0.3
-    frame.Parent = ScreenGui
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -20, 0, 28)
-    titleLabel.Position = UDim2.new(0, 10, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-    titleLabel.TextSize = 17
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = frame
-    local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1, -20, 0, 30)
-    descLabel.Position = UDim2.new(0, 10, 0, 28)
-    descLabel.BackgroundTransparency = 1
-    descLabel.Text = desc
-    descLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
-    descLabel.TextSize = 13
-    descLabel.Font = Enum.Font.Gotham
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.Parent = frame
-    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 0.1 }):Play()
-    task.wait(duration)
-    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-    task.wait(0.3)
-    frame:Destroy()
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = desc,
+            Duration = duration
+        })
+    end)
 end
 
 Notify(
