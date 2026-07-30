@@ -1,5 +1,5 @@
--- NKNO$ HUB - Ultimate Edition v2.1
--- Полная версия с Auto Farm, UnderMap, Wallbang, Custom Tag, Ping/FPS, мультиязык (7 языков)
+-- NKNO$ HUB - Ultimate Edition v2.2
+-- Языки: Русский, English, Українська, Беларуская
 -- Discord: https://discord.gg/HsSSmNf69
 
 local Players = game:GetService("Players")
@@ -11,66 +11,148 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local Clipboard = game:GetService("Clipboard")
 local CoreGui = game:GetService("CoreGui")
 local Stats = game:GetService("Stats")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- ===== НАСТРОЙКИ ЯЗЫКА =====
+-- =====================================================
+-- ЯЗЫКИ (только 4)
+-- =====================================================
 local Languages = {
     ru = "Русский",
     en = "English (USA)",
-    fr = "Français",
-    pt = "Português",
     uk = "Українська",
-    be = "Беларуская",
-    br = "Português (Brasil)"
+    be = "Беларуская"
 }
 local lang = "ru"
 
--- ===== ПЕРЕВОДЫ (все ключи) =====
+-- =====================================================
+-- ПЕРЕВОДЫ (все тексты UI)
+-- =====================================================
 local L = {}
 
 -- Русский
 L.ru = {
-    tab_main = "Основное", tab_visuals = "Визуал", tab_misc = "Разное", tab_settings = "Настройки", tab_lang = "Язык", tab_changelog = "📢 Обновления",
-    sec_murder = "Функции убийцы", sec_sheriff = "Функции шерифа", sec_innocent = "Функции невиновного", sec_autofarm = "Авто-фарм",
-    sec_chams = "Чамы", sec_esp = "ESP", sec_esp_custom = "Настройки ESP", sec_char_mod = "Модификаторы персонажа", sec_dance = "Танцы",
-    sec_fling = "Флинг игроков", sec_discord = "Discord", sec_nkno = "NKNO$",
-    btn_killall = "Убить всех", btn_killall_desc = "Убивает всех невиновных",
-    btn_shoot = "Выстрелить в убийцу (сквозь стены)", btn_shoot_desc = "Мгновенно убивает убийцу, игнорируя стены",
-    btn_copydiscord = "📢 Копировать Discord", btn_copydiscord_desc = "Копирует ссылку на наш Discord сервер",
-    btn_fling_murder = "Флинг убийцы", btn_fling_sheriff = "Флинг шерифа", btn_fling_sel = "Флинг выбранного", btn_stop_fling = "Остановить флинг",
-    btn_map_tp = "ТП на карту", btn_lobby_tp = "ТП в лобби", btn_murder_tp = "ТП к убийце", btn_sheriff_tp = "ТП к шерифу",
-    tog_autoshoot = "Авто-кнопка выстрела", tog_autoshoot_desc = "Создаёт перетаскиваемую кнопку для стрельбы",
-    tog_magicbullet = "Магическая пуля", tog_magicbullet_desc = "Пуля летит прямо в убийцу",
-    tog_autogun = "Авто-подбор пистолета", tog_autogun_desc = "Автоматически поднимает пистолет, если шериф погиб",
-    tog_farm = "Фарм монет", tog_farm_desc = "Автоматический сбор монет с ноклипом",
-    tog_random_delays = "Случайные задержки", tog_random_delays_desc = "Добавляет случайные паузы между сборами",
-    tog_random_move = "Случайное движение", tog_random_move_desc = "Добавляет случайные отклонения при движении",
-    tog_random_coin = "Случайный выбор монеты", tog_random_coin_desc = "Выбирает случайную монету, а не ближайшую",
-    tog_antiafk = "Анти-AFK", tog_antiafk_desc = "Отправляет случайные движения, чтобы не выкинуло",
-    tog_chams_murder = "Чамы убийцы", tog_chams_sheriff = "Чамы шерифа", tog_chams_innocent = "Чамы невиновного", tog_chams_hero = "Чамы героя",
-    tog_esp_murder = "ESP убийцы", tog_esp_sheriff = "ESP шерифа", tog_esp_innocent = "ESP невиновного", tog_esp_hero = "ESP героя",
-    tog_box2d = "2D рамка", tog_box2d_desc = "Показывает рамку вокруг игрока",
-    tog_displayname = "Отображать DisplayName", tog_normalname = "Отображать обычное имя", tog_avatar = "Аватар над головой",
-    tog_antifling = "Анти-флинг", tog_customws = "Своя скорость", tog_customjp = "Своя сила прыжка", tog_customfov = "Свой FOV",
-    tog_forcefield = "ForceField материал", tog_forcefield_desc = "Все части тела становятся как ForceField",
-    tog_autodance = "Авто-танец", tog_undermap = "Под картой", tog_undermap_desc = "Телепортирует под карту (неуязвимость)",
-    tog_tag = "Показать тег NKNO$", tog_tag_desc = "Над вашим персонажем появится корона с надписью NKNO$",
-    tog_pingfps = "Пинг / FPS", tog_pingfps_desc = "Показывает пинг и FPS на экране",
-    slider_mindelay = "Мин. задержка (сек)", slider_maxdelay = "Макс. задержка (сек)", slider_ws = "Значение скорости", slider_jp = "Значение прыжка", slider_fov = "Значение FOV",
-    dropdown_dance = "Выберите танец", dropdown_theme = "Тема", dropdown_lang = "Выберите язык",
-    input_player = "Поиск игрока", keybind_minimize = "Клавиша сворачивания",
-    notify_hello = "Привет! Нажми Left Alt для сворачивания", notify_copied = "Ссылка скопирована!", notify_error = "Ошибка",
-    notify_fling_start = "Флинг запущен", notify_fling_stop = "Флинг остановлен",
-    notify_undermap_on = "Режим под картой включён", notify_undermap_off = "Режим под картой выключен",
-    notify_tag_on = "Тег NKNO$ включён", notify_tag_off = "Тег NKNO$ выключен",
-    notify_kill = "Все убиты!", notify_nomurder = "Убийца не найден",
+    -- Вкладки
+    tab_main = "Основное",
+    tab_visuals = "Визуал",
+    tab_misc = "Разное",
+    tab_settings = "Настройки",
+    tab_lang = "Язык",
+    tab_changelog = "📢 Обновления",
+
+    -- Разделы
+    sec_murder = "Функции убийцы",
+    sec_sheriff = "Функции шерифа",
+    sec_innocent = "Функции невиновного",
+    sec_autofarm = "Авто-фарм",
+    sec_chams = "Чамы",
+    sec_esp = "ESP",
+    sec_esp_custom = "Настройки ESP",
+    sec_char_mod = "Модификаторы персонажа",
+    sec_dance = "Танцы",
+    sec_fling = "Флинг игроков",
+    sec_discord = "Discord",
+    sec_nkno = "NKNO$",
+
+    -- Кнопки
+    btn_killall = "Убить всех",
+    btn_killall_desc = "Убивает всех невиновных",
+    btn_shoot = "Выстрелить в убийцу (сквозь стены)",
+    btn_shoot_desc = "Мгновенно убивает убийцу, игнорируя стены",
+    btn_copydiscord = "📢 Копировать Discord",
+    btn_copydiscord_desc = "Копирует ссылку на наш Discord сервер",
+    btn_fling_murder = "Флинг убийцы",
+    btn_fling_sheriff = "Флинг шерифа",
+    btn_fling_sel = "Флинг выбранного",
+    btn_stop_fling = "Остановить флинг",
+    btn_map_tp = "ТП на карту",
+    btn_lobby_tp = "ТП в лобби",
+    btn_murder_tp = "ТП к убийце",
+    btn_sheriff_tp = "ТП к шерифу",
+
+    -- Тогглы
+    tog_autoshoot = "Авто-кнопка выстрела",
+    tog_autoshoot_desc = "Создаёт перетаскиваемую кнопку для стрельбы",
+    tog_magicbullet = "Магическая пуля",
+    tog_magicbullet_desc = "Пуля летит прямо в убийцу",
+    tog_autogun = "Авто-подбор пистолета",
+    tog_autogun_desc = "Автоматически поднимает пистолет, если шериф погиб",
+    tog_farm = "Фарм монет",
+    tog_farm_desc = "Автоматический сбор монет с ноклипом",
+    tog_random_delays = "Случайные задержки",
+    tog_random_delays_desc = "Добавляет случайные паузы между сборами",
+    tog_random_move = "Случайное движение",
+    tog_random_move_desc = "Добавляет случайные отклонения при движении",
+    tog_random_coin = "Случайный выбор монеты",
+    tog_random_coin_desc = "Выбирает случайную монету, а не ближайшую",
+    tog_antiafk = "Анти-AFK",
+    tog_antiafk_desc = "Отправляет случайные движения, чтобы не выкинуло",
+    tog_chams_murder = "Чамы убийцы",
+    tog_chams_sheriff = "Чамы шерифа",
+    tog_chams_innocent = "Чамы невиновного",
+    tog_chams_hero = "Чамы героя",
+    tog_esp_murder = "ESP убийцы",
+    tog_esp_sheriff = "ESP шерифа",
+    tog_esp_innocent = "ESP невиновного",
+    tog_esp_hero = "ESP героя",
+    tog_box2d = "2D рамка",
+    tog_box2d_desc = "Показывает рамку вокруг игрока",
+    tog_displayname = "Отображать DisplayName",
+    tog_normalname = "Отображать обычное имя",
+    tog_avatar = "Аватар над головой",
+    tog_antifling = "Анти-флинг",
+    tog_customws = "Своя скорость",
+    tog_customjp = "Своя сила прыжка",
+    tog_customfov = "Свой FOV",
+    tog_forcefield = "ForceField материал",
+    tog_forcefield_desc = "Все части тела становятся как ForceField",
+    tog_autodance = "Авто-танец",
+    tog_undermap = "Под картой",
+    tog_undermap_desc = "Телепортирует под карту (неуязвимость)",
+    tog_tag = "Показать тег NKNO$",
+    tog_tag_desc = "Над вашим персонажем появится корона с надписью NKNO$",
+    tog_pingfps = "Пинг / FPS",
+    tog_pingfps_desc = "Показывает пинг и FPS на экране",
+
+    -- Слайдеры
+    slider_mindelay = "Мин. задержка (сек)",
+    slider_maxdelay = "Макс. задержка (сек)",
+    slider_ws = "Значение скорости",
+    slider_jp = "Значение прыжка",
+    slider_fov = "Значение FOV",
+
+    -- Выпадающие списки
+    dropdown_dance = "Выберите танец",
+    dropdown_theme = "Тема",
+    dropdown_lang = "Выберите язык",
+
+    -- Поле ввода
+    input_player = "Поиск игрока",
+
+    -- Клавиша
+    keybind_minimize = "Клавиша сворачивания",
+
+    -- Уведомления
+    notify_hello = "Привет! Нажми Left Alt для сворачивания",
+    notify_copied = "Ссылка скопирована!",
+    notify_error = "Ошибка",
+    notify_fling_start = "Флинг запущен",
+    notify_fling_stop = "Флинг остановлен",
+    notify_undermap_on = "Режим под картой включён",
+    notify_undermap_off = "Режим под картой выключен",
+    notify_tag_on = "Тег NKNO$ включён",
+    notify_tag_off = "Тег NKNO$ выключен",
+    notify_kill = "Все убиты!",
+    notify_nomurder = "Убийца не найден",
+
+    -- Changelog
     changelog_title = "Что нового в NKNO$ HUB",
-    changelog_text = [[🆕 Версия 2.1 – Добавлены новые языки!
-✅ Українська, Беларуская, Português (Brasil).
+    changelog_text = [[🆕 Версия 2.2 – Убраны лишние языки!
+✅ Оставлены: Русский, English, Українська, Беларуская.
 ✅ Авто-фарм монет в любых играх.
-✅ Поддержка +1 Speed Keyboard и других режимов.
+✅ Поддержка +1 Speed Keyboard.
 ✅ Wallbang – убийца сквозь стены.
 ✅ Custom Tag с короной 👑 NKNO$.
 ✅ Ping/FPS на экране.
@@ -78,7 +160,7 @@ L.ru = {
 🎯 NKNO$ HUB – мощнее с каждым обновлением!]]
 }
 
--- Английский (уже был)
+-- Английский
 L.en = {
     tab_main = "Main", tab_visuals = "Visuals", tab_misc = "Misc", tab_settings = "Settings", tab_lang = "Language", tab_changelog = "📢 Changelog",
     sec_murder = "Murder Functions", sec_sheriff = "Sheriff Functions", sec_innocent = "Innocent Functions", sec_autofarm = "Auto Farm",
@@ -115,111 +197,15 @@ L.en = {
     notify_tag_on = "NKNO$ Tag enabled", notify_tag_off = "NKNO$ Tag disabled",
     notify_kill = "All killed!", notify_nomurder = "Murderer not found",
     changelog_title = "What's new in NKNO$ HUB",
-    changelog_text = [[🆕 Version 2.1 – New languages added!
-✅ Ukrainian, Belarusian, Português (Brasil).
+    changelog_text = [[🆕 Version 2.2 – Extra languages removed!
+✅ Left: Russian, English, Ukrainian, Belarusian.
 ✅ Auto coin farming in any game.
-✅ Support for +1 Speed Keyboard and other modes.
+✅ Support for +1 Speed Keyboard.
 ✅ Wallbang – murderer through walls.
 ✅ Custom Tag with crown 👑 NKNO$.
 ✅ Ping/FPS on screen.
 ✅ Close with Ctrl+Z.
 🎯 NKNO$ HUB – more powerful with every update!]]
-}
-
--- Французский
-L.fr = {
-    tab_main = "Principal", tab_visuals = "Visuels", tab_misc = "Divers", tab_settings = "Paramètres", tab_lang = "Langue", tab_changelog = "📢 Mises à jour",
-    sec_murder = "Fonctions meurtrier", sec_sheriff = "Fonctions shérif", sec_innocent = "Fonctions innocent", sec_autofarm = "Auto-farm",
-    sec_chams = "Chams", sec_esp = "ESP", sec_esp_custom = "Personnalisation ESP", sec_char_mod = "Modificateurs personnage", sec_dance = "Danses",
-    sec_fling = "Fling joueurs", sec_discord = "Discord", sec_nkno = "NKNO$",
-    btn_killall = "Tuer tous", btn_killall_desc = "Tuer tous les innocents",
-    btn_shoot = "Tirer sur le meurtrier (à travers)", btn_shoot_desc = "Tue instantanément le meurtrier à travers les murs",
-    btn_copydiscord = "📢 Copier Discord", btn_copydiscord_desc = "Copier le lien du serveur Discord",
-    btn_fling_murder = "Fling meurtrier", btn_fling_sheriff = "Fling shérif", btn_fling_sel = "Fling sélectionné", btn_stop_fling = "Arrêter Fling",
-    btn_map_tp = "TP à la carte", btn_lobby_tp = "TP au lobby", btn_murder_tp = "TP au meurtrier", btn_sheriff_tp = "TP au shérif",
-    tog_autoshoot = "Bouton de tir automatique", tog_autoshoot_desc = "Crée un bouton déplaçable pour tirer",
-    tog_magicbullet = "Balle magique", tog_magicbullet_desc = "La balle va directement au meurtrier",
-    tog_autogun = "Saisie automatique du pistolet", tog_autogun_desc = "Attrape le pistolet si le shérif est mort",
-    tog_farm = "Fermer les pièces", tog_farm_desc = "Ferme automatiquement les pièces avec noclip",
-    tog_random_delays = "Délais aléatoires", tog_random_delays_desc = "Ajoute des pauses aléatoires entre les collectes",
-    tog_random_move = "Mouvement aléatoire", tog_random_move_desc = "Ajoute des déviations aléatoires au mouvement",
-    tog_random_coin = "Sélection aléatoire de pièce", tog_random_coin_desc = "Choisit une pièce aléatoire au lieu de la plus proche",
-    tog_antiafk = "Anti-AFK", tog_antiafk_desc = "Envoie des mouvements aléatoires pour éviter AFK",
-    tog_chams_murder = "Chams meurtrier", tog_chams_sheriff = "Chams shérif", tog_chams_innocent = "Chams innocent", tog_chams_hero = "Chams héros",
-    tog_esp_murder = "ESP meurtrier", tog_esp_sheriff = "ESP shérif", tog_esp_innocent = "ESP innocent", tog_esp_hero = "ESP héros",
-    tog_box2d = "Boîte 2D", tog_box2d_desc = "Affiche une boîte 2D autour du joueur",
-    tog_displayname = "Afficher DisplayName", tog_normalname = "Afficher le nom normal", tog_avatar = "Avatar au-dessus de la tête",
-    tog_antifling = "Anti-Fling", tog_customws = "Vitesse personnalisée", tog_customjp = "Puissance de saut personnalisée", tog_customfov = "FOV personnalisé",
-    tog_forcefield = "Matériau ForceField", tog_forcefield_desc = "Toutes les parties du corps deviennent ForceField",
-    tog_autodance = "Danse auto", tog_undermap = "Mode sous la carte", tog_undermap_desc = "Vous téléporte sous la carte (invincibilité)",
-    tog_tag = "Afficher le tag NKNO$", tog_tag_desc = "Une couronne avec NKNO$ apparaît au-dessus de vous",
-    tog_pingfps = "Ping / FPS", tog_pingfps_desc = "Affiche le ping et les FPS à l'écran",
-    slider_mindelay = "Délai min (s)", slider_maxdelay = "Délai max (s)", slider_ws = "Valeur de vitesse", slider_jp = "Valeur de saut", slider_fov = "Valeur FOV",
-    dropdown_dance = "Choisir la danse", dropdown_theme = "Choisir le thème", dropdown_lang = "Choisir la langue",
-    input_player = "Recherche de joueur", keybind_minimize = "Raccourci minimisation",
-    notify_hello = "Bonjour ! Appuyez sur Left Alt pour minimiser", notify_copied = "Lien copié !", notify_error = "Erreur",
-    notify_fling_start = "Fling lancé", notify_fling_stop = "Fling arrêté",
-    notify_undermap_on = "Mode sous la carte activé", notify_undermap_off = "Mode sous la carte désactivé",
-    notify_tag_on = "Tag NKNO$ activé", notify_tag_off = "Tag NKNO$ désactivé",
-    notify_kill = "Tous tués !", notify_nomurder = "Meurtrier introuvable",
-    changelog_title = "Quoi de neuf dans NKNO$ HUB",
-    changelog_text = [[🆕 Version 2.1 – Nouvelles langues ajoutées !
-✅ Ukrainien, Biélorusse, Portugais (Brésil).
-✅ Farm automatique de pièces dans tous les jeux.
-✅ Support de +1 Speed Keyboard et d'autres modes.
-✅ Wallbang – meurtrier à travers les murs.
-✅ Tag personnalisé avec couronne 👑 NKNO$.
-✅ Ping/FPS à l'écran.
-✅ Fermeture avec Ctrl+Z.
-🎯 NKNO$ HUB – plus puissant que jamais !]]
-}
-
--- Португальский (Европа)
-L.pt = {
-    tab_main = "Principal", tab_visuals = "Visuais", tab_misc = "Diversos", tab_settings = "Configurações", tab_lang = "Idioma", tab_changelog = "📢 Atualizações",
-    sec_murder = "Funções de assassino", sec_sheriff = "Funções de xerife", sec_innocent = "Funções de inocente", sec_autofarm = "Auto-farm",
-    sec_chams = "Chams", sec_esp = "ESP", sec_esp_custom = "Personalização ESP", sec_char_mod = "Modificadores de personagem", sec_dance = "Danças",
-    sec_fling = "Fling de jogadores", sec_discord = "Discord", sec_nkno = "NKNO$",
-    btn_killall = "Matar todos", btn_killall_desc = "Matar todos os inocentes",
-    btn_shoot = "Atirar no assassino (através)", btn_shoot_desc = "Mata instantaneamente o assassino através das paredes",
-    btn_copydiscord = "📢 Copiar Discord", btn_copydiscord_desc = "Copiar o link do servidor Discord",
-    btn_fling_murder = "Fling assassino", btn_fling_sheriff = "Fling xerife", btn_fling_sel = "Fling selecionado", btn_stop_fling = "Parar Fling",
-    btn_map_tp = "TP para o mapa", btn_lobby_tp = "TP para o lobby", btn_murder_tp = "TP para o assassino", btn_sheriff_tp = "TP para o xerife",
-    tog_autoshoot = "Botão de tiro automático", tog_autoshoot_desc = "Cria um botão arrastável para atirar",
-    tog_magicbullet = "Bala mágica", tog_magicbullet_desc = "A bala vai diretamente para o assassino",
-    tog_autogun = "Pegar arma automaticamente", tog_autogun_desc = "Pega a arma se o xerife morrer",
-    tog_farm = "Farmar moedas", tog_farm_desc = "Farma moedas automaticamente com noclip",
-    tog_random_delays = "Atrasos aleatórios", tog_random_delays_desc = "Adiciona pausas aleatórias entre as coletas",
-    tog_random_move = "Movimento aleatório", tog_random_move_desc = "Adiciona desvios aleatórios ao movimento",
-    tog_random_coin = "Seleção aleatória de moeda", tog_random_coin_desc = "Escolhe uma moeda aleatória em vez da mais próxima",
-    tog_antiafk = "Anti-AFK", tog_antiafk_desc = "Envia movimentos aleatórios para evitar AFK",
-    tog_chams_murder = "Chams assassino", tog_chams_sheriff = "Chams xerife", tog_chams_innocent = "Chams inocente", tog_chams_hero = "Chams herói",
-    tog_esp_murder = "ESP assassino", tog_esp_sheriff = "ESP xerife", tog_esp_innocent = "ESP inocente", tog_esp_hero = "ESP herói",
-    tog_box2d = "Caixa 2D", tog_box2d_desc = "Mostra uma caixa 2D ao redor do jogador",
-    tog_displayname = "Mostrar DisplayName", tog_normalname = "Mostrar nome normal", tog_avatar = "Avatar acima da cabeça",
-    tog_antifling = "Anti-Fling", tog_customws = "Velocidade personalizada", tog_customjp = "Poder de salto personalizado", tog_customfov = "FOV personalizado",
-    tog_forcefield = "Material ForceField", tog_forcefield_desc = "Todas as partes do corpo ficam ForceField",
-    tog_autodance = "Dança automática", tog_undermap = "Modo abaixo do mapa", tog_undermap_desc = "Teletransporta para abaixo do mapa (invulnerabilidade)",
-    tog_tag = "Mostrar tag NKNO$", tog_tag_desc = "Uma coroa com NKNO$ aparece acima do seu personagem",
-    tog_pingfps = "Ping / FPS", tog_pingfps_desc = "Mostra ping e FPS na tela",
-    slider_mindelay = "Atraso mínimo (s)", slider_maxdelay = "Atraso máximo (s)", slider_ws = "Valor da velocidade", slider_jp = "Valor do salto", slider_fov = "Valor do FOV",
-    dropdown_dance = "Escolher dança", dropdown_theme = "Escolher tema", dropdown_lang = "Escolher idioma",
-    input_player = "Pesquisar jogador", keybind_minimize = "Tecla de minimizar",
-    notify_hello = "Olá! Pressione Left Alt para minimizar", notify_copied = "Link copiado!", notify_error = "Erro",
-    notify_fling_start = "Fling iniciado", notify_fling_stop = "Fling parado",
-    notify_undermap_on = "Modo abaixo do mapa ativado", notify_undermap_off = "Modo abaixo do mapa desativado",
-    notify_tag_on = "Tag NKNO$ ativada", notify_tag_off = "Tag NKNO$ desativada",
-    notify_kill = "Todos mortos!", notify_nomurder = "Assassino não encontrado",
-    changelog_title = "O que há de novo no NKNO$ HUB",
-    changelog_text = [[🆕 Versão 2.1 – Novos idiomas adicionados!
-✅ Ucraniano, Bielorrusso, Português (Brasil).
-✅ Farm automático de moedas em qualquer jogo.
-✅ Suporte para +1 Speed Keyboard e outros modos.
-✅ Wallbang – assassino através das paredes.
-✅ Tag personalizada com coroa 👑 NKNO$.
-✅ Ping/FPS na tela.
-✅ Fechar com Ctrl+Z.
-🎯 NKNO$ HUB – mais poderoso a cada atualização!]]
 }
 
 -- Украинский
@@ -259,10 +245,10 @@ L.uk = {
     notify_tag_on = "Тег NKNO$ увімкнено", notify_tag_off = "Тег NKNO$ вимкнено",
     notify_kill = "Всі вбиті!", notify_nomurder = "Вбивцю не знайдено",
     changelog_title = "Що нового в NKNO$ HUB",
-    changelog_text = [[🆕 Версія 2.1 – Додано нові мови!
-✅ Українська, Білоруська, Português (Brasil).
+    changelog_text = [[🆕 Версія 2.2 – Видалено зайві мови!
+✅ Залишено: Українська, Білоруська, Англійська, Російська.
 ✅ Авто-фарм монет у будь-яких іграх.
-✅ Підтримка +1 Speed Keyboard та інших режимів.
+✅ Підтримка +1 Speed Keyboard.
 ✅ Wallbang – вбивця крізь стіни.
 ✅ Custom Tag з короною 👑 NKNO$.
 ✅ Пінг/FPS на екрані.
@@ -307,10 +293,10 @@ L.be = {
     notify_tag_on = "Тэг NKNO$ уключаны", notify_tag_off = "Тэг NKNO$ выключаны",
     notify_kill = "Усе забітыя!", notify_nomurder = "Забойца не знойдзены",
     changelog_title = "Што новага ў NKNO$ HUB",
-    changelog_text = [[🆕 Версія 2.1 – Дададзены новыя мовы!
-✅ Украінская, Беларуская, Português (Brasil).
+    changelog_text = [[🆕 Версія 2.2 – Выдалены лішнія мовы!
+✅ Пакінуты: Беларуская, Руская, Англійская, Украінская.
 ✅ Аўта-фарм манет у любых гульнях.
-✅ Падтрымка +1 Speed Keyboard і іншых рэжымаў.
+✅ Падтрымка +1 Speed Keyboard.
 ✅ Wallbang – забойца скрозь сцены.
 ✅ Custom Tag з каронай 👑 NKNO$.
 ✅ Пінг/FPS на экране.
@@ -318,65 +304,19 @@ L.be = {
 🎯 NKNO$ HUB – магутнейшы з кожным абнаўленнем!]]
 }
 
--- Бразильский португальский (адаптация)
-L.br = {
-    tab_main = "Principal", tab_visuals = "Visuais", tab_misc = "Diversos", tab_settings = "Configurações", tab_lang = "Idioma", tab_changelog = "📢 Atualizações",
-    sec_murder = "Funções do assassino", sec_sheriff = "Funções do xerife", sec_innocent = "Funções do inocente", sec_autofarm = "Auto-farm",
-    sec_chams = "Chams", sec_esp = "ESP", sec_esp_custom = "Personalização ESP", sec_char_mod = "Modificadores de personagem", sec_dance = "Danças",
-    sec_fling = "Fling de jogadores", sec_discord = "Discord", sec_nkno = "NKNO$",
-    btn_killall = "Matar todos", btn_killall_desc = "Mata todos os inocentes",
-    btn_shoot = "Atirar no assassino (através)", btn_shoot_desc = "Mata instantaneamente o assassino através das paredes",
-    btn_copydiscord = "📢 Copiar Discord", btn_copydiscord_desc = "Copiar o link do servidor Discord",
-    btn_fling_murder = "Fling assassino", btn_fling_sheriff = "Fling xerife", btn_fling_sel = "Fling selecionado", btn_stop_fling = "Parar Fling",
-    btn_map_tp = "TP para o mapa", btn_lobby_tp = "TP para o lobby", btn_murder_tp = "TP para o assassino", btn_sheriff_tp = "TP para o xerife",
-    tog_autoshoot = "Botão de tiro automático", tog_autoshoot_desc = "Cria um botão arrastável para atirar",
-    tog_magicbullet = "Bala mágica", tog_magicbullet_desc = "A bala vai diretamente para o assassino",
-    tog_autogun = "Pegar arma automaticamente", tog_autogun_desc = "Pega a arma se o xerife morrer",
-    tog_farm = "Farmar moedas", tog_farm_desc = "Farma moedas automaticamente com noclip",
-    tog_random_delays = "Atrasos aleatórios", tog_random_delays_desc = "Adiciona pausas aleatórias entre as coletas",
-    tog_random_move = "Movimento aleatório", tog_random_move_desc = "Adiciona desvios aleatórios ao movimento",
-    tog_random_coin = "Seleção aleatória de moeda", tog_random_coin_desc = "Escolhe uma moeda aleatória em vez da mais próxima",
-    tog_antiafk = "Anti-AFK", tog_antiafk_desc = "Envia movimentos aleatórios para evitar AFK",
-    tog_chams_murder = "Chams assassino", tog_chams_sheriff = "Chams xerife", tog_chams_innocent = "Chams inocente", tog_chams_hero = "Chams herói",
-    tog_esp_murder = "ESP assassino", tog_esp_sheriff = "ESP xerife", tog_esp_innocent = "ESP inocente", tog_esp_hero = "ESP herói",
-    tog_box2d = "Caixa 2D", tog_box2d_desc = "Mostra uma caixa 2D ao redor do jogador",
-    tog_displayname = "Mostrar DisplayName", tog_normalname = "Mostrar nome normal", tog_avatar = "Avatar acima da cabeça",
-    tog_antifling = "Anti-Fling", tog_customws = "Velocidade personalizada", tog_customjp = "Poder de salto personalizado", tog_customfov = "FOV personalizado",
-    tog_forcefield = "Material ForceField", tog_forcefield_desc = "Todas as partes do corpo ficam ForceField",
-    tog_autodance = "Dança automática", tog_undermap = "Modo abaixo do mapa", tog_undermap_desc = "Teletransporta para abaixo do mapa (invulnerabilidade)",
-    tog_tag = "Mostrar tag NKNO$", tog_tag_desc = "Uma coroa com NKNO$ aparece acima do seu personagem",
-    tog_pingfps = "Ping / FPS", tog_pingfps_desc = "Mostra ping e FPS na tela",
-    slider_mindelay = "Atraso mínimo (s)", slider_maxdelay = "Atraso máximo (s)", slider_ws = "Valor da velocidade", slider_jp = "Valor do salto", slider_fov = "Valor do FOV",
-    dropdown_dance = "Escolher dança", dropdown_theme = "Escolher tema", dropdown_lang = "Escolher idioma",
-    input_player = "Pesquisar jogador", keybind_minimize = "Tecla de minimizar",
-    notify_hello = "Olá! Pressione Left Alt para minimizar", notify_copied = "Link copiado!", notify_error = "Erro",
-    notify_fling_start = "Fling iniciado", notify_fling_stop = "Fling parado",
-    notify_undermap_on = "Modo abaixo do mapa ativado", notify_undermap_off = "Modo abaixo do mapa desativado",
-    notify_tag_on = "Tag NKNO$ ativada", notify_tag_off = "Tag NKNO$ desativada",
-    notify_kill = "Todos mortos!", notify_nomurder = "Assassino não encontrado",
-    changelog_title = "O que há de novo no NKNO$ HUB",
-    changelog_text = [[🆕 Versão 2.1 – Novos idiomas adicionados!
-✅ Ucraniano, Bielorrusso, Português (Brasil).
-✅ Farm automático de moedas em qualquer jogo.
-✅ Suporte para +1 Speed Keyboard e outros modos.
-✅ Wallbang – assassino através das paredes.
-✅ Tag personalizada com coroa 👑 NKNO$.
-✅ Ping/FPS na tela.
-✅ Fechar com Ctrl+Z.
-🎯 NKNO$ HUB – mais poderoso a cada atualização!]]
-}
-
 -- Функция получения перевода
 local function T(key)
     return L[lang] and L[lang][key] or key
 end
 
--- ===== ЗАКРЫТИЕ ПО CTRL+Z =====
+-- =====================================================
+-- ЗАКРЫТИЕ ПО CTRL+Z
+-- =====================================================
 local function closeScript()
-    -- Удаляем GUI
     if windowGui then windowGui:Destroy() end
     if fpsGui then fpsGui:Destroy() end
     if tagGui then tagGui:Destroy() end
+    if shootButtonGui then shootButtonGui:Destroy() end
     for _, conn in pairs(connections) do pcall(conn.Disconnect, conn) end
     getgenv().ScriptClosed = true
     print("NKNO$ HUB закрыт.")
@@ -389,7 +329,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ===== БИБЛИОТЕКА UI =====
+-- =====================================================
+-- ЗАГРУЗКА UI БИБЛИОТЕКИ
+-- =====================================================
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/UI-Libraries/UiLibs/VapeUiLib.lua"))()
 local window = library:CreateWindow({
     Title = "NKNO$ HUB",
@@ -403,7 +345,9 @@ windowGui = window.Gui
 toggles = {}
 connections = {}
 
--- ===== ВКЛАДКИ =====
+-- =====================================================
+-- ВКЛАДКИ
+-- =====================================================
 local tabMain = window:AddTab({ Title = T("tab_main") })
 local tabVisuals = window:AddTab({ Title = T("tab_visuals") })
 local tabMisc = window:AddTab({ Title = T("tab_misc") })
@@ -411,7 +355,9 @@ local tabSettings = window:AddTab({ Title = T("tab_settings") })
 local tabLang = window:AddTab({ Title = T("tab_lang") })
 local tabChangelog = window:AddTab({ Title = T("tab_changelog") })
 
--- ===== ОБНОВЛЕНИЯ (Changelog) =====
+-- =====================================================
+-- CHANGELOG
+-- =====================================================
 window:AddSection({ Name = T("changelog_title"), Tab = tabChangelog })
 local changelogFrame = Instance.new("Frame")
 changelogFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -430,7 +376,9 @@ changelogLabel.TextYAlignment = Enum.TextYAlignment.Top
 changelogLabel.Font = Enum.Font.Gotham
 changelogLabel.Parent = changelogFrame
 
--- ===== ЯЗЫК =====
+-- =====================================================
+-- ЯЗЫК
+-- =====================================================
 window:AddSection({ Name = T("dropdown_lang"), Tab = tabLang })
 window:AddDropdown({
     Title = T("dropdown_lang"),
@@ -439,7 +387,7 @@ window:AddDropdown({
     Tab = tabLang,
     Callback = function(opt)
         lang = opt
-        -- Обновляем тексты вкладок и уведомлений
+        -- Обновляем заголовки вкладок
         tabMain:SetTitle(T("tab_main"))
         tabVisuals:SetTitle(T("tab_visuals"))
         tabMisc:SetTitle(T("tab_misc"))
@@ -460,38 +408,1361 @@ window:AddDropdown({
     end
 })
 
--- ===== ОСТАЛЬНЫЕ ВКЛАДКИ (Main, Visuals, Misc, Settings) =====
--- Здесь вставляются все ваши оригинальные функции (автофарм, ESP, флинг, танцы, телепорты и т.д.)
--- Я привожу только сокращённую версию для экономии места, но в полном скрипте они все есть.
--- Полный код доступен по ссылке ниже.
+-- =====================================================
+-- ПЕРЕМЕННЫЕ ДЛЯ ФУНКЦИЙ
+-- =====================================================
+local farm = false
+local noclipConnection = nil
+local farmRunning = false
+local randomDelays = false
+local randomMovement = false
+local randomCoinSelection = false
+local antiAFK = false
+local minDelay = 0.1
+local maxDelay = 0.5
+local underMapActive = false
+local underMapConnection = nil
+local oldFallenHeight = Workspace.FallenPartsDestroyHeight
+local customTagActive = false
+local tagGui = nil
+local pingFpsActive = false
+local fpsGui = nil
+local autoShootActive = false
+local shootButtonGui = nil
+local magicBullet = false
+local grabGun = false
+local antiFling = false
+local customWalkSpeed = false
+local walkSpeedValue = 16
+local customJumpPower = false
+local jumpPowerValue = 50
+local customFOV = false
+local fovValue = 70
+local forceFieldMat = false
+local autoDance = false
+local danceId = "127118661424463"
+local flingActive = false
+local selectedPlayer = nil
 
--- ===== ВКЛАДКА MAIN =====
+-- ESP настройки
+local espSettings = { Murderer = false, Sheriff = false, Innocent = false, Hero = false }
+local nameEspSettings = { Murderer = false, Sheriff = false, Innocent = false, Hero = false }
+local espCustom = { Box2D = false, DisplayName = false, NormalName = true, AvatarDisplay = false }
+
+-- =====================================================
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (из оригинального скрипта)
+-- =====================================================
+local function findMap()
+    for _, obj in pairs(Workspace:GetChildren()) do
+        if obj:GetAttribute("MapID") then return obj end
+    end
+    return nil
+end
+
+local function returnCoinContainer()
+    local map = findMap()
+    if map and map:FindFirstChild("CoinContainer") then
+        return map.CoinContainer
+    end
+    return nil
+end
+
+local function getPing()
+    return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+end
+
+local function findMurderer()
+    local dataEvent = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+    if not dataEvent then return nil end
+    local success, data = pcall(function() return dataEvent:InvokeServer() end)
+    if not success or not data then return nil end
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player and plr:GetAttribute("Alive") == true then
+            local info = data[plr.Name]
+            if info and info.Role == "Murderer" then
+                return plr
+            end
+        end
+    end
+    return nil
+end
+
+local function FindNearestCoin(container, useRandom)
+    if not container then return nil, math.huge end
+    local candidates = {}
+    for _, coin in pairs(container:GetChildren()) do
+        if coin:GetAttribute("CoinID") == "Coin" and coin:FindFirstChild("TouchInterest") and coin.Transparency == 1 then
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (player.Character.HumanoidRootPart.Position - coin.Position).Magnitude
+                table.insert(candidates, {coin = coin, dist = dist})
+            end
+        end
+    end
+    if #candidates == 0 then return nil, math.huge end
+    table.sort(candidates, function(a,b) return a.dist < b.dist end)
+    if useRandom and #candidates > 2 then
+        local index = math.random(1, math.min(3, #candidates))
+        return candidates[index].coin, candidates[index].dist
+    else
+        return candidates[1].coin, candidates[1].dist
+    end
+end
+
+-- =====================================================
+-- АВТОФАРМ
+-- =====================================================
+local function enableNoclip()
+    if noclipConnection then return end
+    noclipConnection = RunService.Stepped:Connect(function()
+        if farm and player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+local function startFarming()
+    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+    if player:GetAttribute("Alive") ~= true then return end
+    local root = player.Character.HumanoidRootPart
+    local humanoid = player.Character:FindFirstChild("Humanoid")
+    root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0)
+    root.CFrame = root.CFrame * CFrame.Angles(math.rad(90), 0, 0)
+    if humanoid then
+        humanoid.PlatformStand = true
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+    end
+    farmRunning = true
+    enableNoclip()
+end
+
+local function stopFarming()
+    farmRunning = false
+    if noclipConnection then noclipConnection:Disconnect(); noclipConnection = nil end
+    if player.Character then
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if root then
+            root.Velocity = Vector3.new(0,0,0)
+            root.RotVelocity = Vector3.new(0,0,0)
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0)
+            root.CFrame = root.CFrame + Vector3.new(0, 2.5, 0)
+        end
+        if humanoid then
+            humanoid.PlatformStand = false
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+        end
+    end
+end
+
+-- Обработчики событий монет
+local coinEvent = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Gameplay")
+if coinEvent then
+    coinEvent = coinEvent:FindFirstChild("CoinCollected")
+end
+if coinEvent then
+    coinEvent.OnClientEvent:Connect(function(plr, id, total)
+        if plr == player then
+            if id == total then
+                if farmRunning then stopFarming() end
+            end
+        end
+    end)
+end
+
+-- Основной цикл фарма
+task.spawn(function()
+    while true do
+        RunService.Heartbeat:Wait()
+        if farm and not farmRunning and player:GetAttribute("Alive") == true and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local container = returnCoinContainer()
+            if container then
+                local coin, dist = FindNearestCoin(container, randomCoinSelection)
+                if coin and coin.Transparency == 1 then
+                    if not farmRunning then startFarming() end
+                    local root = player.Character.HumanoidRootPart
+                    local humanoid = player.Character:FindFirstChild("Humanoid")
+                    root.Velocity = Vector3.new(0,0,0)
+                    root.RotVelocity = Vector3.new(0,0,0)
+                    local offset = Vector3.new()
+                    if randomMovement then
+                        offset = Vector3.new(math.random(-2,2), 0, math.random(-2,2))
+                    end
+                    local targetPos = coin.Position - Vector3.new(0, 2.5, 0) + offset
+                    local targetCF = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, 0)
+                    local duration = (dist / 23) * (randomMovement and (0.8 + math.random()*0.4) or 1)
+                    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                    local tween = TweenService:Create(root, tweenInfo, {CFrame = targetCF})
+                    tween:Play()
+                    local conn
+                    conn = RunService.Heartbeat:Connect(function()
+                        if farm and player:GetAttribute("Alive") == true and root then
+                            root.Velocity = Vector3.new(0,0,0)
+                            root.RotVelocity = Vector3.new(0,0,0)
+                            if humanoid then humanoid.PlatformStand = true end
+                        else
+                            if conn then conn:Disconnect() end
+                        end
+                    end)
+                    while coin and coin:FindFirstChild("TouchInterest") and coin.Transparency == 1 and farm and player:GetAttribute("Alive") == true do
+                        RunService.Heartbeat:Wait()
+                    end
+                    if conn then conn:Disconnect() end
+                    tween:Cancel()
+                    if root then
+                        root.Velocity = Vector3.new(0,0,0)
+                        root.RotVelocity = Vector3.new(0,0,0)
+                    end
+                    if randomDelays then
+                        task.wait(minDelay + math.random() * (maxDelay - minDelay))
+                    end
+                else
+                    if farmRunning then stopFarming() end
+                end
+            else
+                if farmRunning then stopFarming() end
+            end
+        elseif farmRunning then
+            stopFarming()
+        end
+    end
+end)
+
+-- =====================================================
+-- ESP И CHAMS
+-- =====================================================
+local function CreateESP(plr, color)
+    if not plr.Character then return end
+    local highlight = plr.Character:FindFirstChild("RoleESP")
+    if not highlight then
+        highlight = Instance.new("Highlight")
+        highlight.Name = "RoleESP"
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = plr.Character
+    end
+    highlight.FillColor = color
+    highlight.OutlineColor = color
+end
+
+local function RemoveESP(plr)
+    if plr.Character then
+        local h = plr.Character:FindFirstChild("RoleESP")
+        if h then h:Destroy() end
+    end
+end
+
+local function CreateNameESP(plr, color)
+    if not plr.Character then return end
+    local head = plr.Character:FindFirstChild("Head")
+    if not head then return end
+    local gui = head:FindFirstChild("NameESP")
+    if not gui then
+        gui = Instance.new("BillboardGui")
+        gui.Name = "NameESP"
+        gui.AlwaysOnTop = true
+        gui.Size = UDim2.new(0,200,0,80)
+        gui.StudsOffset = Vector3.new(0,2,0)
+        gui.Parent = head
+        local avatarFrame = Instance.new("Frame")
+        avatarFrame.Name = "AvatarFrame"
+        avatarFrame.BackgroundColor3 = Color3.new(1,1,1)
+        avatarFrame.Size = UDim2.new(0,40,0,40)
+        avatarFrame.Position = UDim2.new(0.5,-20,0,0)
+        avatarFrame.BorderSizePixel = 2
+        avatarFrame.Parent = gui
+        local uic = Instance.new("UICorner")
+        uic.CornerRadius = UDim.new(1,0)
+        uic.Parent = avatarFrame
+        local avatar = Instance.new("ImageLabel")
+        avatar.Name = "Avatar"
+        avatar.BackgroundTransparency = 1
+        avatar.Size = UDim2.new(1,0,1,0)
+        avatar.Image = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        avatar.Parent = avatarFrame
+        local uic2 = Instance.new("UICorner")
+        uic2.CornerRadius = UDim.new(1,0)
+        uic2.Parent = avatar
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "NameLabel"
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1,0,0,20)
+        nameLabel.Position = UDim2.new(0,0,1,-20)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 14
+        nameLabel.TextStrokeTransparency = 0
+        nameLabel.TextStrokeColor3 = Color3.new(0,0,0)
+        nameLabel.Parent = gui
+    end
+    local avatarFrame = gui:FindFirstChild("AvatarFrame")
+    local nameLabel = gui:FindFirstChild("NameLabel")
+    if nameLabel then
+        if espCustom.DisplayName then
+            nameLabel.Text = plr.DisplayName
+        elseif espCustom.NormalName then
+            nameLabel.Text = plr.Name
+        else
+            nameLabel.Text = ""
+        end
+        nameLabel.TextColor3 = color
+    end
+    if avatarFrame then
+        avatarFrame.Visible = espCustom.AvatarDisplay
+        avatarFrame.BorderColor3 = color
+    end
+    -- 2D Box
+    local rootPart = plr.Character:FindFirstChild("HumanoidRootPart")
+    if rootPart then
+        local box = rootPart:FindFirstChild("Box2D")
+        if espCustom.Box2D then
+            if not box then
+                box = Instance.new("BillboardGui")
+                box.Name = "Box2D"
+                box.AlwaysOnTop = true
+                box.Size = UDim2.new(4,0,5,0)
+                box.StudsOffset = Vector3.new(0,0,0)
+                box.Parent = rootPart
+                local frame = Instance.new("Frame")
+                frame.Name = "BoxFrame"
+                frame.BackgroundTransparency = 1
+                frame.Size = UDim2.new(1,0,1,0)
+                frame.BorderSizePixel = 2
+                frame.Parent = box
+                local stroke = Instance.new("UIStroke")
+                stroke.Name = "Stroke"
+                stroke.Thickness = 2
+                stroke.Parent = frame
+            end
+            local frame = box:FindFirstChild("BoxFrame")
+            if frame then
+                local stroke = frame:FindFirstChild("Stroke")
+                if stroke then stroke.Color = color end
+            end
+        else
+            if box then box:Destroy() end
+        end
+    end
+end
+
+local function RemoveNameESP(plr)
+    if plr.Character then
+        local head = plr.Character:FindFirstChild("Head")
+        if head then
+            local gui = head:FindFirstChild("NameESP")
+            if gui then gui:Destroy() end
+        end
+        local root = plr.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local box = root:FindFirstChild("Box2D")
+            if box then box:Destroy() end
+        end
+    end
+end
+
+local function UpdateESP()
+    local dataEvent = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+    if not dataEvent then return end
+    local success, data = pcall(function() return dataEvent:InvokeServer() end)
+    if not success or not data then return end
+    local colorMap = {
+        Murderer = Color3.fromRGB(255,0,0),
+        Sheriff = Color3.fromRGB(0,0,255),
+        Hero = Color3.fromRGB(255,255,0),
+        Innocent = Color3.fromRGB(0,255,0)
+    }
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= player and plr:GetAttribute("Alive") == true then
+            local role = "Innocent"
+            local info = data[plr.Name]
+            if info and info.Role then role = info.Role end
+            local color = colorMap[role] or colorMap.Innocent
+            if espSettings[role] == true then
+                CreateESP(plr, color)
+            else
+                RemoveESP(plr)
+            end
+            if nameEspSettings[role] == true then
+                CreateNameESP(plr, color)
+            else
+                RemoveNameESP(plr)
+            end
+        else
+            RemoveESP(plr)
+            RemoveNameESP(plr)
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        RunService.Heartbeat:Wait()
+        UpdateESP()
+    end
+end)
+
+-- =====================================================
+-- ВКЛАДКА MAIN – ФУНКЦИИ УБИЙЦЫ
+-- =====================================================
 window:AddSection({ Name = T("sec_murder"), Tab = tabMain })
+
+-- Kill All
 window:AddButton({
     Title = T("btn_killall"),
     Description = T("btn_killall_desc"),
     Tab = tabMain,
     Callback = function()
-        -- (код убийства всех, как в оригинале)
+        if not player.Character then return end
+        local knife = player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife")
+        if not knife then return end
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                for _, part in pairs(plr.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+                local root = player.Character.HumanoidRootPart
+                local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    targetRoot.Size = Vector3.new(5,5,5)
+                    targetRoot.CFrame = root.CFrame + root.CFrame.LookVector * 3
+                    targetRoot.Anchored = true
+                    VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+                    VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+                end
+            end
+        end
         window:Notify({ Title = T("notify_kill"), Duration = 2 })
     end
 })
+
+-- Wallbang Shoot
 window:AddButton({
     Title = T("btn_shoot"),
     Description = T("btn_shoot_desc"),
     Tab = tabMain,
     Callback = function()
-        -- Wallbang код
-        window:Notify({ Title = "Wallbang!", Duration = 2 })
+        local murderer = findMurderer()
+        if not murderer then
+            window:Notify({ Title = T("notify_nomurder"), Duration = 2 })
+            return
+        end
+        local gun = player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun")
+        if not gun then
+            window:Notify({ Title = T("notify_error"), Description = "No gun!", Duration = 2 })
+            return
+        end
+        if gun.Parent ~= player.Character then gun.Parent = player.Character end
+        local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+        if not targetRoot then return end
+        local shootEvent = gun:FindFirstChild("ShootEvent") or gun:FindFirstChild("Shoot")
+        if shootEvent then
+            local head = murderer.Character:FindFirstChild("Head") or targetRoot
+            local origin = player.Character.HumanoidRootPart.Position
+            local direction = (head.Position - origin).unit * 500
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            raycastParams.FilterDescendantsInstances = {player.Character, murderer.Character}
+            local result = Workspace:Raycast(origin, direction, raycastParams)
+            local targetPos = result and result.Position or head.Position
+            shootEvent:FireServer(CFrame.new(origin, targetPos), CFrame.new(targetPos))
+            window:Notify({ Title = "Wallbang!", Description = "Shot through walls!", Duration = 2 })
+        end
     end
 })
--- ... и так далее для всех функций (автофарм, ESP, Misc, Settings).
 
--- Поскольку полный код занимает более 500 строк, я выложил его на Pastebin.
--- Ссылка на полный скрипт с украинским, белорусским и бразильским языками:
--- https://pastebin.com/raw/6wQzX9Yd
+-- Другие тогглы
+window:AddToggle({
+    Title = T("tog_autoshoot"),
+    Description = T("tog_autoshoot_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val)
+        autoShootActive = val
+        if val then
+            -- создаём кнопку стрельбы (как в оригинале)
+            if not shootButtonGui then
+                shootButtonGui = Instance.new("ScreenGui")
+                shootButtonGui.Name = "ShootButtonGui"
+                shootButtonGui.ResetOnSpawn = false
+                shootButtonGui.Parent = CoreGui
+                local btn = Instance.new("ImageButton")
+                btn.Name = "ShootButton"
+                btn.Size = UDim2.new(0,80,0,80)
+                btn.Position = UDim2.new(0.5,-40,0.5,-40)
+                btn.BackgroundColor3 = Color3.fromRGB(255,50,50)
+                btn.BackgroundTransparency = 0.3
+                btn.BorderSizePixel = 0
+                btn.Parent = shootButtonGui
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(1,0)
+                corner.Parent = btn
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1,0,1,0)
+                label.BackgroundTransparency = 1
+                label.Text = "🔫"
+                label.TextSize = 32
+                label.TextColor3 = Color3.new(1,1,1)
+                label.Font = Enum.Font.GothamBold
+                label.Parent = btn
+                -- обработчики перетаскивания и клика
+                local dragging, dragStart, startPos
+                btn.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = true
+                        dragStart = input.Position
+                        startPos = btn.Position
+                    end
+                end)
+                btn.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        if dragging then
+                            local delta = input.Position - dragStart
+                            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                        end
+                    end
+                end)
+                btn.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        dragging = false
+                    end
+                end)
+                btn.MouseButton1Click:Connect(function()
+                    -- стрельба
+                    local murderer = findMurderer()
+                    if not murderer then return end
+                    local gun = player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun")
+                    if not gun then return end
+                    if gun.Parent ~= player.Character then gun.Parent = player.Character end
+                    local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+                    if not targetRoot then return end
+                    local shootEvent = gun:FindFirstChild("ShootEvent") or gun:FindFirstChild("Shoot")
+                    if shootEvent then
+                        local origin = player.Character.HumanoidRootPart.Position
+                        local targetPos = targetRoot.Position
+                        shootEvent:FireServer(CFrame.new(origin, targetPos), CFrame.new(targetPos))
+                    end
+                end)
+            end
+        else
+            if shootButtonGui then shootButtonGui:Destroy(); shootButtonGui = nil end
+        end
+    end
+})
 
--- ВНИМАНИЕ: Вставьте этот код в ваш исполнитель. Он полностью рабочий.
--- Если ссылка не работает, напишите мне, и я пришлю код напрямую.
+window:AddToggle({
+    Title = T("tog_magicbullet"),
+    Description = T("tog_magicbullet_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val)
+        magicBullet = val
+        -- в оригинале меняет способ стрельбы
+    end
+})
+
+window:AddToggle({
+    Title = T("tog_autogun"),
+    Description = T("tog_autogun_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val)
+        grabGun = val
+        if val then
+            task.spawn(function()
+                while grabGun and player:GetAttribute("Alive") == true do
+                    local map = findMap()
+                    if map and map:FindFirstChild("GunDrop") then
+                        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            map.GunDrop.CFrame = root.CFrame
+                        end
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+-- =====================================================
+-- АВТОФАРМ (уже реализован выше, добавляем тогглы в UI)
+-- =====================================================
+window:AddSection({ Name = T("sec_autofarm"), Tab = tabMain })
+window:AddToggle({
+    Title = T("tog_farm"),
+    Description = T("tog_farm_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val)
+        farm = val
+        if not val then stopFarming() end
+    end
+})
+window:AddToggle({
+    Title = T("tog_random_delays"),
+    Description = T("tog_random_delays_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val) randomDelays = val end
+})
+window:AddToggle({
+    Title = T("tog_random_move"),
+    Description = T("tog_random_move_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val) randomMovement = val end
+})
+window:AddToggle({
+    Title = T("tog_random_coin"),
+    Description = T("tog_random_coin_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val) randomCoinSelection = val end
+})
+window:AddToggle({
+    Title = T("tog_antiafk"),
+    Description = T("tog_antiafk_desc"),
+    Default = false,
+    Tab = tabMain,
+    Callback = function(val)
+        antiAFK = val
+        if val then
+            task.spawn(function()
+                while antiAFK and task.wait(math.random(30, 60)) do
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        local humanoid = player.Character.Humanoid
+                        humanoid:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(math.random(-5,5), 0, math.random(-5,5)))
+                    end
+                end
+            end)
+        end
+    end
+})
+window:AddSlider({
+    Title = T("slider_mindelay"),
+    Tab = tabMain,
+    Default = 0.1,
+    MinValue = 0,
+    MaxValue = 1,
+    AllowDecimals = true,
+    Callback = function(val) minDelay = val end
+})
+window:AddSlider({
+    Title = T("slider_maxdelay"),
+    Tab = tabMain,
+    Default = 0.5,
+    MinValue = 0,
+    MaxValue = 2,
+    AllowDecimals = true,
+    Callback = function(val) maxDelay = val end
+})
+
+-- =====================================================
+-- ВКЛАДКА VISUALS
+-- =====================================================
+window:AddSection({ Name = T("sec_chams"), Tab = tabVisuals })
+window:AddToggle({
+    Title = T("tog_chams_murder"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espSettings.Murderer = v end
+})
+window:AddToggle({
+    Title = T("tog_chams_sheriff"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espSettings.Sheriff = v end
+})
+window:AddToggle({
+    Title = T("tog_chams_innocent"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espSettings.Innocent = v end
+})
+window:AddToggle({
+    Title = T("tog_chams_hero"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espSettings.Hero = v end
+})
+
+window:AddSection({ Name = T("sec_esp"), Tab = tabVisuals })
+window:AddToggle({
+    Title = T("tog_esp_murder"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) nameEspSettings.Murderer = v end
+})
+window:AddToggle({
+    Title = T("tog_esp_sheriff"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) nameEspSettings.Sheriff = v end
+})
+window:AddToggle({
+    Title = T("tog_esp_innocent"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) nameEspSettings.Innocent = v end
+})
+window:AddToggle({
+    Title = T("tog_esp_hero"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) nameEspSettings.Hero = v end
+})
+
+window:AddSection({ Name = T("sec_esp_custom"), Tab = tabVisuals })
+window:AddToggle({
+    Title = T("tog_box2d"),
+    Description = T("tog_box2d_desc"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espCustom.Box2D = v end
+})
+window:AddToggle({
+    Title = T("tog_displayname"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v)
+        espCustom.DisplayName = v
+        if v then espCustom.NormalName = false end
+    end
+})
+window:AddToggle({
+    Title = T("tog_normalname"),
+    Default = true,
+    Tab = tabVisuals,
+    Callback = function(v)
+        espCustom.NormalName = v
+        if v then espCustom.DisplayName = false end
+    end
+})
+window:AddToggle({
+    Title = T("tog_avatar"),
+    Default = false,
+    Tab = tabVisuals,
+    Callback = function(v) espCustom.AvatarDisplay = v end
+})
+
+-- =====================================================
+-- ВКЛАДКА MISC
+-- =====================================================
+window:AddSection({ Name = T("sec_discord"), Tab = tabMisc })
+window:AddButton({
+    Title = T("btn_copydiscord"),
+    Description = T("btn_copydiscord_desc"),
+    Tab = tabMisc,
+    Callback = function()
+        Clipboard:set("https://discord.gg/HsSSmNf69")
+        window:Notify({ Title = T("notify_copied"), Description = "https://discord.gg/HsSSmNf69", Duration = 3 })
+    end
+})
+
+window:AddSection({ Name = T("sec_nkno"), Tab = tabMisc })
+window:AddToggle({
+    Title = T("tog_tag"),
+    Description = T("tog_tag_desc"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        customTagActive = val
+        if val then
+            if tagGui then tagGui:Destroy() end
+            local head = player.Character and player.Character:FindFirstChild("Head")
+            if head then
+                tagGui = Instance.new("BillboardGui")
+                tagGui.Name = "NKNO_Tag"
+                tagGui.AlwaysOnTop = true
+                tagGui.Size = UDim2.new(0,200,0,50)
+                tagGui.StudsOffset = Vector3.new(0,2.5,0)
+                tagGui.Parent = head
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1,0,1,0)
+                label.BackgroundTransparency = 1
+                label.Text = "👑 NKNO$"
+                label.TextColor3 = Color3.fromRGB(255,0,0)
+                label.TextSize = 24
+                label.Font = Enum.Font.GothamBold
+                label.TextStrokeColor3 = Color3.new(0,0,0)
+                label.TextStrokeTransparency = 0.3
+                label.Parent = tagGui
+            end
+            window:Notify({ Title = T("notify_tag_on"), Duration = 2 })
+        else
+            if tagGui then tagGui:Destroy(); tagGui = nil end
+            window:Notify({ Title = T("notify_tag_off"), Duration = 2 })
+        end
+    end
+})
+
+window:AddToggle({
+    Title = T("tog_pingfps"),
+    Description = T("tog_pingfps_desc"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        pingFpsActive = val
+        if val then
+            if fpsGui then fpsGui:Destroy() end
+            fpsGui = Instance.new("ScreenGui")
+            fpsGui.Name = "PingFPS"
+            fpsGui.Parent = CoreGui
+            local frame = Instance.new("Frame")
+            frame.Size = UDim2.new(0,150,0,40)
+            frame.Position = UDim2.new(0,10,0,10)
+            frame.BackgroundTransparency = 0.5
+            frame.BackgroundColor3 = Color3.new(0,0,0)
+            frame.BorderSizePixel = 0
+            frame.Parent = fpsGui
+            local pingLabel = Instance.new("TextLabel")
+            pingLabel.Size = UDim2.new(1,0,0.5,0)
+            pingLabel.Position = UDim2.new(0,0,0,0)
+            pingLabel.BackgroundTransparency = 1
+            pingLabel.Text = "Ping: 0ms"
+            pingLabel.TextColor3 = Color3.new(1,1,1)
+            pingLabel.TextSize = 14
+            pingLabel.Font = Enum.Font.Gotham
+            pingLabel.Parent = frame
+            local fpsLabel = Instance.new("TextLabel")
+            fpsLabel.Size = UDim2.new(1,0,0.5,0)
+            fpsLabel.Position = UDim2.new(0,0,0.5,0)
+            fpsLabel.BackgroundTransparency = 1
+            fpsLabel.Text = "FPS: 0"
+            fpsLabel.TextColor3 = Color3.new(1,1,1)
+            fpsLabel.TextSize = 14
+            fpsLabel.Font = Enum.Font.Gotham
+            fpsLabel.Parent = frame
+            local lastUpdate = tick()
+            local frameCount = 0
+            local conn = RunService.RenderStepped:Connect(function(dt)
+                frameCount = frameCount + 1
+                if tick() - lastUpdate >= 1 then
+                    fpsLabel.Text = "FPS: " .. frameCount
+                    frameCount = 0
+                    lastUpdate = tick()
+                end
+                pingLabel.Text = "Ping: " .. getPing() .. "ms"
+            end)
+            table.insert(connections, conn)
+        else
+            if fpsGui then fpsGui:Destroy(); fpsGui = nil end
+        end
+    end
+})
+
+-- =====================================================
+-- ТЕЛЕПОРТЫ
+-- =====================================================
+window:AddButton({
+    Title = T("btn_map_tp"),
+    Tab = tabMisc,
+    Callback = function()
+        local map = findMap()
+        if map and map:FindFirstChild("Spawns") then
+            local spawns = map.Spawns:GetChildren()
+            if #spawns > 0 then
+                local spawn = spawns[math.random(1, #spawns)]
+                if spawn:IsA("BasePart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = spawn.CFrame
+                end
+            end
+        end
+    end
+})
+
+window:AddButton({
+    Title = T("btn_lobby_tp"),
+    Tab = tabMisc,
+    Callback = function()
+        local lobby = Workspace:FindFirstChild("RegularLobby")
+        if lobby and lobby:FindFirstChild("Spawns") then
+            local spawns = lobby.Spawns:GetChildren()
+            if #spawns > 0 and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                player.Character.HumanoidRootPart.CFrame = spawns[1].CFrame
+            end
+        end
+    end
+})
+
+window:AddButton({
+    Title = T("btn_murder_tp"),
+    Tab = tabMisc,
+    Callback = function()
+        local murderer = findMurderer()
+        if murderer and murderer.Character and murderer.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = murderer.Character.HumanoidRootPart.CFrame
+        end
+    end
+})
+
+window:AddButton({
+    Title = T("btn_sheriff_tp"),
+    Tab = tabMisc,
+    Callback = function()
+        local dataEvent = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+        if not dataEvent then return end
+        local success, data = pcall(function() return dataEvent:InvokeServer() end)
+        if not success or not data then return end
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr:GetAttribute("Alive") == true then
+                local info = data[plr.Name]
+                if info and info.Role == "Sheriff" and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = plr.Character.HumanoidRootPart.CFrame
+                    break
+                end
+            end
+        end
+    end
+})
+
+-- =====================================================
+-- ФЛИНГ
+-- =====================================================
+local function SkidFling(target)
+    if not player.Character then return end
+    local root = player.Character:FindFirstChild("HumanoidRootPart")
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid then return end
+    local tChar = target.Character
+    if not tChar then return end
+    local tRoot = tChar:FindFirstChild("HumanoidRootPart")
+    local tHead = tChar:FindFirstChild("Head")
+    if not tRoot then return end
+    -- Сохраняем позицию
+    getgenov().OldPos = root.CFrame
+    -- Отключаем коллизии
+    for _, part in pairs(tChar:GetDescendants()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+    -- Устанавливаем камеру на цель
+    Workspace.CurrentCamera.CameraSubject = tRoot
+    -- Создаём BodyVelocity
+    local bv = Instance.new("BodyVelocity")
+    bv.Parent = root
+    bv.Velocity = Vector3.new(0,0,0)
+    bv.MaxForce = Vector3.new(9e9,9e9,9e9)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+    -- Основной цикл флинга
+    local startTime = tick()
+    while flingActive and (tick() - startTime) < 10 do
+        if not root or not tRoot then break end
+        root.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0,1.5,0) * CFrame.Angles(math.rad(90),0,0)
+        root.Velocity = Vector3.new(9e7, 9e7*10, 9e7)
+        root.RotVelocity = Vector3.new(9e8,9e8,9e8)
+        task.wait()
+        root.CFrame = CFrame.new(tRoot.Position) * CFrame.new(0,-1.5,0) * CFrame.Angles(math.rad(90),0,0)
+        root.Velocity = Vector3.new(9e7, 9e7*10, 9e7)
+        root.RotVelocity = Vector3.new(9e8,9e8,9e8)
+        task.wait()
+    end
+    bv:Destroy()
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+    Workspace.CurrentCamera.CameraSubject = humanoid
+    -- Возврат на место
+    if getgenv().OldPos then
+        root.CFrame = getgenv().OldPos
+    end
+end
+
+window:AddSection({ Name = T("sec_fling"), Tab = tabMisc })
+window:AddButton({
+    Title = T("btn_fling_murder"),
+    Tab = tabMisc,
+    Callback = function()
+        if flingActive then return end
+        local murderer = findMurderer()
+        if murderer then
+            flingActive = true
+            window:Notify({ Title = T("notify_fling_start"), Description = murderer.Name, Duration = 2 })
+            task.spawn(function()
+                SkidFling(murderer)
+                flingActive = false
+            end)
+        end
+    end
+})
+window:AddButton({
+    Title = T("btn_fling_sheriff"),
+    Tab = tabMisc,
+    Callback = function()
+        if flingActive then return end
+        local dataEvent = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+        if not dataEvent then return end
+        local success, data = pcall(function() return dataEvent:InvokeServer() end)
+        if not success or not data then return end
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr:GetAttribute("Alive") == true then
+                local info = data[plr.Name]
+                if info and info.Role == "Sheriff" then
+                    flingActive = true
+                    window:Notify({ Title = T("notify_fling_start"), Description = plr.Name, Duration = 2 })
+                    task.spawn(function()
+                        SkidFling(plr)
+                        flingActive = false
+                    end)
+                    break
+                end
+            end
+        end
+    end
+})
+window:AddButton({
+    Title = T("btn_fling_sel"),
+    Tab = tabMisc,
+    Callback = function()
+        if flingActive or not selectedPlayer then return end
+        flingActive = true
+        window:Notify({ Title = T("notify_fling_start"), Description = selectedPlayer.Name, Duration = 2 })
+        task.spawn(function()
+            SkidFling(selectedPlayer)
+            flingActive = false
+        end)
+    end
+})
+window:AddButton({
+    Title = T("btn_stop_fling"),
+    Tab = tabMisc,
+    Callback = function()
+        if flingActive then
+            flingActive = false
+            window:Notify({ Title = T("notify_fling_stop"), Duration = 2 })
+        end
+    end
+})
+window:AddInput({
+    Title = T("input_player"),
+    Tab = tabMisc,
+    Callback = function(text)
+        if text and text ~= "" then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if string.lower(plr.Name):find(string.lower(text)) then
+                    selectedPlayer = plr
+                    window:Notify({ Title = "Player selected", Description = plr.Name, Duration = 2 })
+                    return
+                end
+            end
+            selectedPlayer = nil
+            window:Notify({ Title = T("notify_error"), Description = "Player not found", Duration = 2 })
+        end
+    end
+})
+
+-- =====================================================
+-- UNDERMAP
+-- =====================================================
+window:AddToggle({
+    Title = T("tog_undermap"),
+    Description = T("tog_undermap_desc"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        underMapActive = val
+        if val then
+            oldFallenHeight = Workspace.FallenPartsDestroyHeight
+            Workspace.FallenPartsDestroyHeight = -1/0
+            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local underY = -500
+                local map = findMap()
+                if map and map:FindFirstChild("Spawns") then
+                    local total = Vector3.new()
+                    local count = 0
+                    for _, spawn in pairs(map.Spawns:GetChildren()) do
+                        if spawn:IsA("BasePart") then
+                            total = total + spawn.Position
+                            count = count + 1
+                        end
+                    end
+                    if count > 0 then
+                        underY = (total / count).Y - 100
+                    end
+                end
+                root.CFrame = CFrame.new(root.Position.X, underY, root.Position.Z)
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+                local bv = Instance.new("BodyVelocity")
+                bv.Parent = root
+                bv.Velocity = Vector3.new(0,0,0)
+                bv.MaxForce = Vector3.new(9e9,9e9,9e9)
+                if underMapConnection then underMapConnection:Disconnect() end
+                underMapConnection = RunService.Heartbeat:Connect(function()
+                    if not underMapActive or not player.Character or not root then
+                        if bv then bv:Destroy() end
+                        if underMapConnection then underMapConnection:Disconnect() end
+                        return
+                    end
+                    root.Velocity = Vector3.new(0,0,0)
+                    root.RotVelocity = Vector3.new(0,0,0)
+                end)
+            end
+            window:Notify({ Title = T("notify_undermap_on"), Duration = 2 })
+        else
+            Workspace.FallenPartsDestroyHeight = oldFallenHeight
+            if underMapConnection then underMapConnection:Disconnect(); underMapConnection = nil end
+            if player.Character then
+                local root = player.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local bv = root:FindFirstChildOfClass("BodyVelocity")
+                    if bv then bv:Destroy() end
+                end
+                local map = findMap()
+                if map and map:FindFirstChild("Spawns") then
+                    local spawns = map.Spawns:GetChildren()
+                    if #spawns > 0 then
+                        local spawn = spawns[math.random(1, #spawns)]
+                        if spawn:IsA("BasePart") and root then
+                            root.CFrame = spawn.CFrame + Vector3.new(0,5,0)
+                        end
+                    end
+                end
+            end
+            window:Notify({ Title = T("notify_undermap_off"), Duration = 2 })
+        end
+    end
+})
+
+-- =====================================================
+-- МОДИФИКАТОРЫ ПЕРСОНАЖА
+-- =====================================================
+window:AddSection({ Name = T("sec_char_mod"), Tab = tabMisc })
+window:AddToggle({
+    Title = T("tog_antifling"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        antiFling = val
+        if val and player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+})
+
+window:AddToggle({
+    Title = T("tog_customws"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        customWalkSpeed = val
+        if val then
+            local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.WalkSpeed = walkSpeedValue end
+        else
+            local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.WalkSpeed = 16 end
+        end
+    end
+})
+window:AddSlider({
+    Title = T("slider_ws"),
+    Tab = tabMisc,
+    Default = 16,
+    MinValue = 16,
+    MaxValue = 200,
+    AllowDecimals = false,
+    Callback = function(val)
+        walkSpeedValue = val
+        if customWalkSpeed and player.Character then
+            local h = player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.WalkSpeed = val end
+        end
+    end
+})
+window:AddToggle({
+    Title = T("tog_customjp"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        customJumpPower = val
+        if val then
+            local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.JumpPower = jumpPowerValue end
+        else
+            local h = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.JumpPower = 50 end
+        end
+    end
+})
+window:AddSlider({
+    Title = T("slider_jp"),
+    Tab = tabMisc,
+    Default = 50,
+    MinValue = 50,
+    MaxValue = 200,
+    AllowDecimals = false,
+    Callback = function(val)
+        jumpPowerValue = val
+        if customJumpPower and player.Character then
+            local h = player.Character:FindFirstChildOfClass("Humanoid")
+            if h then h.JumpPower = val end
+        end
+    end
+})
+window:AddToggle({
+    Title = T("tog_customfov"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        customFOV = val
+        if val then
+            Workspace.CurrentCamera.FieldOfView = fovValue
+        else
+            Workspace.CurrentCamera.FieldOfView = 70
+        end
+    end
+})
+window:AddSlider({
+    Title = T("slider_fov"),
+    Tab = tabMisc,
+    Default = 70,
+    MinValue = 70,
+    MaxValue = 120,
+    AllowDecimals = false,
+    Callback = function(val)
+        fovValue = val
+        if customFOV then Workspace.CurrentCamera.FieldOfView = val end
+    end
+})
+window:AddToggle({
+    Title = T("tog_forcefield"),
+    Description = T("tog_forcefield_desc"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        forceFieldMat = val
+        if val and player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("MeshPart") then
+                    part.Material = Enum.Material.ForceField
+                end
+            end
+        elseif not val and player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("MeshPart") then
+                    part.Material = Enum.Material.Plastic
+                end
+            end
+        end
+    end
+})
+
+-- =====================================================
+-- ТАНЦЫ
+-- =====================================================
+local function playDance()
+    if not player.Character then return end
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = humanoid
+    end
+    if animator then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://" .. danceId
+        local track = animator:LoadAnimation(anim)
+        track.Looped = true
+        track.Priority = Enum.AnimationPriority.Action
+        track:Play(0.1, 1, 1)
+        task.wait(0.1)
+        anim:Destroy()
+    end
+end
+
+window:AddSection({ Name = T("sec_dance"), Tab = tabMisc })
+window:AddDropdown({
+    Title = T("dropdown_dance"),
+    Options = {
+        ["Dance 1"] = "127118661424463",
+        ["Dance 2"] = "82682811348660",
+        ["Dance 3"] = "10714340543",
+        ["Dance 4"] = "15609995579"
+    },
+    Tab = tabMisc,
+    Callback = function(val)
+        if val then danceId = val end
+    end
+})
+window:AddToggle({
+    Title = T("tog_autodance"),
+    Default = false,
+    Tab = tabMisc,
+    Callback = function(val)
+        autoDance = val
+        if val then
+            playDance()
+        else
+            -- stop dance
+            local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local animator = humanoid:FindFirstChildOfClass("Animator")
+                if animator then
+                    for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                        track:Stop()
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- =====================================================
+-- НАСТРОЙКИ (Settings)
+-- =====================================================
+window:AddKeybind({
+    Title = T("keybind_minimize"),
+    Tab = tabSettings,
+    Callback = function(key)
+        window:SetSetting("Keybind", key)
+    end
+})
+window:AddDropdown({
+    Title = T("dropdown_theme"),
+    Options = {
+        ["Light Mode"] = "Light",
+        ["Dark Mode"] = "Dark",
+        ["Extra Dark"] = "Void"
+    },
+    Tab = tabSettings,
+    Callback = function(val)
+        window:SetTheme(val)
+    end
+})
+window:AddToggle({
+    Title = "UI Blur",
+    Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
+    Default = true,
+    Tab = tabSettings,
+    Callback = function(val)
+        window:SetSetting("Blur", val)
+    end
+})
+window:AddSlider({
+    Title = "UI Transparency",
+    Tab = tabSettings,
+    AllowDecimals = true,
+    MaxValue = 1,
+    Callback = function(val)
+        window:SetSetting("Transparency", val)
+    end
+})
+
+-- =====================================================
+-- ПРИВЕТСТВИЕ
+-- =====================================================
+window:Notify({
+    Title = "NKNO$ HUB",
+    Description = T("notify_hello"),
+    Duration = 5
+})
 
 print("NKNO$ HUB загружен! Язык: " .. Languages[lang])
