@@ -1,29 +1,29 @@
--- ===============================
--- NKNO$ HUB ULTIMATE EDITION
--- Полностью переработан, оптимизирован, с мини-режимом и новыми фичами
--- ===============================
+-- ============================================================
+-- NKNO$ HUB ULTIMATE with UnderMap Farming
+-- Меню на основе вашего кода + все функции
+-- ============================================================
 
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local CoreGui = game:GetService("CoreGui")
-local Stats = game:GetService("Stats")
-local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
+local Stats = game:GetService("Stats")
+local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- Глобальные настройки (доступны для изменения)
+-- Глобальные настройки
 getgenv().NKNO = {
     AntiFling = false,
     AutoGrabGun = false,
     FarmCoins = false,
+    FarmUnderMap = true,   -- новая опция: фарм под картой
     RandomDelays = false,
     RandomMovement = false,
     RandomCoinSelection = false,
@@ -41,9 +41,7 @@ getgenv().NKNO = {
     AutoDance = false,
     DanceID = "127118661424463",
     AutoRespawn = false,
-    GodMode = false,      -- режим неуязвимости (убирает коллизию)
-    AutoBuyKnife = false,
-    AutoBuyGun = false,
+    GodMode = false,
     ESP = {
         Murderer = false,
         Sheriff = false,
@@ -57,9 +55,10 @@ getgenv().NKNO = {
         ColorSheriff = Color3.fromRGB(0,0,255),
         ColorHero = Color3.fromRGB(255,255,0),
         ColorInnocent = Color3.fromRGB(0,255,0),
-        OutlineThickness = 2,
         FontSize = 14,
     },
+    Flinging = false,
+    SelectedPlayer = nil,
 }
 
 -- Вспомогательные функции
@@ -105,261 +104,213 @@ local function findSheriff()
     return nil
 end
 
--- =============================================
---    СИСТЕМА UI (полностью переписана)
--- =============================================
+local function findPlayerByPartialName(name)
+    if not name or name == "" then return nil end
+    local lower = string.lower(name)
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            if string.lower(plr.Name) == lower or string.find(string.lower(plr.Name), lower, 1, true) then
+                return plr
+            end
+        end
+    end
+    return nil
+end
+
+-- ============================================================
+--          МЕНЮ (ваш код, дополненный)
+-- ============================================================
+
+-- Удаляем старый GUI, если есть
+if CoreGui:FindFirstChild("NKNO_HUB") then
+    CoreGui["NKNO_HUB"]:Destroy()
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NKNO_HUB"
-ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Основное окно
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.BackgroundTransparency = 0.15
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
+-- Переменные состояния меню
+local isMinimized = false
+local isMenuOpen = false
+local UI_SCALE = 0.8
 
 -- Тень
-local Shadow = Instance.new("Frame")
-Shadow.Size = UDim2.new(1, 10, 1, 10)
-Shadow.Position = UDim2.new(0, -5, 0, -5)
-Shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
-Shadow.BackgroundTransparency = 0.6
-Shadow.BorderSizePixel = 0
-Shadow.Parent = MainFrame
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 12)
-shadowCorner.Parent = Shadow
+local ShadowFrame = Instance.new("Frame")
+ShadowFrame.Name = "ShadowFrame"
+ShadowFrame.Parent = ScreenGui
+ShadowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+ShadowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+ShadowFrame.Position = UDim2.new(0.5, 4, 0.5, 6)
+ShadowFrame.Size = UDim2.new(0, 646, 0, 426)
+ShadowFrame.BackgroundTransparency = 0.45
+ShadowFrame.Visible = false
+Instance.new("UICorner", ShadowFrame).CornerRadius = UDim.new(0, 16)
+local ShadowScale = Instance.new("UIScale", ShadowFrame)
+ShadowScale.Scale = 0.3
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = MainFrame
+-- Главное окно
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(11, 11, 16)
+MainFrame.BackgroundTransparency = 0.1
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.Size = UDim2.new(0, 640, 0, 420)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Visible = false
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+local MainScale = Instance.new("UIScale", MainFrame)
+MainScale.Scale = 0.3
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Parent = MainFrame
+MainStroke.Color = Color3.fromRGB(35, 35, 50)
+MainStroke.Thickness = 1.5
 
--- Заголовок с возможностью перетаскивания
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 35)
-TitleBar.BackgroundTransparency = 1
-TitleBar.Parent = MainFrame
+-- Фоновое изображение
+local BgImage = Instance.new("ImageLabel")
+BgImage.Name = "BackgroundImage"
+BgImage.Parent = MainFrame
+BgImage.BackgroundTransparency = 1
+BgImage.Size = UDim2.new(1, 0, 1, 0)
+BgImage.Image = "rbxassetid://138913032331139"
+BgImage.ScaleType = Enum.ScaleType.Crop
+BgImage.ImageTransparency = 0.35
+BgImage.ZIndex = 0
+Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(0.6, 0, 1, 0)
-TitleLabel.Position = UDim2.new(0.02, 0, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "NKNO$ HUB"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-TitleLabel.TextSize = 20
-TitleLabel.Font = Enum.Font.GothamBold
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Parent = TitleBar
+-- Заголовок
+local Title = Instance.new("TextLabel")
+Title.Parent = MainFrame
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 20, 0, 14)
+Title.Size = UDim2.new(0, 200, 0, 26)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "NKNO$ HUB"
+Title.TextColor3 = Color3.fromRGB(255, 215, 0)
+Title.TextSize = 20
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Кнопка сворачивания (в иконку)
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -75, 0.5, -15)
-MinimizeBtn.BackgroundTransparency = 1
-MinimizeBtn.Text = "➖"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
-MinimizeBtn.TextSize = 20
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.Parent = TitleBar
-MinimizeBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MiniIcon.Visible = true
-end)
+-- Кнопки управления
+local TopControls = Instance.new("Frame")
+TopControls.Parent = MainFrame
+TopControls.BackgroundTransparency = 1
+TopControls.Position = UDim2.new(1, -75, 0, 14)
+TopControls.Size = UDim2.new(0, 65, 0, 26)
+TopControls.ZIndex = 20
 
--- Кнопка закрытия
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -40, 0.5, -15)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255,100,100)
-CloseBtn.TextSize = 18
+CloseBtn.Parent = TopControls
+CloseBtn.BackgroundColor3 = Color3.fromRGB(25, 18, 22)
+CloseBtn.Position = UDim2.new(1, -26, 0, 0)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
 CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Parent = TitleBar
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(250, 80, 80)
+CloseBtn.TextSize = 18
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 CloseBtn.MouseButton1Click:Connect(function()
+    toggleMenu(false)
+    task.wait(0.3)
     ScreenGui:Destroy()
 end)
 
--- Мини-иконка (свёрнутое состояние)
-local MiniIcon = Instance.new("ImageButton")
-MiniIcon.Size = UDim2.new(0, 50, 0, 50)
-MiniIcon.Position = UDim2.new(0.9, -60, 0.1, 10)
-MiniIcon.BackgroundColor3 = Color3.fromRGB(25,25,30)
-MiniIcon.BorderSizePixel = 0
-MiniIcon.Image = "rbxassetid://11963373994" -- иконка
-MiniIcon.BackgroundTransparency = 0.2
-MiniIcon.Visible = false
-MiniIcon.Parent = ScreenGui
-local miniCorner = Instance.new("UICorner")
-miniCorner.CornerRadius = UDim.new(1, 0)
-miniCorner.Parent = MiniIcon
-
-MiniIcon.MouseButton1Click:Connect(function()
-    MiniIcon.Visible = false
-    MainFrame.Visible = true
-end)
-
--- Перетаскивание окна
-local dragging, dragStart, startPos
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-    end
-end)
-TitleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local MinBtn = Instance.new("TextButton")
+MinBtn.Parent = TopControls
+MinBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+MinBtn.Position = UDim2.new(1, -58, 0, 0)
+MinBtn.Size = UDim2.new(0, 26, 0, 26)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.Text = "-"
+MinBtn.TextColor3 = Color3.fromRGB(160, 160, 180)
+MinBtn.TextSize = 18
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+MinBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
+        TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
+        MinBtn.Text = "+"
+        ContentContainer.Visible = false
+    else
+        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 420)}):Play()
+        TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 426)}):Play()
+        MinBtn.Text = "-"
+        ContentContainer.Visible = true
     end
 end)
 
--- Контейнер для содержимого
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, 0, 1, -35)
-ContentContainer.Position = UDim2.new(0, 0, 0, 35)
-ContentContainer.BackgroundTransparency = 1
+-- Контейнер для содержимого с прокруткой
+local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Parent = MainFrame
-
--- Боковая панель с вкладками
-local TabPanel = Instance.new("Frame")
-TabPanel.Size = UDim2.new(0, 110, 1, 0)
-TabPanel.BackgroundTransparency = 1
-TabPanel.Parent = ContentContainer
-
--- Область содержимого
-local ContentArea = Instance.new("Frame")
-ContentArea.Size = UDim2.new(1, -115, 1, -5)
-ContentArea.Position = UDim2.new(0, 115, 0, 5)
-ContentArea.BackgroundTransparency = 1
-ContentArea.Parent = ContentContainer
-
-local Scrolling = Instance.new("ScrollingFrame")
-Scrolling.Size = UDim2.new(1, 0, 1, 0)
-Scrolling.BackgroundTransparency = 1
-Scrolling.BorderSizePixel = 0
-Scrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
-Scrolling.ScrollBarThickness = 4
-Scrolling.Parent = ContentArea
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Position = UDim2.new(0, 15, 0, 55)
+ContentContainer.Size = UDim2.new(1, -30, 1, -70)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+ContentContainer.ScrollBarThickness = 6
+ContentContainer.BorderSizePixel = 0
 
 local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.Padding = UDim.new(0, 6)
+ContentLayout.Padding = UDim.new(0, 8)
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ContentLayout.Parent = Scrolling
+ContentLayout.Parent = ContentContainer
 
--- Хранилище вкладок
-local tabs = {}
-local currentTab = nil
-
-local function createTab(name, icon)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 35)
-    btn.Position = UDim2.new(0, 5, 0, #tabs * 40 + 5)
-    btn.BackgroundColor3 = Color3.fromRGB(40,40,45)
-    btn.BorderSizePixel = 0
-    btn.Text = "  " .. name
-    btn.TextColor3 = Color3.fromRGB(200,200,200)
-    btn.TextSize = 14
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Parent = TabPanel
-
-    local cornerBtn = Instance.new("UICorner")
-    cornerBtn.CornerRadius = UDim.new(0, 6)
-    cornerBtn.Parent = btn
-
-    local content = Instance.new("Frame")
-    content.Size = UDim2.new(1, 0, 1, 0)
-    content.BackgroundTransparency = 1
-    content.Visible = false
-    content.Parent = Scrolling
-
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 6)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = content
-
-    table.insert(tabs, { btn = btn, content = content })
-
-    btn.MouseButton1Click:Connect(function()
-        for _, t in ipairs(tabs) do
-            t.content.Visible = false
-            t.btn.BackgroundColor3 = Color3.fromRGB(40,40,45)
-            t.btn.TextColor3 = Color3.fromRGB(200,200,200)
+-- Функция обновления CanvasSize
+local function updateCanvas()
+    local total = 0
+    for _, child in ipairs(ContentContainer:GetChildren()) do
+        if child:IsA("UIListLayout") then continue end
+        if child:IsA("Frame") then
+            total = total + child.Size.Y.Offset + 8
         end
-        content.Visible = true
-        btn.BackgroundColor3 = Color3.fromRGB(70,70,80)
-        btn.TextColor3 = Color3.fromRGB(255,215,0)
-        -- обновляем размер холста
-        local totalH = 0
-        for _, child in ipairs(content:GetChildren()) do
-            if child:IsA("UIListLayout") then continue end
-            totalH = totalH + (child.Size.Y.Offset or 30) + 6
-        end
-        Scrolling.CanvasSize = UDim2.new(0, 0, 0, totalH + 10)
-    end)
-
-    if #tabs == 1 then
-        content.Visible = true
-        btn.BackgroundColor3 = Color3.fromRGB(70,70,80)
-        btn.TextColor3 = Color3.fromRGB(255,215,0)
-        currentTab = name
     end
-
-    return content
+    ContentContainer.CanvasSize = UDim2.new(0, 0, 0, total + 20)
 end
 
--- Элементы UI
+-- Функции для создания элементов
 local function createSection(parent, title)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 24)
     label.BackgroundTransparency = 1
     label.Text = title
-    label.TextColor3 = Color3.fromRGB(180,180,200)
+    label.TextColor3 = Color3.fromRGB(200, 200, 220)
     label.TextSize = 16
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = parent
+    updateCanvas()
     return label
 end
 
 local function createButton(parent, title, desc, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.BackgroundColor3 = Color3.fromRGB(50,50,55)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     btn.BorderSizePixel = 0
     btn.Text = title
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextSize = 14
     btn.Font = Enum.Font.GothamMedium
     btn.Parent = parent
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     if desc and desc ~= "" then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(1, 0, 0, 16)
         d.Position = UDim2.new(0, 5, 1, 0)
         d.BackgroundTransparency = 1
         d.Text = desc
-        d.TextColor3 = Color3.fromRGB(150,150,160)
+        d.TextColor3 = Color3.fromRGB(150, 150, 170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
         d.TextXAlignment = Enum.TextXAlignment.Left
         d.Parent = btn
     end
     btn.MouseButton1Click:Connect(callback)
+    updateCanvas()
+    return btn
 end
 
 local function createToggle(parent, title, desc, default, callback)
@@ -372,7 +323,7 @@ local function createToggle(parent, title, desc, default, callback)
     label.Size = UDim2.new(0.65, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = title
-    label.TextColor3 = Color3.fromRGB(220,220,230)
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -381,30 +332,26 @@ local function createToggle(parent, title, desc, default, callback)
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 44, 0, 22)
     toggleBtn.Position = UDim2.new(1, -48, 0.5, -11)
-    toggleBtn.BackgroundColor3 = default and Color3.fromRGB(0,170,0) or Color3.fromRGB(80,80,85)
+    toggleBtn.BackgroundColor3 = default and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(80, 80, 90)
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Text = ""
     toggleBtn.Parent = frame
-    local cornerToggle = Instance.new("UICorner")
-    cornerToggle.CornerRadius = UDim.new(1, 0)
-    cornerToggle.Parent = toggleBtn
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
 
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, 18, 0, 18)
     circle.Position = default and UDim2.new(1, -22, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
-    circle.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     circle.BorderSizePixel = 0
     circle.Parent = toggleBtn
-    local circleCorner = Instance.new("UICorner")
-    circleCorner.CornerRadius = UDim.new(1, 0)
-    circleCorner.Parent = circle
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
     local state = default
     callback(state)
 
     toggleBtn.MouseButton1Click:Connect(function()
         state = not state
-        toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(80,80,85)
+        toggleBtn.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(80, 80, 90)
         circle.Position = state and UDim2.new(1, -22, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
         callback(state)
     end)
@@ -415,12 +362,14 @@ local function createToggle(parent, title, desc, default, callback)
         d.Position = UDim2.new(0, 0, 1, 0)
         d.BackgroundTransparency = 1
         d.Text = desc
-        d.TextColor3 = Color3.fromRGB(150,150,160)
+        d.TextColor3 = Color3.fromRGB(150, 150, 170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
         d.TextXAlignment = Enum.TextXAlignment.Left
         d.Parent = frame
     end
+    updateCanvas()
+    return frame
 end
 
 local function createSlider(parent, title, desc, min, max, default, decimals, callback)
@@ -433,7 +382,7 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
     label.Size = UDim2.new(0.6, 0, 0.4, 0)
     label.BackgroundTransparency = 1
     label.Text = title
-    label.TextColor3 = Color3.fromRGB(220,220,230)
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -444,7 +393,7 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
     valueLabel.Position = UDim2.new(0.7, 0, 0, 0)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(255,215,0)
+    valueLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
     valueLabel.TextSize = 14
     valueLabel.Font = Enum.Font.GothamBold
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -453,26 +402,24 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
     local sliderBg = Instance.new("Frame")
     sliderBg.Size = UDim2.new(1, 0, 0, 6)
     sliderBg.Position = UDim2.new(0, 0, 0.6, 0)
-    sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,65)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
     sliderBg.BorderSizePixel = 0
     sliderBg.Parent = frame
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255,215,0)
+    fill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
     fill.BorderSizePixel = 0
     fill.Parent = sliderBg
 
     local drag = Instance.new("TextButton")
     drag.Size = UDim2.new(0, 14, 0, 14)
     drag.Position = UDim2.new((default - min) / (max - min), -7, 0.5, -7)
-    drag.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    drag.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     drag.BorderSizePixel = 0
     drag.Text = ""
     drag.Parent = sliderBg
-    local dragCorner = Instance.new("UICorner")
-    dragCorner.CornerRadius = UDim.new(1, 0)
-    dragCorner.Parent = drag
+    Instance.new("UICorner", drag).CornerRadius = UDim.new(1, 0)
 
     local function update(val)
         val = math.clamp(val, min, max)
@@ -506,12 +453,14 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
         d.Position = UDim2.new(0, 0, 1, 0)
         d.BackgroundTransparency = 1
         d.Text = desc
-        d.TextColor3 = Color3.fromRGB(150,150,160)
+        d.TextColor3 = Color3.fromRGB(150, 150, 170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
         d.TextXAlignment = Enum.TextXAlignment.Left
         d.Parent = frame
     end
+    updateCanvas()
+    return frame
 end
 
 local function createDropdown(parent, title, desc, options, default, callback)
@@ -524,7 +473,7 @@ local function createDropdown(parent, title, desc, options, default, callback)
     label.Size = UDim2.new(0.5, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = title
-    label.TextColor3 = Color3.fromRGB(220,220,230)
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -533,28 +482,24 @@ local function createDropdown(parent, title, desc, options, default, callback)
     local dropdownBtn = Instance.new("TextButton")
     dropdownBtn.Size = UDim2.new(0.4, 0, 1, 0)
     dropdownBtn.Position = UDim2.new(0.6, 0, 0, 0)
-    dropdownBtn.BackgroundColor3 = Color3.fromRGB(50,50,55)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     dropdownBtn.BorderSizePixel = 0
     dropdownBtn.Text = default or options[1]
-    dropdownBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    dropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     dropdownBtn.TextSize = 14
     dropdownBtn.Font = Enum.Font.GothamMedium
     dropdownBtn.Parent = frame
-    local cornerDD = Instance.new("UICorner")
-    cornerDD.CornerRadius = UDim.new(0, 6)
-    cornerDD.Parent = dropdownBtn
+    Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0, 6)
 
     local listVisible = false
     local listFrame = Instance.new("Frame")
     listFrame.Size = UDim2.new(0.4, 0, 0, 100)
     listFrame.Position = UDim2.new(0.6, 0, 1, 2)
-    listFrame.BackgroundColor3 = Color3.fromRGB(40,40,45)
+    listFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     listFrame.BorderSizePixel = 0
     listFrame.Visible = false
     listFrame.Parent = frame
-    local listCorner = Instance.new("UICorner")
-    listCorner.CornerRadius = UDim.new(0, 6)
-    listCorner.Parent = listFrame
+    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 6)
 
     local listScrolling = Instance.new("ScrollingFrame")
     listScrolling.Size = UDim2.new(1, 0, 1, 0)
@@ -572,10 +517,10 @@ local function createDropdown(parent, title, desc, options, default, callback)
     for _, opt in ipairs(options) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 25)
-        btn.BackgroundColor3 = Color3.fromRGB(45,45,50)
+        btn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         btn.BorderSizePixel = 0
         btn.Text = opt
-        btn.TextColor3 = Color3.fromRGB(200,200,210)
+        btn.TextColor3 = Color3.fromRGB(200, 200, 210)
         btn.TextSize = 13
         btn.Font = Enum.Font.GothamMedium
         btn.Parent = listScrolling
@@ -601,12 +546,14 @@ local function createDropdown(parent, title, desc, options, default, callback)
         d.Position = UDim2.new(0, 0, 1, 0)
         d.BackgroundTransparency = 1
         d.Text = desc
-        d.TextColor3 = Color3.fromRGB(150,150,160)
+        d.TextColor3 = Color3.fromRGB(150, 150, 170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
         d.TextXAlignment = Enum.TextXAlignment.Left
         d.Parent = frame
     end
+    updateCanvas()
+    return frame
 end
 
 local function createInput(parent, title, desc, callback)
@@ -619,7 +566,7 @@ local function createInput(parent, title, desc, callback)
     label.Size = UDim2.new(0.4, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = title
-    label.TextColor3 = Color3.fromRGB(220,220,230)
+    label.TextColor3 = Color3.fromRGB(220, 220, 235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -628,17 +575,15 @@ local function createInput(parent, title, desc, callback)
     local inputBox = Instance.new("TextBox")
     inputBox.Size = UDim2.new(0.5, 0, 1, 0)
     inputBox.Position = UDim2.new(0.5, 0, 0, 0)
-    inputBox.BackgroundColor3 = Color3.fromRGB(50,50,55)
+    inputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     inputBox.BorderSizePixel = 0
     inputBox.Text = ""
-    inputBox.TextColor3 = Color3.fromRGB(255,255,255)
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     inputBox.TextSize = 14
     inputBox.Font = Enum.Font.GothamMedium
     inputBox.PlaceholderText = "Enter..."
     inputBox.Parent = frame
-    local cornerIn = Instance.new("UICorner")
-    cornerIn.CornerRadius = UDim.new(0, 6)
-    cornerIn.Parent = inputBox
+    Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 6)
 
     inputBox.FocusLost:Connect(function()
         callback(inputBox.Text)
@@ -650,12 +595,14 @@ local function createInput(parent, title, desc, callback)
         d.Position = UDim2.new(0, 0, 1, 0)
         d.BackgroundTransparency = 1
         d.Text = desc
-        d.TextColor3 = Color3.fromRGB(150,150,160)
+        d.TextColor3 = Color3.fromRGB(150, 150, 170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
         d.TextXAlignment = Enum.TextXAlignment.Left
         d.Parent = frame
     end
+    updateCanvas()
+    return frame
 end
 
 -- Уведомления
@@ -664,20 +611,18 @@ local function Notify(title, desc, duration)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 340, 0, 70)
     frame.Position = UDim2.new(0.5, -170, 0.85, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(20,20,25)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
     frame.BorderSizePixel = 0
     frame.BackgroundTransparency = 0.3
     frame.Parent = ScreenGui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = frame
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, -20, 0, 28)
     titleLabel.Position = UDim2.new(0, 10, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,215,0)
+    titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
     titleLabel.TextSize = 17
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -688,7 +633,7 @@ local function Notify(title, desc, duration)
     descLabel.Position = UDim2.new(0, 10, 0, 28)
     descLabel.BackgroundTransparency = 1
     descLabel.Text = desc
-    descLabel.TextColor3 = Color3.fromRGB(200,200,210)
+    descLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
     descLabel.TextSize = 13
     descLabel.Font = Enum.Font.Gotham
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -701,387 +646,145 @@ local function Notify(title, desc, duration)
     frame:Destroy()
 end
 
--- =============================================
---    СОЗДАНИЕ ВКЛАДОК
--- =============================================
-local mainTab = createTab("Main")
-local visualsTab = createTab("Visuals")
-local miscTab = createTab("Misc")
-local settingsTab = createTab("Settings")
+-- Плавающая кнопка вызова меню
+local ToggleWidget = Instance.new("Frame")
+ToggleWidget.Name = "ToggleWidget"
+ToggleWidget.Parent = ScreenGui
+ToggleWidget.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+ToggleWidget.BackgroundTransparency = 0.15
+ToggleWidget.Position = UDim2.new(0.5, -80, 0.08, 0)
+ToggleWidget.Size = UDim2.new(0, 160, 0, 44)
+ToggleWidget.Visible = true
+Instance.new("UICorner", ToggleWidget).CornerRadius = UDim.new(0, 10)
+local ToggleScale = Instance.new("UIScale", ToggleWidget)
+ToggleScale.Scale = 0.85
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Parent = ToggleWidget
+ToggleStroke.Color = Color3.fromRGB(45, 45, 65)
+ToggleStroke.Thickness = 1.5
 
--- =============================================
---    MAIN TAB
--- =============================================
-createSection(mainTab, "Murder Functions")
-createButton(mainTab, "Kill All", "Kill all innocents instantly", function()
-    if not LocalPlayer.Character then return end
-    local knife = LocalPlayer.Character:FindFirstChild("Knife")
-    if not knife then
-        knife = LocalPlayer.Backpack:FindFirstChild("Knife")
-        if knife then knife.Parent = LocalPlayer.Character else return end
+local ToggleLabelText = Instance.new("TextLabel")
+ToggleLabelText.Parent = ToggleWidget
+ToggleLabelText.BackgroundTransparency = 1
+ToggleLabelText.Size = UDim2.new(1, 0, 1, 0)
+ToggleLabelText.Font = Enum.Font.GothamBold
+ToggleLabelText.Text = "☰ NKNO$ HUB"
+ToggleLabelText.TextColor3 = Color3.fromRGB(255, 215, 0)
+ToggleLabelText.TextSize = 17
+
+-- Анимация нажатия
+ToggleWidget.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(ToggleScale, TweenInfo.new(0.15), {Scale = 0.78}):Play()
     end
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            for _, part in pairs(plr.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-            local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                local target = plr.Character:FindFirstChild("HumanoidRootPart")
-                if target then
-                    target.Size = Vector3.new(5,5,5)
-                    target.CFrame = root.CFrame + root.CFrame.LookVector * 3
-                    target.Anchored = true
-                    VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
-                    VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
-                end
-            end
+end)
+ToggleWidget.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(ToggleScale, TweenInfo.new(0.15), {Scale = 0.85}):Play()
+    end
+end)
+
+-- Перетаскивание плавающей кнопки
+local dragToggle, dragInputT, dragStartT, startPosT
+local dragStartTime = 0
+ToggleWidget.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = true
+        dragStartT = input.Position
+        startPosT = ToggleWidget.Position
+        dragStartTime = tick()
+    end
+end)
+ToggleWidget.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputT = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInputT and dragToggle then
+        local delta = input.Position - dragStartT
+        ToggleWidget.Position = UDim2.new(
+            startPosT.X.Scale, startPosT.X.Offset + delta.X,
+            startPosT.Y.Scale, startPosT.Y.Offset + delta.Y
+        )
+    end
+end)
+ToggleWidget.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = false
+        if tick() - dragStartTime < 0.25 then
+            toggleMenu()
         end
     end
 end)
 
-createSection(mainTab, "Sheriff Functions")
-local shootButtonActive = false
-local shootGui = nil
-local shootDrag = false
-local shootStartPos = nil
-local shootButtonPos = nil
+-- Функция открытия/закрытия меню
+function toggleMenu(forceState)
+    if forceState ~= nil then
+        isMenuOpen = forceState
+    else
+        isMenuOpen = not isMenuOpen
+    end
 
-local function createShootButton()
-    if shootGui then return end
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ShootButtonGui"
-    gui.ResetOnSpawn = false
-    gui.Parent = CoreGui
-
-    local btn = Instance.new("ImageButton")
-    btn.Size = UDim2.new(0, 80, 0, 80)
-    btn.Position = UDim2.new(0.5, -40, 0.5, -40)
-    btn.BackgroundColor3 = Color3.fromRGB(255,50,50)
-    btn.BackgroundTransparency = 0.3
-    btn.BorderSizePixel = 0
-    btn.Parent = gui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1,0)
-    corner.Parent = btn
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = "🔫"
-    label.TextSize = 32
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.Font = Enum.Font.GothamBold
-    label.Parent = btn
-
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            shootDrag = true
-            shootStartPos = input.Position
-            shootButtonPos = btn.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then shootDrag = false end
-            end)
+    if isMenuOpen then
+        MainFrame.Visible = true
+        if not isMinimized then
+            ShadowFrame.Visible = true
         end
-    end)
-    btn.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            if shootDrag then
-                local delta = input.Position - shootStartPos
-                btn.Position = UDim2.new(shootButtonPos.X.Scale, shootButtonPos.X.Offset + delta.X, shootButtonPos.Y.Scale, shootButtonPos.Y.Offset + delta.Y)
+        TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = UI_SCALE}):Play()
+        TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = UI_SCALE}):Play()
+    else
+        local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
+        TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        closeTween:Play()
+        closeTween.Completed:Connect(function()
+            if not isMenuOpen then
+                MainFrame.Visible = false
+                ShadowFrame.Visible = false
             end
-        end
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        if not shootDrag then
-            local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Gun")
-            if not gun then gun = LocalPlayer.Backpack:FindFirstChild("Gun") if gun then gun.Parent = LocalPlayer.Character else return end end
-            local murderer = findMurderer()
-            if not murderer then return end
-            local mChar = murderer.Character
-            if not mChar or not mChar:FindFirstChild("HumanoidRootPart") then return end
-            local mRoot = mChar.HumanoidRootPart
-            local torso = mChar:FindFirstChild("Torso") or mChar:FindFirstChild("UpperTorso")
-            if not torso then return end
-            local pRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not pRoot then return end
-            local ping = getPing()
-            local bulletSpeed = 1.25
-            local predict = (ping / 1000) * bulletSpeed
-            local targetPos = torso.Position + (mRoot.Velocity * predict)
-            local cframe = CFrame.new(pRoot.Position, targetPos)
-            local shootEvent = gun:FindFirstChild("ShootEvent") or gun:FindFirstChild("Shoot")
-            if shootEvent then shootEvent:FireServer(cframe, CFrame.new(targetPos)) end
-        end
-    end)
-    shootGui = gui
+        end)
+    end
 end
 
-local function removeShootButton()
-    if shootGui then shootGui:Destroy() shootGui = nil end
-end
-
-local magicBullet = false
-createToggle(mainTab, "Auto Shoot Button", "Draggable button to shoot murderer", false, function(val)
-    if val then createShootButton() else removeShootButton() end
-end)
-createToggle(mainTab, "Magic Bullet", "Auto-aim at murderer", false, function(val) magicBullet = val end)
-
-createSection(mainTab, "Innocent Functions")
-createToggle(mainTab, "Auto Grab Gun", "Grab gun when sheriff dies", false, function(val) getgenv().NKNO.AutoGrabGun = val end)
-
-createSection(mainTab, "Auto Farm")
-createToggle(mainTab, "Farm Coins", "Collect coins with noclip", false, function(val) getgenv().NKNO.FarmCoins = val end)
-createToggle(mainTab, "Random Delays", "Random pauses between pickups", false, function(val) getgenv().NKNO.RandomDelays = val end)
-createToggle(mainTab, "Random Movement", "Random offset to path", false, function(val) getgenv().NKNO.RandomMovement = val end)
-createToggle(mainTab, "Random Coin Selection", "Pick random coin among nearest 3", false, function(val) getgenv().NKNO.RandomCoinSelection = val end)
-createToggle(mainTab, "Anti-AFK", "Random movement to avoid kick", false, function(val)
-    getgenv().NKNO.AntiAFK = val
-    if val then
-        task.spawn(function()
-            while getgenv().NKNO.AntiAFK and task.wait(math.random(30,60)) do
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                    local hum = LocalPlayer.Character.Humanoid
-                    local dir = Vector3.new(math.random(-1,1),0,math.random(-1,1))
-                    hum:MoveTo(LocalPlayer.Character.HumanoidRootPart.Position + dir * 5)
-                end
-            end
-        end)
+-- Перетаскивание главного окна
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
     end
 end)
-createSlider(mainTab, "Min Delay (s)", "", 0, 1, 0.1, true, function(val) getgenv().NKNO.MinDelay = val end)
-createSlider(mainTab, "Max Delay (s)", "", 0, 2, 0.5, true, function(val) getgenv().NKNO.MaxDelay = val end)
-
--- =============================================
---    VISUALS TAB
--- =============================================
-createSection(visualsTab, "Chams")
-createToggle(visualsTab, "Murderer", "", false, function(val) getgenv().NKNO.ESP.Murderer = val end)
-createToggle(visualsTab, "Sheriff", "", false, function(val) getgenv().NKNO.ESP.Sheriff = val end)
-createToggle(visualsTab, "Innocent", "", false, function(val) getgenv().NKNO.ESP.Innocent = val end)
-createToggle(visualsTab, "Hero", "", false, function(val) getgenv().NKNO.ESP.Hero = val end)
-
-createSection(visualsTab, "Name ESP")
-createToggle(visualsTab, "Murderer", "", false, function(val) getgenv().NKNO.ESP.Murderer = val end) -- уже есть, но для имени отдельно? Лучше объединить.
--- Для упрощения используем те же настройки, но можно разделить. Я сделаю отдельные переменные для имени.
--- Но чтобы не усложнять, оставлю как есть.
-
-createToggle(visualsTab, "2D Box", "", false, function(val) getgenv().NKNO.ESP.Box2D = val end)
-createToggle(visualsTab, "Display Name", "", false, function(val)
-    getgenv().NKNO.ESP.DisplayName = val
-    if val then getgenv().NKNO.ESP.NormalName = false end
-end)
-createToggle(visualsTab, "Normal Name", "", true, function(val)
-    getgenv().NKNO.ESP.NormalName = val
-    if val then getgenv().NKNO.ESP.DisplayName = false end
-end)
-createToggle(visualsTab, "Avatar Display", "", false, function(val) getgenv().NKNO.ESP.AvatarDisplay = val end)
-
-createSection(visualsTab, "Colors")
--- Можно добавить выбор цвета через dropdown или палитру, но для упрощения оставлю пока как есть, с возможностью редактировать в коде.
-
--- =============================================
---    MISC TAB
--- =============================================
-createSection(miscTab, "Anti-Fling")
-createToggle(miscTab, "Anti-Fling", "Prevent being flung", false, function(val) getgenv().NKNO.AntiFling = val end)
-
-createSection(miscTab, "Character Modifiers")
-createToggle(miscTab, "Custom WalkSpeed", "", false, function(val)
-    getgenv().NKNO.CustomWalkSpeed = val
-    applyWalkSpeed()
-end)
-createSlider(miscTab, "WalkSpeed", "", 16, 200, 16, false, function(val)
-    getgenv().NKNO.WalkSpeedValue = val
-    if getgenv().NKNO.CustomWalkSpeed then applyWalkSpeed() end
-end)
-createToggle(miscTab, "Custom JumpPower", "", false, function(val)
-    getgenv().NKNO.CustomJumpPower = val
-    applyJumpPower()
-end)
-createSlider(miscTab, "JumpPower", "", 50, 200, 50, false, function(val)
-    getgenv().NKNO.JumpPowerValue = val
-    if getgenv().NKNO.CustomJumpPower then applyJumpPower() end
-end)
-createToggle(miscTab, "Custom FOV", "", false, function(val)
-    getgenv().NKNO.CustomFOV = val
-    applyFOV()
-end)
-createSlider(miscTab, "FOV", "", 70, 120, 70, false, function(val)
-    getgenv().NKNO.FOVValue = val
-    if getgenv().NKNO.CustomFOV then applyFOV() end
-end)
-createToggle(miscTab, "ForceField Material", "", false, function(val)
-    getgenv().NKNO.ForceFieldMaterial = val
-    if val then applyForceField() else restoreMaterial() end
-end)
-
-createSection(miscTab, "Teleports")
-createButton(miscTab, "Map TP", "", function()
-    local map = findMap()
-    if map and map:FindFirstChild("Spawns") then
-        local spawns = map.Spawns:GetChildren()
-        if #spawns > 0 then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[1].CFrame
-        end
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
-createButton(miscTab, "Lobby TP", "", function()
-    local lobby = Workspace:FindFirstChild("RegularLobby")
-    if lobby and lobby:FindFirstChild("Spawns") then
-        local spawns = lobby.Spawns:GetChildren()
-        if #spawns > 0 then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[1].CFrame
-        end
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        local targetPos = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+        MainFrame.Position = targetPos
+        ShadowFrame.Position = UDim2.new(
+            targetPos.X.Scale, targetPos.X.Offset + 4,
+            targetPos.Y.Scale, targetPos.Y.Offset + 6
+        )
     end
 end)
-createButton(miscTab, "Murder TP", "", function()
-    local m = findMurderer()
-    if m and m.Character then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = m.Character.HumanoidRootPart.CFrame
-    end
-end)
-createButton(miscTab, "Sheriff TP", "", function()
-    local s = findSheriff()
-    if s and s.Character then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = s.Character.HumanoidRootPart.CFrame
+MainFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
     end
 end)
 
-createSection(miscTab, "Dance Emotes")
-local danceOptions = {"Dance 1","Dance 2","Dance 3","Dance 4"}
-local danceIDs = {
-    ["Dance 1"] = "127118661424463",
-    ["Dance 2"] = "82682811348660",
-    ["Dance 3"] = "10714340543",
-    ["Dance 4"] = "15609995579",
-}
-createDropdown(miscTab, "Select Dance", "", danceOptions, "Dance 1", function(val)
-    getgenv().NKNO.DanceID = danceIDs[val]
-    if getgenv().NKNO.AutoDance then
-        stopDance()
-        task.wait(0.2)
-        playDance()
-    end
-end)
-createToggle(miscTab, "Auto Dance", "", false, function(val)
-    getgenv().NKNO.AutoDance = val
-    if val then playDance() else stopDance() end
-end)
+-- ============================================================
+--          НАПОЛНЕНИЕ МЕНЮ ФУНКЦИЯМИ
+-- ============================================================
 
-createSection(miscTab, "Fling Players")
-createInput(miscTab, "Player Search", "", function(text)
-    local plr = findPlayerByPartialName(text)
-    if plr then
-        getgenv().NKNO.SelectedPlayer = plr
-        Notify("Player Found", "Selected: " .. plr.Name, 2)
-    else
-        getgenv().NKNO.SelectedPlayer = nil
-        if text ~= "" then Notify("Not Found", "No player", 2) end
-    end
-end)
-createButton(miscTab, "Fling Murderer", "", function()
-    if getgenv().NKNO.Flinging then return end
-    local m = findMurderer()
-    if m then
-        getgenv().NKNO.Flinging = true
-        Notify("Fling Started", "Flinging murderer", 3)
-        task.spawn(function()
-            SkidFling(m)
-            getgenv().NKNO.Flinging = false
-        end)
-    end
-end)
-createButton(miscTab, "Fling Sheriff", "", function()
-    if getgenv().NKNO.Flinging then return end
-    local s = findSheriff()
-    if s then
-        getgenv().NKNO.Flinging = true
-        Notify("Fling Started", "Flinging sheriff", 3)
-        task.spawn(function()
-            SkidFling(s)
-            getgenv().NKNO.Flinging = false
-        end)
-    end
-end)
-createButton(miscTab, "Fling Selected", "", function()
-    if getgenv().NKNO.Flinging then return end
-    local sel = getgenv().NKNO.SelectedPlayer
-    if not sel or not sel.Parent then
-        Notify("Error", "Select a player first", 3)
-        return
-    end
-    getgenv().NKNO.Flinging = true
-    Notify("Fling Started", "Flinging " .. sel.Name, 3)
-    task.spawn(function()
-        SkidFling(sel)
-        getgenv().NKNO.Flinging = false
-    end)
-end)
-createButton(miscTab, "Stop Fling", "", function()
-    if getgenv().NKNO.Flinging then
-        getgenv().NKNO.Flinging = false
-        Notify("Stopped", "Fling stopped", 2)
-    end
-end)
-
-createSection(miscTab, "UnderMap")
-createToggle(miscTab, "UnderMap Mode", "Go below map", false, function(val)
-    getgenv().NKNO.UnderMap = val
-    if val then goUnderMap() else returnFromUnderMap() end
-end)
-
-createSection(miscTab, "God Mode")
-createToggle(miscTab, "God Mode", "Disable collisions (invincible)", false, function(val)
-    getgenv().NKNO.GodMode = val
-    if val then
-        if LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end
-    else
-        -- восстановить коллизию (сложно, но можно пересоздать персонажа)
-    end
-end)
-
-createSection(miscTab, "Auto Respawn")
-createToggle(miscTab, "Auto Respawn", "Respawn when dead", false, function(val)
-    getgenv().NKNO.AutoRespawn = val
-end)
-
--- =============================================
---    SETTINGS TAB
--- =============================================
-createSection(settingsTab, "UI Settings")
-createButton(settingsTab, "Minimize Keybind", "Left Alt", function()
-    Notify("Keybind", "Left Alt toggles UI", 2)
-end)
-createDropdown(settingsTab, "Theme", "", {"Dark","Light","Gold"}, "Dark", function(val)
-    local colors = {
-        Dark = { bg = Color3.fromRGB(25,25,30), text = Color3.fromRGB(220,220,230), accent = Color3.fromRGB(255,215,0) },
-        Light = { bg = Color3.fromRGB(240,240,245), text = Color3.fromRGB(30,30,40), accent = Color3.fromRGB(0,120,255) },
-        Gold = { bg = Color3.fromRGB(30,25,20), text = Color3.fromRGB(255,215,0), accent = Color3.fromRGB(255,180,0) },
-    }
-    local theme = colors[val]
-    MainFrame.BackgroundColor3 = theme.bg
-    TitleLabel.TextColor3 = theme.accent
-    for _, t in ipairs(tabs) do
-        t.btn.BackgroundColor3 = Color3.fromRGB(theme.bg.r*1.5, theme.bg.g*1.5, theme.bg.b*1.5)
-        t.btn.TextColor3 = theme.text
-    end
-end)
-createToggle(settingsTab, "UI Blur", "Requires graphics 8+", true, function(val)
-    -- заглушка
-end)
-createSlider(settingsTab, "UI Transparency", "", 0, 1, 0.15, true, function(val)
-    MainFrame.BackgroundTransparency = val
-end)
-
--- =============================================
---    ОСНОВНЫЕ ФУНКЦИИ (переработаны)
--- =============================================
+-- Функции персонажа (применяются позже)
 local function applyWalkSpeed()
     if getgenv().NKNO.CustomWalkSpeed and LocalPlayer.Character then
         local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -1116,20 +819,7 @@ local function restoreMaterial()
     end
 end
 
-local function findPlayerByPartialName(name)
-    if not name or name == "" then return nil end
-    local lower = string.lower(name)
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            if string.lower(plr.Name) == lower or string.find(string.lower(plr.Name), lower, 1, true) then
-                return plr
-            end
-        end
-    end
-    return nil
-end
-
--- ===== ТАНЦЫ =====
+-- Танцы
 local danceAnim = nil
 local function playDance()
     if not LocalPlayer.Character then return end
@@ -1164,7 +854,7 @@ local function stopDance()
     end
 end
 
--- ===== ФЛИНГ (улучшенный) =====
+-- Флинг
 local function SkidFling(plr)
     local char = LocalPlayer.Character
     if not char then return end
@@ -1240,12 +930,12 @@ local function SkidFling(plr)
     bv:Destroy()
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
     Workspace.CurrentCamera.CameraSubject = hum
-    Workspace.FallenPartsDestroyHeight = getgenv().FPDH or workspace.FallenPartsDestroyHeight
+    Workspace.FallenPartsDestroyHeight = getgenv().FPDH or Workspace.FallenPartsDestroyHeight
 end
 
--- ===== UNDERMAP =====
+-- UnderMap
 local underMapConnection = nil
-local oldFallenHeight = workspace.FallenPartsDestroyHeight
+local oldFallenHeight = Workspace.FallenPartsDestroyHeight
 local function goUnderMap()
     if not LocalPlayer.Character then return end
     local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1317,7 +1007,7 @@ local function returnFromUnderMap()
     end
 end
 
--- ===== ESP (полностью переработан) =====
+-- ESP
 local espHighlights = {}
 local espNames = {}
 
@@ -1427,7 +1117,7 @@ local function updateESP()
     end
 end
 
--- ===== АВТО-ГРАБ ПИСТОЛЕТА =====
+-- Авто-граб пистолета
 local function autoGrabGun()
     pcall(function()
         if not getgenv().NKNO.AutoGrabGun then return end
@@ -1441,26 +1131,7 @@ local function autoGrabGun()
     end)
 end
 
--- ===== АВТО-РЕСПАВН =====
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    if getgenv().NKNO.AutoRespawn and not LocalPlayer:GetAttribute("Alive") then
-        -- попытка респавна (в некоторых играх есть кнопка, но можно через Remote)
-        -- заглушка
-    end
-    -- Применяем настройки
-    applyWalkSpeed()
-    applyJumpPower()
-    if getgenv().NKNO.ForceFieldMaterial then applyForceField() end
-    if getgenv().NKNO.GodMode then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-    if getgenv().NKNO.AutoDance then playDance() end
-end)
-
--- ===== АНТИ-ФЛИНГ (через обработку всех игроков) =====
+-- Анти-флинг
 local function setupAntiFling(plr)
     if plr == LocalPlayer then return end
     plr.CharacterAdded:Connect(function(char)
@@ -1476,7 +1147,10 @@ end
 for _, plr in pairs(Players:GetPlayers()) do setupAntiFling(plr) end
 Players.PlayerAdded:Connect(setupAntiFling)
 
--- ===== ФАРМ МОНЕТ (оптимизированный) =====
+-- ============================================================
+--          АВТОФАРМ С ПОДКАРТОЙ (обновлённый)
+-- ============================================================
+
 local function getCoinContainer()
     for _, child in pairs(Workspace:GetChildren()) do
         if child:FindFirstChild("CoinContainer") and child:IsA("Model") then
@@ -1511,22 +1185,55 @@ local farming = false
 local farmTween = nil
 local farmConnection = nil
 local savedCollision = {}
+local underMapModeForFarm = false
 
 local function startFarming()
     if farming then return end
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
     if LocalPlayer:GetAttribute("Alive") ~= true then return end
+
     local root = LocalPlayer.Character.HumanoidRootPart
     local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-    -- сохраняем коллизию
+
+    -- Сохраняем коллизию
     savedCollision = {}
     for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
         if part:IsA("BasePart") then
             savedCollision[part] = { CanCollide = part.CanCollide, Massless = part.Massless }
         end
     end
-    root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0)
-    root.CFrame = root.CFrame * CFrame.Angles(math.rad(90), 0, 0)
+
+    -- Если включён фарм под картой, уходим под карту
+    if getgenv().NKNO.FarmUnderMap then
+        underMapModeForFarm = true
+        oldFallenHeight = Workspace.FallenPartsDestroyHeight
+        Workspace.FallenPartsDestroyHeight = -1/0
+        local map = findMap()
+        local underY = -500
+        if map and map:FindFirstChild("Spawns") then
+            local total = Vector3.new()
+            local count = 0
+            for _, spawn in pairs(map.Spawns:GetChildren()) do
+                if spawn:IsA("BasePart") then
+                    total = total + spawn.Position
+                    count = count + 1
+                end
+            end
+            if count > 0 then
+                local center = total / count
+                underY = center.Y - 100
+            end
+        end
+        root.CFrame = CFrame.new(root.Position.X, underY, root.Position.Z)
+        -- Отключаем коллизию
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    else
+        root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0)
+        root.CFrame = root.CFrame * CFrame.Angles(math.rad(90), 0, 0)
+    end
+
     if hum then
         hum.PlatformStand = true
         hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -1539,6 +1246,7 @@ local function stopFarming()
     farming = false
     if farmTween then farmTween:Cancel() farmTween = nil end
     if farmConnection then farmConnection:Disconnect() farmConnection = nil end
+
     if LocalPlayer.Character then
         for part, data in pairs(savedCollision) do
             if part and part.Parent then
@@ -1547,13 +1255,29 @@ local function stopFarming()
             end
         end
         local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
         if root then
             root.Velocity = Vector3.new(0,0,0)
             root.RotVelocity = Vector3.new(0,0,0)
-            root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0)
-            root.CFrame = root.CFrame + Vector3.new(0, 2.5, 0)
+            if underMapModeForFarm then
+                Workspace.FallenPartsDestroyHeight = oldFallenHeight
+                -- возвращаем на карту
+                local map = findMap()
+                if map and map:FindFirstChild("Spawns") then
+                    local spawns = map.Spawns:GetChildren()
+                    if #spawns > 0 then
+                        local spawn = spawns[math.random(1, #spawns)]
+                        if spawn:IsA("BasePart") then
+                            root.CFrame = spawn.CFrame + Vector3.new(0, 5, 0)
+                        end
+                    end
+                end
+                underMapModeForFarm = false
+            else
+                root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0)
+                root.CFrame = root.CFrame + Vector3.new(0, 2.5, 0)
+            end
         end
-        local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
         if hum then
             hum.PlatformStand = false
             hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
@@ -1585,7 +1309,7 @@ roundEndRemote.OnClientEvent:Connect(function()
     if farming then stopFarming() end
 end)
 
--- Основной цикл фарма (запускается отдельно)
+-- Основной цикл фарма
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
@@ -1603,9 +1327,15 @@ task.spawn(function()
                     if getgenv().NKNO.RandomMovement then
                         offset = Vector3.new(math.random(-2,2), 0, math.random(-2,2))
                     end
-                    local targetPos = coin.Position - Vector3.new(0, 2.5, 0) + offset
-                    local targetCF = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, 0)
-                    -- включаем ноклип
+                    local targetPos
+                    if getgenv().NKNO.FarmUnderMap then
+                        -- под картой монеты на том же уровне, что и персонаж
+                        targetPos = coin.Position - Vector3.new(0, 0, 0) + offset
+                    else
+                        targetPos = coin.Position - Vector3.new(0, 2.5, 0) + offset
+                    end
+                    local targetCF = CFrame.new(targetPos) * (getgenv().NKNO.FarmUnderMap and CFrame.new() or CFrame.Angles(math.rad(90), 0, 0))
+
                     if not farmConnection then
                         farmConnection = RunService.Stepped:Connect(function()
                             if getgenv().NKNO.FarmCoins and LocalPlayer.Character then
@@ -1615,9 +1345,11 @@ task.spawn(function()
                             end
                         end)
                     end
+
                     local duration = (dist / 23) * (getgenv().NKNO.RandomMovement and (0.8 + math.random() * 0.4) or 1)
                     farmTween = TweenService:Create(root, TweenInfo.new(duration, Enum.EasingStyle.Linear), { CFrame = targetCF })
                     farmTween:Play()
+
                     local conn
                     conn = RunService.Heartbeat:Connect(function()
                         if getgenv().NKNO.FarmCoins and LocalPlayer:GetAttribute("Alive") == true and root then
@@ -1628,9 +1360,11 @@ task.spawn(function()
                             if conn then conn:Disconnect() end
                         end
                     end)
+
                     while coin and coin:FindFirstChild("TouchInterest") and coin.Transparency == 1 and not coinCollected and getgenv().NKNO.FarmCoins and LocalPlayer:GetAttribute("Alive") == true do
                         RunService.Heartbeat:Wait()
                     end
+
                     if conn then conn:Disconnect() end
                     if farmTween then farmTween:Cancel() farmTween = nil end
                     if root then
@@ -1652,24 +1386,402 @@ task.spawn(function()
     end
 end)
 
--- ===== ЗАПУСК ЦИКЛОВ =====
+-- ============================================================
+--          ДОБАВЛЯЕМ ЭЛЕМЕНТЫ В МЕНЮ
+-- ============================================================
+
+-- Main Tab (основные функции)
+createSection(ContentContainer, "Murder Functions")
+createButton(ContentContainer, "Kill All", "Kill all innocents", function()
+    if not LocalPlayer.Character then return end
+    local knife = LocalPlayer.Character:FindFirstChild("Knife")
+    if not knife then
+        knife = LocalPlayer.Backpack:FindFirstChild("Knife")
+        if knife then knife.Parent = LocalPlayer.Character else return end
+    end
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            for _, part in pairs(plr.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+            local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local target = plr.Character:FindFirstChild("HumanoidRootPart")
+                if target then
+                    target.Size = Vector3.new(5,5,5)
+                    target.CFrame = root.CFrame + root.CFrame.LookVector * 3
+                    target.Anchored = true
+                    VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+                    VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+                end
+            end
+        end
+    end
+end)
+
+createSection(ContentContainer, "Sheriff Functions")
+local shootButtonActive = false
+local shootGui = nil
+local shootDrag = false
+local shootStartPos = nil
+local shootButtonPos = nil
+
+local function createShootButton()
+    if shootGui then return end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "ShootButtonGui"
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+
+    local btn = Instance.new("ImageButton")
+    btn.Size = UDim2.new(0, 80, 0, 80)
+    btn.Position = UDim2.new(0.5, -40, 0.5, -40)
+    btn.BackgroundColor3 = Color3.fromRGB(255,50,50)
+    btn.BackgroundTransparency = 0.3
+    btn.BorderSizePixel = 0
+    btn.Parent = gui
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = "🔫"
+    label.TextSize = 32
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.Font = Enum.Font.GothamBold
+    label.Parent = btn
+
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            shootDrag = true
+            shootStartPos = input.Position
+            shootButtonPos = btn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then shootDrag = false end
+            end)
+        end
+    end)
+    btn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if shootDrag then
+                local delta = input.Position - shootStartPos
+                btn.Position = UDim2.new(shootButtonPos.X.Scale, shootButtonPos.X.Offset + delta.X, shootButtonPos.Y.Scale, shootButtonPos.Y.Offset + delta.Y)
+            end
+        end
+    end)
+
+    btn.MouseButton1Click:Connect(function()
+        if not shootDrag then
+            local gun = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Gun")
+            if not gun then gun = LocalPlayer.Backpack:FindFirstChild("Gun") if gun then gun.Parent = LocalPlayer.Character else return end end
+            local murderer = findMurderer()
+            if not murderer then return end
+            local mChar = murderer.Character
+            if not mChar or not mChar:FindFirstChild("HumanoidRootPart") then return end
+            local mRoot = mChar.HumanoidRootPart
+            local torso = mChar:FindFirstChild("Torso") or mChar:FindFirstChild("UpperTorso")
+            if not torso then return end
+            local pRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not pRoot then return end
+            local ping = getPing()
+            local bulletSpeed = 1.25
+            local predict = (ping / 1000) * bulletSpeed
+            local targetPos = torso.Position + (mRoot.Velocity * predict)
+            local cframe = CFrame.new(pRoot.Position, targetPos)
+            local shootEvent = gun:FindFirstChild("ShootEvent") or gun:FindFirstChild("Shoot")
+            if shootEvent then shootEvent:FireServer(cframe, CFrame.new(targetPos)) end
+        end
+    end)
+    shootGui = gui
+end
+
+local function removeShootButton()
+    if shootGui then shootGui:Destroy() shootGui = nil end
+end
+
+createToggle(ContentContainer, "Auto Shoot Button", "Draggable button to shoot murderer", false, function(val)
+    if val then createShootButton() else removeShootButton() end
+end)
+createToggle(ContentContainer, "Magic Bullet", "Auto-aim at murderer", false, function(val) end) -- заглушка
+
+createSection(ContentContainer, "Innocent Functions")
+createToggle(ContentContainer, "Auto Grab Gun", "Grab gun when sheriff dies", false, function(val)
+    getgenv().NKNO.AutoGrabGun = val
+end)
+
+createSection(ContentContainer, "Auto Farm")
+createToggle(ContentContainer, "Farm Coins", "Collect coins with noclip", false, function(val)
+    getgenv().NKNO.FarmCoins = val
+    if not val and farming then stopFarming() end
+end)
+createToggle(ContentContainer, "Farm UnderMap", "Farm while staying under the map", true, function(val)
+    getgenv().NKNO.FarmUnderMap = val
+end)
+createToggle(ContentContainer, "Random Delays", "Random pauses between pickups", false, function(val)
+    getgenv().NKNO.RandomDelays = val
+end)
+createToggle(ContentContainer, "Random Movement", "Random offset to path", false, function(val)
+    getgenv().NKNO.RandomMovement = val
+end)
+createToggle(ContentContainer, "Random Coin Selection", "Pick random coin among nearest 3", false, function(val)
+    getgenv().NKNO.RandomCoinSelection = val
+end)
+createToggle(ContentContainer, "Anti-AFK", "Random movement to avoid kick", false, function(val)
+    getgenv().NKNO.AntiAFK = val
+    if val then
+        task.spawn(function()
+            while getgenv().NKNO.AntiAFK and task.wait(math.random(30,60)) do
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    local hum = LocalPlayer.Character.Humanoid
+                    local dir = Vector3.new(math.random(-1,1),0,math.random(-1,1))
+                    hum:MoveTo(LocalPlayer.Character.HumanoidRootPart.Position + dir * 5)
+                end
+            end
+        end)
+    end
+end)
+createSlider(ContentContainer, "Min Delay (s)", "", 0, 1, 0.1, true, function(val) getgenv().NKNO.MinDelay = val end)
+createSlider(ContentContainer, "Max Delay (s)", "", 0, 2, 0.5, true, function(val) getgenv().NKNO.MaxDelay = val end)
+
+-- Visuals
+createSection(ContentContainer, "Visuals - Chams")
+createToggle(ContentContainer, "Murderer", "", false, function(val) getgenv().NKNO.ESP.Murderer = val end)
+createToggle(ContentContainer, "Sheriff", "", false, function(val) getgenv().NKNO.ESP.Sheriff = val end)
+createToggle(ContentContainer, "Innocent", "", false, function(val) getgenv().NKNO.ESP.Innocent = val end)
+createToggle(ContentContainer, "Hero", "", false, function(val) getgenv().NKNO.ESP.Hero = val end)
+
+createSection(ContentContainer, "ESP Options")
+createToggle(ContentContainer, "2D Box", "", false, function(val) getgenv().NKNO.ESP.Box2D = val end)
+createToggle(ContentContainer, "Display Name", "", false, function(val)
+    getgenv().NKNO.ESP.DisplayName = val
+    if val then getgenv().NKNO.ESP.NormalName = false end
+end)
+createToggle(ContentContainer, "Normal Name", "", true, function(val)
+    getgenv().NKNO.ESP.NormalName = val
+    if val then getgenv().NKNO.ESP.DisplayName = false end
+end)
+createToggle(ContentContainer, "Avatar Display", "", false, function(val) getgenv().NKNO.ESP.AvatarDisplay = val end)
+
+-- Misc
+createSection(ContentContainer, "Anti-Fling")
+createToggle(ContentContainer, "Anti-Fling", "Prevent being flung", false, function(val) getgenv().NKNO.AntiFling = val end)
+
+createSection(ContentContainer, "Character Modifiers")
+createToggle(ContentContainer, "Custom WalkSpeed", "", false, function(val)
+    getgenv().NKNO.CustomWalkSpeed = val
+    applyWalkSpeed()
+end)
+createSlider(ContentContainer, "WalkSpeed", "", 16, 200, 16, false, function(val)
+    getgenv().NKNO.WalkSpeedValue = val
+    if getgenv().NKNO.CustomWalkSpeed then applyWalkSpeed() end
+end)
+createToggle(ContentContainer, "Custom JumpPower", "", false, function(val)
+    getgenv().NKNO.CustomJumpPower = val
+    applyJumpPower()
+end)
+createSlider(ContentContainer, "JumpPower", "", 50, 200, 50, false, function(val)
+    getgenv().NKNO.JumpPowerValue = val
+    if getgenv().NKNO.CustomJumpPower then applyJumpPower() end
+end)
+createToggle(ContentContainer, "Custom FOV", "", false, function(val)
+    getgenv().NKNO.CustomFOV = val
+    applyFOV()
+end)
+createSlider(ContentContainer, "FOV", "", 70, 120, 70, false, function(val)
+    getgenv().NKNO.FOVValue = val
+    if getgenv().NKNO.CustomFOV then applyFOV() end
+end)
+createToggle(ContentContainer, "ForceField Material", "", false, function(val)
+    getgenv().NKNO.ForceFieldMaterial = val
+    if val then applyForceField() else restoreMaterial() end
+end)
+
+createSection(ContentContainer, "Teleports")
+createButton(ContentContainer, "Map TP", "", function()
+    local map = findMap()
+    if map and map:FindFirstChild("Spawns") then
+        local spawns = map.Spawns:GetChildren()
+        if #spawns > 0 then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[1].CFrame
+        end
+    end
+end)
+createButton(ContentContainer, "Lobby TP", "", function()
+    local lobby = Workspace:FindFirstChild("RegularLobby")
+    if lobby and lobby:FindFirstChild("Spawns") then
+        local spawns = lobby.Spawns:GetChildren()
+        if #spawns > 0 then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[1].CFrame
+        end
+    end
+end)
+createButton(ContentContainer, "Murder TP", "", function()
+    local m = findMurderer()
+    if m and m.Character then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = m.Character.HumanoidRootPart.CFrame
+    end
+end)
+createButton(ContentContainer, "Sheriff TP", "", function()
+    local s = findSheriff()
+    if s and s.Character then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = s.Character.HumanoidRootPart.CFrame
+    end
+end)
+
+createSection(ContentContainer, "Dance Emotes")
+local danceOptions = {"Dance 1","Dance 2","Dance 3","Dance 4"}
+local danceIDs = {
+    ["Dance 1"] = "127118661424463",
+    ["Dance 2"] = "82682811348660",
+    ["Dance 3"] = "10714340543",
+    ["Dance 4"] = "15609995579",
+}
+createDropdown(ContentContainer, "Select Dance", "", danceOptions, "Dance 1", function(val)
+    getgenv().NKNO.DanceID = danceIDs[val]
+    if getgenv().NKNO.AutoDance then
+        stopDance()
+        task.wait(0.2)
+        playDance()
+    end
+end)
+createToggle(ContentContainer, "Auto Dance", "", false, function(val)
+    getgenv().NKNO.AutoDance = val
+    if val then playDance() else stopDance() end
+end)
+
+createSection(ContentContainer, "Fling Players")
+createInput(ContentContainer, "Player Search", "", function(text)
+    local plr = findPlayerByPartialName(text)
+    if plr then
+        getgenv().NKNO.SelectedPlayer = plr
+        Notify("Player Found", "Selected: " .. plr.Name, 2)
+    else
+        getgenv().NKNO.SelectedPlayer = nil
+        if text ~= "" then Notify("Not Found", "No player", 2) end
+    end
+end)
+createButton(ContentContainer, "Fling Murderer", "", function()
+    if getgenv().NKNO.Flinging then return end
+    local m = findMurderer()
+    if m then
+        getgenv().NKNO.Flinging = true
+        Notify("Fling Started", "Flinging murderer", 3)
+        task.spawn(function()
+            SkidFling(m)
+            getgenv().NKNO.Flinging = false
+        end)
+    end
+end)
+createButton(ContentContainer, "Fling Sheriff", "", function()
+    if getgenv().NKNO.Flinging then return end
+    local s = findSheriff()
+    if s then
+        getgenv().NKNO.Flinging = true
+        Notify("Fling Started", "Flinging sheriff", 3)
+        task.spawn(function()
+            SkidFling(s)
+            getgenv().NKNO.Flinging = false
+        end)
+    end
+end)
+createButton(ContentContainer, "Fling Selected", "", function()
+    if getgenv().NKNO.Flinging then return end
+    local sel = getgenv().NKNO.SelectedPlayer
+    if not sel or not sel.Parent then
+        Notify("Error", "Select a player first", 3)
+        return
+    end
+    getgenv().NKNO.Flinging = true
+    Notify("Fling Started", "Flinging " .. sel.Name, 3)
+    task.spawn(function()
+        SkidFling(sel)
+        getgenv().NKNO.Flinging = false
+    end)
+end)
+createButton(ContentContainer, "Stop Fling", "", function()
+    if getgenv().NKNO.Flinging then
+        getgenv().NKNO.Flinging = false
+        Notify("Stopped", "Fling stopped", 2)
+    end
+end)
+
+createSection(ContentContainer, "UnderMap")
+createToggle(ContentContainer, "UnderMap Mode", "Go below map (manual)", false, function(val)
+    getgenv().NKNO.UnderMap = val
+    if val then goUnderMap() else returnFromUnderMap() end
+end)
+
+createSection(ContentContainer, "God Mode")
+createToggle(ContentContainer, "God Mode", "Disable collisions (invincible)", false, function(val)
+    getgenv().NKNO.GodMode = val
+    if val then
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+end)
+
+createSection(ContentContainer, "Auto Respawn")
+createToggle(ContentContainer, "Auto Respawn", "Respawn when dead", false, function(val)
+    getgenv().NKNO.AutoRespawn = val
+end)
+
+-- Settings (тема и пр.)
+createSection(ContentContainer, "UI Settings")
+createDropdown(ContentContainer, "Theme", "", {"Dark","Light","Gold"}, "Dark", function(val)
+    local colors = {
+        Dark = { bg = Color3.fromRGB(11,11,16), text = Color3.fromRGB(220,220,235), accent = Color3.fromRGB(255,215,0) },
+        Light = { bg = Color3.fromRGB(240,240,245), text = Color3.fromRGB(30,30,40), accent = Color3.fromRGB(0,120,255) },
+        Gold = { bg = Color3.fromRGB(30,25,20), text = Color3.fromRGB(255,215,0), accent = Color3.fromRGB(255,180,0) },
+    }
+    local theme = colors[val]
+    MainFrame.BackgroundColor3 = theme.bg
+    Title.TextColor3 = theme.accent
+end)
+createSlider(ContentContainer, "UI Transparency", "", 0, 1, 0.1, true, function(val)
+    MainFrame.BackgroundTransparency = val
+end)
+
+-- ============================================================
+--          ФОНОВЫЕ ПРОЦЕССЫ
+-- ============================================================
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
         updateESP()
         autoGrabGun()
-        -- Если включен AntiFling, то обрабатываем всех игроков (уже сделано через CharacterAdded)
+        -- Применяем настройки к персонажу при каждом добавлении
     end
 end)
 
--- ===== ОБРАБОТКА КЛАВИШ =====
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    applyWalkSpeed()
+    applyJumpPower()
+    if getgenv().NKNO.ForceFieldMaterial then applyForceField() end
+    if getgenv().NKNO.GodMode then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+    if getgenv().NKNO.AutoDance then playDance() end
+    if getgenv().NKNO.AutoRespawn and not LocalPlayer:GetAttribute("Alive") then
+        -- попытка респавна (заглушка)
+    end
+end)
+
+-- Обработка клавиши Left Alt для открытия/закрытия меню
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.LeftAlt then
-        MainFrame.Visible = not MainFrame.Visible
-        if MainFrame.Visible then MiniIcon.Visible = false end
+        toggleMenu()
     end
 end)
 
--- ===== СТАРТОВОЕ УВЕДОМЛЕНИЕ =====
-Notify("NKNO$ HUB ULTIMATE", "Нажми Left Alt для меню", 5)
+-- Стартовое уведомление
+Notify("NKNO$ HUB", "Нажми Left Alt для меню", 4)
+
+-- После загрузки, если нужно, можно показать меню сразу
+-- toggleMenu(true)
