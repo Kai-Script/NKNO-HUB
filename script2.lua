@@ -1,6 +1,6 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v2 (FULL SCRIPT)
--- Фарм под картой + выбор nearest/random + категории
+-- NKNO$ HUB ULTIMATE v3
+-- Поддержка языка, уведомления об обновлении, Discord кнопка
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -12,54 +12,205 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local Workspace = game:GetService("Workspace")
 local Stats = game:GetService("Stats")
 local CoreGui = game:GetService("CoreGui")
+local GuiService = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- Глобальные настройки
-getgenv().NKNO = {
-    AntiFling = false,
-    AutoGrabGun = false,
-    FarmCoins = false,
-    FarmUnderMap = true,          -- фарм под картой
-    RandomDelays = false,
-    RandomMovement = false,
-    RandomCoinSelection = false,  -- false = nearest, true = random среди 3 ближайших
-    AntiAFK = false,
-    MinDelay = 0.1,
-    MaxDelay = 0.5,
-    UnderMap = false,
-    CustomWalkSpeed = false,
-    WalkSpeedValue = 16,
-    CustomJumpPower = false,
-    JumpPowerValue = 50,
-    CustomFOV = false,
-    FOVValue = 70,
-    ForceFieldMaterial = false,
-    AutoDance = false,
-    DanceID = "127118661424463",
-    AutoRespawn = false,
-    GodMode = false,
-    ESP = {
-        Murderer = false,
-        Sheriff = false,
-        Innocent = false,
-        Hero = false,
-        Box2D = false,
-        DisplayName = false,
-        NormalName = true,
-        AvatarDisplay = false,
-        ColorMurderer = Color3.fromRGB(255,0,0),
-        ColorSheriff = Color3.fromRGB(0,0,255),
-        ColorHero = Color3.fromRGB(255,255,0),
-        ColorInnocent = Color3.fromRGB(0,255,0),
-        FontSize = 14,
-    },
-    Flinging = false,
-    SelectedPlayer = nil,
+-- Версия и обновление
+local SCRIPT_VERSION = "3.0"
+local UPDATE_MESSAGE = {
+    ru = "Обновление v3.0:\n- Выбор языка (RU/EN)\n- Discord кнопка\n- Улучшенный фарм под картой\n- Исправлены баги",
+    en = "Update v3.0:\n- Language selection (RU/EN)\n- Discord button\n- Improved under-map farming\n- Bug fixes"
 }
+
+-- Настройки языка (по умолчанию не задан)
+if not getgenv().NKNO then
+    getgenv().NKNO = {}
+end
+
+-- Функция выбора языка (показывается один раз)
+local function selectLanguage()
+    if getgenv().NKNO.Language then return end -- уже выбран
+
+    local LangGui = Instance.new("ScreenGui")
+    LangGui.Name = "LanguageSelector"
+    LangGui.Parent = CoreGui
+    LangGui.ResetOnSpawn = false
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, 200)
+    frame.Position = UDim2.new(0.5, -200, 0.5, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+    frame.BorderSizePixel = 0
+    frame.Parent = LangGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(60,60,80)
+    stroke.Thickness = 1.5
+    stroke.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,0,0,50)
+    title.BackgroundTransparency = 1
+    title.Text = "Select Language / Выберите язык"
+    title.TextColor3 = Color3.fromRGB(255,215,0)
+    title.TextSize = 20
+    title.Font = Enum.Font.GothamBold
+    title.Parent = frame
+
+    local btnRu = Instance.new("TextButton")
+    btnRu.Size = UDim2.new(0.4,0,0,40)
+    btnRu.Position = UDim2.new(0.05,0,0.6,0)
+    btnRu.BackgroundColor3 = Color3.fromRGB(50,50,70)
+    btnRu.Text = "Русский"
+    btnRu.TextColor3 = Color3.fromRGB(255,255,255)
+    btnRu.TextSize = 18
+    btnRu.Font = Enum.Font.GothamBold
+    btnRu.Parent = frame
+    Instance.new("UICorner", btnRu).CornerRadius = UDim.new(0,8)
+    btnRu.MouseButton1Click:Connect(function()
+        getgenv().NKNO.Language = "ru"
+        LangGui:Destroy()
+        Notify("Язык выбран", "Русский", 3)
+        showUpdateNotice()
+        -- Перезапускаем UI для обновления текстов (можно пересоздать меню)
+        -- Но проще перезагрузить скрипт? Мы просто продолжим.
+    end)
+
+    local btnEn = Instance.new("TextButton")
+    btnEn.Size = UDim2.new(0.4,0,0,40)
+    btnEn.Position = UDim2.new(0.55,0,0.6,0)
+    btnEn.BackgroundColor3 = Color3.fromRGB(50,50,70)
+    btnEn.Text = "English"
+    btnEn.TextColor3 = Color3.fromRGB(255,255,255)
+    btnEn.TextSize = 18
+    btnEn.Font = Enum.Font.GothamBold
+    btnEn.Parent = frame
+    Instance.new("UICorner", btnEn).CornerRadius = UDim.new(0,8)
+    btnEn.MouseButton1Click:Connect(function()
+        getgenv().NKNO.Language = "en"
+        LangGui:Destroy()
+        Notify("Language selected", "English", 3)
+        showUpdateNotice()
+    end)
+end
+
+-- Уведомление об обновлении
+local function showUpdateNotice()
+    local lang = getgenv().NKNO.Language or "ru"
+    local msg = UPDATE_MESSAGE[lang] or UPDATE_MESSAGE.ru
+    Notify("NKNO$ HUB " .. SCRIPT_VERSION, msg, 8)
+end
+
+-- Discord кнопка (слева снизу)
+local function createDiscordButton()
+    if CoreGui:FindFirstChild("DiscordButton") then return end
+    local btnGui = Instance.new("ScreenGui")
+    btnGui.Name = "DiscordButton"
+    btnGui.Parent = CoreGui
+    btnGui.ResetOnSpawn = false
+    btnGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local btn = Instance.new("ImageButton")
+    btn.Size = UDim2.new(0, 60, 0, 60)
+    btn.Position = UDim2.new(0, 10, 1, -70) -- левый нижний угол
+    btn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Discord цвет
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 0
+    btn.Parent = btnGui
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+    -- Иконка Discord (текст или изображение)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = "DC"
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.TextSize = 24
+    label.Font = Enum.Font.GothamBold
+    label.Parent = btn
+
+    -- Текст "Discord" под кнопкой (можно добавить)
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(0, 80, 0, 20)
+    text.Position = UDim2.new(0, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = "Discord"
+    text.TextColor3 = Color3.fromRGB(200,200,220)
+    text.TextSize = 12
+    text.Font = Enum.Font.GothamMedium
+    text.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        GuiService:OpenBrowserWindow("https://discord.gg/vQUM4JapP")
+    end)
+
+    -- Перетаскивание кнопки (опционально)
+    local drag, startPos, startMouse
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            drag = true
+            startPos = btn.Position
+            startMouse = input.Position
+        end
+    end)
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            drag = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - startMouse
+            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- ============================================================
+-- ОСТАЛЬНЫЕ ГЛОБАЛЬНЫЕ НАСТРОЙКИ
+-- ============================================================
+
+if not getgenv().NKNO.Language then
+    getgenv().NKNO.Language = "ru" -- запасной, но будет предложен выбор
+end
+
+-- Остальные настройки
+getgenv().NKNO.AntiFling = getgenv().NKNO.AntiFling or false
+getgenv().NKNO.AutoGrabGun = getgenv().NKNO.AutoGrabGun or false
+getgenv().NKNO.FarmCoins = getgenv().NKNO.FarmCoins or false
+getgenv().NKNO.FarmUnderMap = getgenv().NKNO.FarmUnderMap ~= false -- по умолчанию true
+getgenv().NKNO.RandomDelays = getgenv().NKNO.RandomDelays or false
+getgenv().NKNO.RandomMovement = getgenv().NKNO.RandomMovement or false
+getgenv().NKNO.RandomCoinSelection = getgenv().NKNO.RandomCoinSelection or false
+getgenv().NKNO.AntiAFK = getgenv().NKNO.AntiAFK or false
+getgenv().NKNO.MinDelay = getgenv().NKNO.MinDelay or 0.1
+getgenv().NKNO.MaxDelay = getgenv().NKNO.MaxDelay or 0.5
+getgenv().NKNO.UnderMap = getgenv().NKNO.UnderMap or false
+getgenv().NKNO.CustomWalkSpeed = getgenv().NKNO.CustomWalkSpeed or false
+getgenv().NKNO.WalkSpeedValue = getgenv().NKNO.WalkSpeedValue or 16
+getgenv().NKNO.CustomJumpPower = getgenv().NKNO.CustomJumpPower or false
+getgenv().NKNO.JumpPowerValue = getgenv().NKNO.JumpPowerValue or 50
+getgenv().NKNO.CustomFOV = getgenv().NKNO.CustomFOV or false
+getgenv().NKNO.FOVValue = getgenv().NKNO.FOVValue or 70
+getgenv().NKNO.ForceFieldMaterial = getgenv().NKNO.ForceFieldMaterial or false
+getgenv().NKNO.AutoDance = getgenv().NKNO.AutoDance or false
+getgenv().NKNO.DanceID = getgenv().NKNO.DanceID or "127118661424463"
+getgenv().NKNO.AutoRespawn = getgenv().NKNO.AutoRespawn or false
+getgenv().NKNO.GodMode = getgenv().NKNO.GodMode or false
+getgenv().NKNO.ESP = getgenv().NKNO.ESP or {
+    Murderer = false, Sheriff = false, Innocent = false, Hero = false,
+    Box2D = false, DisplayName = false, NormalName = true, AvatarDisplay = false,
+    ColorMurderer = Color3.fromRGB(255,0,0),
+    ColorSheriff = Color3.fromRGB(0,0,255),
+    ColorHero = Color3.fromRGB(255,255,0),
+    ColorInnocent = Color3.fromRGB(0,255,0),
+    FontSize = 14,
+}
+getgenv().NKNO.Flinging = false
+getgenv().NKNO.SelectedPlayer = nil
 
 -- ============================================================
 -- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -121,7 +272,7 @@ local function findPlayerByPartialName(name)
 end
 
 -- ============================================================
--- ПОСТРОЕНИЕ GUI (МЕНЮ)
+-- GUI (МЕНЮ) - ОБНОВЛЕНО С ПЕРЕВОДАМИ
 -- ============================================================
 
 if CoreGui:FindFirstChild("NKNO_HUB") then CoreGui["NKNO_HUB"]:Destroy() end
@@ -268,8 +419,14 @@ local function updateCanvas()
     ContentContainer.CanvasSize = UDim2.new(0,0,0,total + 20)
 end
 
--- Функции создания элементов
-local function createSection(parent, title)
+-- Функции создания элементов с поддержкой языка
+local lang = getgenv().NKNO.Language or "ru"
+local T = function(ru, en)
+    return lang == "ru" and ru or en
+end
+
+local function createSection(parent, titleRu, titleEn)
+    local title = T(titleRu, titleEn)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1,0,0,24)
     label.BackgroundTransparency = 1
@@ -283,23 +440,23 @@ local function createSection(parent, title)
     return label
 end
 
-local function createButton(parent, title, desc, callback)
+local function createButton(parent, titleRu, titleEn, descRu, descEn, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1,0,0,32)
     btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
     btn.BorderSizePixel = 0
-    btn.Text = title
+    btn.Text = T(titleRu, titleEn)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.TextSize = 14
     btn.Font = Enum.Font.GothamMedium
     btn.Parent = parent
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
-    if desc and desc ~= "" then
+    if descRu or descEn then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(1,0,0,16)
         d.Position = UDim2.new(0,5,1,0)
         d.BackgroundTransparency = 1
-        d.Text = desc
+        d.Text = T(descRu or "", descEn or "")
         d.TextColor3 = Color3.fromRGB(150,150,170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
@@ -311,7 +468,7 @@ local function createButton(parent, title, desc, callback)
     return btn
 end
 
-local function createToggle(parent, title, desc, default, callback)
+local function createToggle(parent, titleRu, titleEn, descRu, descEn, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,30)
     frame.BackgroundTransparency = 1
@@ -320,7 +477,7 @@ local function createToggle(parent, title, desc, default, callback)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.65,0,1,0)
     label.BackgroundTransparency = 1
-    label.Text = title
+    label.Text = T(titleRu, titleEn)
     label.TextColor3 = Color3.fromRGB(220,220,235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
@@ -354,12 +511,12 @@ local function createToggle(parent, title, desc, default, callback)
         callback(state)
     end)
 
-    if desc and desc ~= "" then
+    if descRu or descEn then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(0.65,0,0,16)
         d.Position = UDim2.new(0,0,1,0)
         d.BackgroundTransparency = 1
-        d.Text = desc
+        d.Text = T(descRu or "", descEn or "")
         d.TextColor3 = Color3.fromRGB(150,150,170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
@@ -370,7 +527,7 @@ local function createToggle(parent, title, desc, default, callback)
     return frame
 end
 
-local function createSlider(parent, title, desc, min, max, default, decimals, callback)
+local function createSlider(parent, titleRu, titleEn, descRu, descEn, min, max, default, decimals, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,44)
     frame.BackgroundTransparency = 1
@@ -379,7 +536,7 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.6,0,0.4,0)
     label.BackgroundTransparency = 1
-    label.Text = title
+    label.Text = T(titleRu, titleEn)
     label.TextColor3 = Color3.fromRGB(220,220,235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
@@ -445,12 +602,12 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
         end)
     end)
 
-    if desc and desc ~= "" then
+    if descRu or descEn then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(1,0,0,16)
         d.Position = UDim2.new(0,0,1,0)
         d.BackgroundTransparency = 1
-        d.Text = desc
+        d.Text = T(descRu or "", descEn or "")
         d.TextColor3 = Color3.fromRGB(150,150,170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
@@ -461,7 +618,7 @@ local function createSlider(parent, title, desc, min, max, default, decimals, ca
     return frame
 end
 
-local function createDropdown(parent, title, desc, options, default, callback)
+local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,30)
     frame.BackgroundTransparency = 1
@@ -470,7 +627,7 @@ local function createDropdown(parent, title, desc, options, default, callback)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.5,0,1,0)
     label.BackgroundTransparency = 1
-    label.Text = title
+    label.Text = T(titleRu, titleEn)
     label.TextColor3 = Color3.fromRGB(220,220,235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
@@ -538,12 +695,12 @@ local function createDropdown(parent, title, desc, options, default, callback)
         end
     end)
 
-    if desc and desc ~= "" then
+    if descRu or descEn then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(1,0,0,16)
         d.Position = UDim2.new(0,0,1,0)
         d.BackgroundTransparency = 1
-        d.Text = desc
+        d.Text = T(descRu or "", descEn or "")
         d.TextColor3 = Color3.fromRGB(150,150,170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
@@ -554,7 +711,7 @@ local function createDropdown(parent, title, desc, options, default, callback)
     return frame
 end
 
-local function createInput(parent, title, desc, callback)
+local function createInput(parent, titleRu, titleEn, descRu, descEn, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,30)
     frame.BackgroundTransparency = 1
@@ -563,7 +720,7 @@ local function createInput(parent, title, desc, callback)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.4,0,1,0)
     label.BackgroundTransparency = 1
-    label.Text = title
+    label.Text = T(titleRu, titleEn)
     label.TextColor3 = Color3.fromRGB(220,220,235)
     label.TextSize = 14
     label.Font = Enum.Font.GothamMedium
@@ -579,7 +736,7 @@ local function createInput(parent, title, desc, callback)
     inputBox.TextColor3 = Color3.fromRGB(255,255,255)
     inputBox.TextSize = 14
     inputBox.Font = Enum.Font.GothamMedium
-    inputBox.PlaceholderText = "Enter..."
+    inputBox.PlaceholderText = T("Введите...", "Enter...")
     inputBox.Parent = frame
     Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0,6)
 
@@ -587,12 +744,12 @@ local function createInput(parent, title, desc, callback)
         callback(inputBox.Text)
     end)
 
-    if desc and desc ~= "" then
+    if descRu or descEn then
         local d = Instance.new("TextLabel")
         d.Size = UDim2.new(1,0,0,16)
         d.Position = UDim2.new(0,0,1,0)
         d.BackgroundTransparency = 1
-        d.Text = desc
+        d.Text = T(descRu or "", descEn or "")
         d.TextColor3 = Color3.fromRGB(150,150,170)
         d.TextSize = 11
         d.Font = Enum.Font.Gotham
@@ -603,7 +760,7 @@ local function createInput(parent, title, desc, callback)
     return frame
 end
 
--- Уведомления
+-- Уведомления (с поддержкой языка)
 local function Notify(title, desc, duration)
     duration = duration or 3
     local frame = Instance.new("Frame")
@@ -1183,7 +1340,6 @@ local function startFarming()
     local root = LocalPlayer.Character.HumanoidRootPart
     local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
 
-    -- сохраняем коллизию
     savedCollision = {}
     for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -1371,12 +1527,12 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- НАПОЛНЕНИЕ МЕНЮ (КАТЕГОРИИ)
+-- НАПОЛНЕНИЕ МЕНЮ (КАТЕГОРИИ С ПЕРЕВОДАМИ)
 -- ============================================================
 
 -- MAIN
-createSection(ContentContainer, "Main")
-createButton(ContentContainer, "Kill All", "Убить всех мирных (только убийца)", function()
+createSection(ContentContainer, "Основное", "Main")
+createButton(ContentContainer, "Убить всех", "Kill All", "Убить всех мирных (только убийца)", "Kill all innocents (murderer only)", function()
     if not LocalPlayer.Character then return end
     local knife = LocalPlayer.Character:FindFirstChild("Knife")
     if not knife then
@@ -1403,11 +1559,11 @@ createButton(ContentContainer, "Kill All", "Убить всех мирных (т
     end
 end)
 
-createToggle(ContentContainer, "Auto Grab Gun", "Забрать пистолет, если шериф умер", false, function(val)
+createToggle(ContentContainer, "Авто-граб пистолета", "Auto Grab Gun", "Забрать пистолет, если шериф умер", "Grab gun when sheriff dies", false, function(val)
     getgenv().NKNO.AutoGrabGun = val
 end)
 
-createToggle(ContentContainer, "God Mode", "Отключить коллизии (неуязвимость)", false, function(val)
+createToggle(ContentContainer, "Режим Бога", "God Mode", "Отключить коллизии (неуязвимость)", "Disable collisions (invincible)", false, function(val)
     getgenv().NKNO.GodMode = val
     if val then
         if LocalPlayer.Character then
@@ -1418,18 +1574,18 @@ createToggle(ContentContainer, "God Mode", "Отключить коллизии 
     end
 end)
 
-createToggle(ContentContainer, "UnderMap Mode", "Ручной уход под карту", false, function(val)
+createToggle(ContentContainer, "Под картой (ручной)", "UnderMap Mode", "Уйти под карту вручную", "Go under map manually", false, function(val)
     getgenv().NKNO.UnderMap = val
     if val then goUnderMap() else returnFromUnderMap() end
 end)
 
-createToggle(ContentContainer, "Auto Respawn", "Авто-респавн при смерти", false, function(val)
+createToggle(ContentContainer, "Авто-респавн", "Auto Respawn", "Респавниться при смерти", "Respawn when dead", false, function(val)
     getgenv().NKNO.AutoRespawn = val
 end)
 
 -- COMBAT
-createSection(ContentContainer, "Combat")
-createToggle(ContentContainer, "Auto Shoot Button", "Кнопка для выстрела в убийцу (шериф)", false, function(val)
+createSection(ContentContainer, "Бой", "Combat")
+createToggle(ContentContainer, "Кнопка выстрела", "Auto Shoot Button", "Кнопка для стрельбы в убийцу (шериф)", "Button to shoot murderer (sheriff)", false, function(val)
     local function createShootButton()
         if CoreGui:FindFirstChild("ShootButtonGui") then return end
         local gui = Instance.new("ScreenGui")
@@ -1501,14 +1657,14 @@ createToggle(ContentContainer, "Auto Shoot Button", "Кнопка для выс�
     end
 end)
 
-createToggle(ContentContainer, "Magic Bullet", "Авто-прицеливание в убийцу", false, function(val) end) -- заглушка
+createToggle(ContentContainer, "Магическая пуля", "Magic Bullet", "Авто-прицел в убийцу", "Auto-aim at murderer", false, function(val) end)
 
-createButton(ContentContainer, "Fling Murderer", "Зафлингует убийцу", function()
+createButton(ContentContainer, "Флинг убийцы", "Fling Murderer", "Зафлингует убийцу", "Fling the murderer", function()
     if getgenv().NKNO.Flinging then return end
     local m = findMurderer()
     if m then
         getgenv().NKNO.Flinging = true
-        Notify("Флинг", "Флингуем убийцу", 3)
+        Notify(T("Флинг", "Fling"), T("Флингуем убийцу", "Flinging murderer"), 3)
         task.spawn(function()
             SkidFling(m)
             getgenv().NKNO.Flinging = false
@@ -1516,12 +1672,12 @@ createButton(ContentContainer, "Fling Murderer", "Зафлингует убий�
     end
 end)
 
-createButton(ContentContainer, "Fling Sheriff", "Зафлингует шерифа", function()
+createButton(ContentContainer, "Флинг шерифа", "Fling Sheriff", "Зафлингует шерифа", "Fling the sheriff", function()
     if getgenv().NKNO.Flinging then return end
     local s = findSheriff()
     if s then
         getgenv().NKNO.Flinging = true
-        Notify("Флинг", "Флингуем шерифа", 3)
+        Notify(T("Флинг", "Fling"), T("Флингуем шерифа", "Flinging sheriff"), 3)
         task.spawn(function()
             SkidFling(s)
             getgenv().NKNO.Flinging = false
@@ -1529,109 +1685,109 @@ createButton(ContentContainer, "Fling Sheriff", "Зафлингует шериф
     end
 end)
 
-createInput(ContentContainer, "Player Search", "Введите ник для флинга", function(text)
+createInput(ContentContainer, "Поиск игрока", "Player Search", "Введите ник для флинга", "Enter name for fling", function(text)
     local plr = findPlayerByPartialName(text)
     if plr then
         getgenv().NKNO.SelectedPlayer = plr
-        Notify("Найден", "Выбран: " .. plr.Name, 2)
+        Notify(T("Найден", "Found"), T("Выбран: " .. plr.Name, "Selected: " .. plr.Name), 2)
     else
         getgenv().NKNO.SelectedPlayer = nil
-        if text ~= "" then Notify("Не найден", "Игрок не найден", 2) end
+        if text ~= "" then Notify(T("Не найден", "Not found"), T("Игрок не найден", "Player not found"), 2) end
     end
 end)
-createButton(ContentContainer, "Fling Selected", "Флинг выбранного игрока", function()
+createButton(ContentContainer, "Флинг выбранного", "Fling Selected", "Флинг выбранного игрока", "Fling selected player", function()
     if getgenv().NKNO.Flinging then return end
     local sel = getgenv().NKNO.SelectedPlayer
     if not sel or not sel.Parent then
-        Notify("Ошибка", "Сначала выберите игрока", 3)
+        Notify(T("Ошибка", "Error"), T("Сначала выберите игрока", "Select a player first"), 3)
         return
     end
     getgenv().NKNO.Flinging = true
-    Notify("Флинг", "Флингуем " .. sel.Name, 3)
+    Notify(T("Флинг", "Fling"), T("Флингуем " .. sel.Name, "Flinging " .. sel.Name), 3)
     task.spawn(function()
         SkidFling(sel)
         getgenv().NKNO.Flinging = false
     end)
 end)
-createButton(ContentContainer, "Stop Fling", "Остановить флинг", function()
+createButton(ContentContainer, "Остановить флинг", "Stop Fling", "Остановить флинг", "Stop fling", function()
     if getgenv().NKNO.Flinging then
         getgenv().NKNO.Flinging = false
-        Notify("Остановлено", "Флинг прекращён", 2)
+        Notify(T("Остановлено", "Stopped"), T("Флинг прекращён", "Fling stopped"), 2)
     end
 end)
 
 -- FARM
-createSection(ContentContainer, "Farm")
-createToggle(ContentContainer, "Farm Coins", "Автосбор монет", false, function(val)
+createSection(ContentContainer, "Фарм", "Farm")
+createToggle(ContentContainer, "Фарм монет", "Farm Coins", "Автосбор монет", "Auto-collect coins", false, function(val)
     getgenv().NKNO.FarmCoins = val
     if not val and farming then stopFarming() end
 end)
-createToggle(ContentContainer, "Farm UnderMap", "Сбор под картой (недосягаем)", true, function(val)
+createToggle(ContentContainer, "Фарм под картой", "Farm UnderMap", "Сбор под картой (недосягаем)", "Farm under map (unreachable)", true, function(val)
     getgenv().NKNO.FarmUnderMap = val
 end)
-createToggle(ContentContainer, "Random Delays", "Случайные задержки между монетами", false, function(val)
+createToggle(ContentContainer, "Случайные задержки", "Random Delays", "Случайные задержки между монетами", "Random delays between coins", false, function(val)
     getgenv().NKNO.RandomDelays = val
 end)
-createToggle(ContentContainer, "Random Movement", "Случайное смещение пути", false, function(val)
+createToggle(ContentContainer, "Случайное движение", "Random Movement", "Случайное смещение пути", "Random path offset", false, function(val)
     getgenv().NKNO.RandomMovement = val
 end)
-createToggle(ContentContainer, "Random Coin Selection", "Выбирать случайную из 3 ближайших (random)", false, function(val)
+createToggle(ContentContainer, "Случайный выбор монеты", "Random Coin Selection", "Выбирать случайную из 3 ближайших", "Pick random from nearest 3", false, function(val)
     getgenv().NKNO.RandomCoinSelection = val
 end)
-createSlider(ContentContainer, "Min Delay (s)", "Минимальная задержка", 0, 1, 0.1, true, function(val)
+createSlider(ContentContainer, "Мин. задержка (с)", "Min Delay (s)", "Минимальная задержка", "Minimum delay", 0, 1, 0.1, true, function(val)
     getgenv().NKNO.MinDelay = val
 end)
-createSlider(ContentContainer, "Max Delay (s)", "Максимальная задержка", 0, 2, 0.5, true, function(val)
+createSlider(ContentContainer, "Макс. задержка (с)", "Max Delay (s)", "Максимальная задержка", "Maximum delay", 0, 2, 0.5, true, function(val)
     getgenv().NKNO.MaxDelay = val
 end)
 
 -- VISUALS
-createSection(ContentContainer, "Visuals")
-createToggle(ContentContainer, "Murderer ESP", "", false, function(val) getgenv().NKNO.ESP.Murderer = val end)
-createToggle(ContentContainer, "Sheriff ESP", "", false, function(val) getgenv().NKNO.ESP.Sheriff = val end)
-createToggle(ContentContainer, "Innocent ESP", "", false, function(val) getgenv().NKNO.ESP.Innocent = val end)
-createToggle(ContentContainer, "Hero ESP", "", false, function(val) getgenv().NKNO.ESP.Hero = val end)
-createToggle(ContentContainer, "2D Box", "Рамка вокруг игрока", false, function(val) getgenv().NKNO.ESP.Box2D = val end)
-createToggle(ContentContainer, "Display Name", "Показывать DisplayName", false, function(val)
+createSection(ContentContainer, "Визуал", "Visuals")
+createToggle(ContentContainer, "ESP убийцы", "Murderer ESP", "", "", false, function(val) getgenv().NKNO.ESP.Murderer = val end)
+createToggle(ContentContainer, "ESP шерифа", "Sheriff ESP", "", "", false, function(val) getgenv().NKNO.ESP.Sheriff = val end)
+createToggle(ContentContainer, "ESP мирных", "Innocent ESP", "", "", false, function(val) getgenv().NKNO.ESP.Innocent = val end)
+createToggle(ContentContainer, "ESP героя", "Hero ESP", "", "", false, function(val) getgenv().NKNO.ESP.Hero = val end)
+createToggle(ContentContainer, "2D рамка", "2D Box", "Рамка вокруг игрока", "Box around player", false, function(val) getgenv().NKNO.ESP.Box2D = val end)
+createToggle(ContentContainer, "Показывать DisplayName", "Display Name", "", "", false, function(val)
     getgenv().NKNO.ESP.DisplayName = val
     if val then getgenv().NKNO.ESP.NormalName = false end
 end)
-createToggle(ContentContainer, "Normal Name", "Показывать ник", true, function(val)
+createToggle(ContentContainer, "Показывать ник", "Normal Name", "", "", true, function(val)
     getgenv().NKNO.ESP.NormalName = val
     if val then getgenv().NKNO.ESP.DisplayName = false end
 end)
-createToggle(ContentContainer, "ForceField Material", "Материал ForceField на себе", false, function(val)
+createToggle(ContentContainer, "ForceField материал", "ForceField Material", "Материал ForceField на себе", "ForceField material on self", false, function(val)
     getgenv().NKNO.ForceFieldMaterial = val
     if val then applyForceField() else restoreMaterial() end
 end)
-createToggle(ContentContainer, "Custom FOV", "", false, function(val)
+createToggle(ContentContainer, "Кастомный FOV", "Custom FOV", "", "", false, function(val)
     getgenv().NKNO.CustomFOV = val
     applyFOV()
 end)
-createSlider(ContentContainer, "FOV", "", 70, 120, 70, false, function(val)
+createSlider(ContentContainer, "FOV", "FOV", "", "", 70, 120, 70, false, function(val)
     getgenv().NKNO.FOVValue = val
     if getgenv().NKNO.CustomFOV then applyFOV() end
 end)
 
 -- MOVEMENT
-createSection(ContentContainer, "Movement")
-createToggle(ContentContainer, "Custom WalkSpeed", "", false, function(val)
+createSection(ContentContainer, "Движение", "Movement")
+createToggle(ContentContainer, "Кастомная скорость", "Custom WalkSpeed", "", "", false, function(val)
     getgenv().NKNO.CustomWalkSpeed = val
     applyWalkSpeed()
 end)
-createSlider(ContentContainer, "WalkSpeed", "", 16, 200, 16, false, function(val)
+createSlider(ContentContainer, "WalkSpeed", "WalkSpeed", "", "", 16, 200, 16, false, function(val)
     getgenv().NKNO.WalkSpeedValue = val
     if getgenv().NKNO.CustomWalkSpeed then applyWalkSpeed() end
 end)
-createToggle(ContentContainer, "Custom JumpPower", "", false, function(val)
+createToggle(ContentContainer, "Кастомный прыжок", "Custom JumpPower", "", "", false, function(val)
     getgenv().NKNO.CustomJumpPower = val
     applyJumpPower()
 end)
-createSlider(ContentContainer, "JumpPower", "", 50, 200, 50, false, function(val)
+createSlider(ContentContainer, "JumpPower", "JumpPower", "", "", 50, 200, 50, false, function(val)
     getgenv().NKNO.JumpPowerValue = val
     if getgenv().NKNO.CustomJumpPower then applyJumpPower() end
 end)
-createToggle(ContentContainer, "Anti-AFK", "Движение для избегания кика", false, function(val)
+createToggle(ContentContainer, "Анти-AFK", "Anti-AFK", "Движение для избегания кика", "Movement to avoid kick", false, function(val)
     getgenv().NKNO.AntiAFK = val
     if val then
         task.spawn(function()
@@ -1647,8 +1803,8 @@ createToggle(ContentContainer, "Anti-AFK", "Движение для избега
 end)
 
 -- TELEPORTS
-createSection(ContentContainer, "Teleports")
-createButton(ContentContainer, "Map TP", "Телепорт на текущую карту", function()
+createSection(ContentContainer, "Телепорты", "Teleports")
+createButton(ContentContainer, "На карту", "Map TP", "Телепорт на текущую карту", "Teleport to current map", function()
     local map = findMap()
     if map and map:FindFirstChild("Spawns") then
         local spawns = map.Spawns:GetChildren()
@@ -1657,7 +1813,7 @@ createButton(ContentContainer, "Map TP", "Телепорт на текущую �
         end
     end
 end)
-createButton(ContentContainer, "Lobby TP", "Телепорт в лобби", function()
+createButton(ContentContainer, "В лобби", "Lobby TP", "Телепорт в лобби", "Teleport to lobby", function()
     local lobby = Workspace:FindFirstChild("RegularLobby")
     if lobby and lobby:FindFirstChild("Spawns") then
         local spawns = lobby.Spawns:GetChildren()
@@ -1666,13 +1822,13 @@ createButton(ContentContainer, "Lobby TP", "Телепорт в лобби", fun
         end
     end
 end)
-createButton(ContentContainer, "Murder TP", "Телепорт к убийце", function()
+createButton(ContentContainer, "К убийце", "Murder TP", "Телепорт к убийце", "Teleport to murderer", function()
     local m = findMurderer()
     if m and m.Character then
         LocalPlayer.Character.HumanoidRootPart.CFrame = m.Character.HumanoidRootPart.CFrame
     end
 end)
-createButton(ContentContainer, "Sheriff TP", "Телепорт к шерифу", function()
+createButton(ContentContainer, "К шерифу", "Sheriff TP", "Телепорт к шерифу", "Teleport to sheriff", function()
     local s = findSheriff()
     if s and s.Character then
         LocalPlayer.Character.HumanoidRootPart.CFrame = s.Character.HumanoidRootPart.CFrame
@@ -1680,11 +1836,12 @@ createButton(ContentContainer, "Sheriff TP", "Телепорт к шерифу",
 end)
 
 -- MISC
-createSection(ContentContainer, "Misc")
-createToggle(ContentContainer, "Anti-Fling", "Защита от флинга (отключает коллизию у других)", false, function(val)
+createSection(ContentContainer, "Разное", "Misc")
+createToggle(ContentContainer, "Анти-флинг", "Anti-Fling", "Защита от флинга (отключает коллизию у других)", "Anti-fling (disables collision for others)", false, function(val)
     getgenv().NKNO.AntiFling = val
 end)
-createSection(ContentContainer, "Dance Emotes")
+
+createSection(ContentContainer, "Танцы", "Dance Emotes")
 local danceOptions = {"Dance 1","Dance 2","Dance 3","Dance 4"}
 local danceIDs = {
     ["Dance 1"] = "127118661424463",
@@ -1692,7 +1849,7 @@ local danceIDs = {
     ["Dance 3"] = "10714340543",
     ["Dance 4"] = "15609995579",
 }
-createDropdown(ContentContainer, "Select Dance", "", danceOptions, "Dance 1", function(val)
+createDropdown(ContentContainer, "Выбрать танец", "Select Dance", "", "", danceOptions, "Dance 1", function(val)
     getgenv().NKNO.DanceID = danceIDs[val]
     if getgenv().NKNO.AutoDance then
         stopDance()
@@ -1700,13 +1857,13 @@ createDropdown(ContentContainer, "Select Dance", "", danceOptions, "Dance 1", fu
         playDance()
     end
 end)
-createToggle(ContentContainer, "Auto Dance", "Автоматический танец", false, function(val)
+createToggle(ContentContainer, "Авто-танец", "Auto Dance", "Автоматический танец", "Auto dance", false, function(val)
     getgenv().NKNO.AutoDance = val
     if val then playDance() else stopDance() end
 end)
 
-createSection(ContentContainer, "UI Settings")
-createDropdown(ContentContainer, "Theme", "", {"Dark","Light","Gold"}, "Dark", function(val)
+createSection(ContentContainer, "Настройки UI", "UI Settings")
+createDropdown(ContentContainer, "Тема", "Theme", "", "", {"Dark","Light","Gold"}, "Dark", function(val)
     local colors = {
         Dark = { bg = Color3.fromRGB(11,11,16), text = Color3.fromRGB(220,220,235), accent = Color3.fromRGB(255,215,0) },
         Light = { bg = Color3.fromRGB(240,240,245), text = Color3.fromRGB(30,30,40), accent = Color3.fromRGB(0,120,255) },
@@ -1716,7 +1873,7 @@ createDropdown(ContentContainer, "Theme", "", {"Dark","Light","Gold"}, "Dark", f
     MainFrame.BackgroundColor3 = theme.bg
     Title.TextColor3 = theme.accent
 end)
-createSlider(ContentContainer, "UI Transparency", "Прозрачность окна", 0, 1, 0.1, true, function(val)
+createSlider(ContentContainer, "Прозрачность UI", "UI Transparency", "Прозрачность окна", "Window transparency", 0, 1, 0.1, true, function(val)
     MainFrame.BackgroundTransparency = val
 end)
 
@@ -1751,4 +1908,24 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-Notify("NKNO$ HUB", "Нажми Left Alt для открытия меню", 4)
+-- ============================================================
+-- ЗАПУСК (ВЫБОР ЯЗЫКА, УВЕДОМЛЕНИЕ, DISCORD)
+-- ============================================================
+
+-- Показываем выбор языка, если ещё не выбран
+selectLanguage()
+
+-- Создаём Discord кнопку
+createDiscordButton()
+
+-- Если язык уже был выбран, показываем уведомление об обновлении
+if getgenv().NKNO.Language then
+    showUpdateNotice()
+end
+
+-- Стартовое уведомление (в зависимости от языка)
+local startMsg = {
+    ru = "Нажми Left Alt для открытия меню",
+    en = "Press Left Alt to open menu"
+}
+Notify("NKNO$ HUB", T(startMsg.ru, startMsg.en), 4)
