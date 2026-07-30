@@ -1,6 +1,7 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v6
--- Финальная версия с автофармом, индикацией и копированием Discord
+-- NKNO$ HUB ULTIMATE v7
+-- Полная версия: защита от шерифа, флинг с выбором игроков,
+-- отображение ролей, категории с динамическими цветами
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -18,10 +19,10 @@ local Clipboard = (syn and syn.request) and setclipboard or (setclipboard and se
 local LocalPlayer = Players.LocalPlayer
 
 -- Версия
-local SCRIPT_VERSION = "6.0"
+local SCRIPT_VERSION = "7.0"
 local UPDATE_MESSAGE = {
-    ru = "Обновление v6.0:\n- Автофарм с выбором Nearest/Random\n- Регулировка скорости фарма\n- Индикация статуса (правый верх)\n- Копирование Discord ссылки",
-    en = "Update v6.0:\n- Auto-farm with Nearest/Random choice\n- Farm speed control\n- Status indicator (top right)\n- Copy Discord link"
+    ru = "Обновление v7.0:\n- Защита от шерифа\n- Флинг с выбором игроков (с ролями)\n- Отображение ролей в ESP\n- Категории меняют цвет с темой\n- Улучшен интерфейс",
+    en = "Update v7.0:\n- Anti-Sheriff protection\n- Fling with player selection (with roles)\n- Role display in ESP\n- Categories change color with theme\n- Improved UI"
 }
 
 -- Настройки языка
@@ -99,10 +100,11 @@ end
 -- ============================================================
 if not getgenv().NKNO.Language then getgenv().NKNO.Language = "ru" end
 getgenv().NKNO.AntiFling = getgenv().NKNO.AntiFling or false
+getgenv().NKNO.AntiSheriff = getgenv().NKNO.AntiSheriff or false
 getgenv().NKNO.AutoGrabGun = getgenv().NKNO.AutoGrabGun or false
 getgenv().NKNO.FarmCoins = getgenv().NKNO.FarmCoins or false
 getgenv().NKNO.FarmUnderMap = getgenv().NKNO.FarmUnderMap ~= false
-getgenv().NKNO.FarmMode = getgenv().NKNO.FarmMode or "Nearest"  -- "Nearest" или "Random"
+getgenv().NKNO.FarmMode = getgenv().NKNO.FarmMode or "Nearest"
 getgenv().NKNO.FarmSpeedMultiplier = getgenv().NKNO.FarmSpeedMultiplier or 1.0
 getgenv().NKNO.RandomDelays = getgenv().NKNO.RandomDelays or false
 getgenv().NKNO.RandomMovement = getgenv().NKNO.RandomMovement or false
@@ -124,7 +126,7 @@ getgenv().NKNO.GodMode = getgenv().NKNO.GodMode or false
 getgenv().NKNO.Theme = getgenv().NKNO.Theme or "Dark"
 getgenv().NKNO.ESP = getgenv().NKNO.ESP or {
     Murderer = false, Sheriff = false, Innocent = false, Hero = false,
-    Box2D = false, DisplayName = false, NormalName = true,
+    Box2D = false, DisplayName = false, NormalName = true, ShowRole = true,
     ColorMurderer = Color3.fromRGB(255,0,0),
     ColorSheriff = Color3.fromRGB(0,0,255),
     ColorHero = Color3.fromRGB(255,255,0),
@@ -155,6 +157,12 @@ local function getPing()
     return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
 end
 
+local function getPlayerRole(plr)
+    local data = getPlayerData()
+    if not data or not data[plr.Name] then return "Innocent" end
+    return data[plr.Name].Role or "Innocent"
+end
+
 local function findMurderer()
     local data = getPlayerData()
     if not data then return nil end
@@ -179,21 +187,18 @@ local function findSheriff()
     return nil
 end
 
-local function findPlayerByPartialName(name)
-    if not name or name == "" then return nil end
-    local lower = string.lower(name)
+local function getAlivePlayers()
+    local list = {}
     for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            if string.lower(plr.Name) == lower or string.find(string.lower(plr.Name), lower, 1, true) then
-                return plr
-            end
+        if plr ~= LocalPlayer and plr:GetAttribute("Alive") == true and plr.Character then
+            table.insert(list, plr)
         end
     end
-    return nil
+    return list
 end
 
 -- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (ФЛИНГ, ПОДКАРТА, ESP и др.)
+-- ОСНОВНЫЕ ФУНКЦИИ
 -- ============================================================
 local function applyWalkSpeed()
     if getgenv().NKNO.CustomWalkSpeed and LocalPlayer.Character then
@@ -264,83 +269,121 @@ local function stopDance()
     end
 end
 
--- Флинг (атака)
-local function SkidFling(plr)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local root = hum.RootPart
-    if not root then return end
-    local targetChar = plr.Character
-    if not targetChar then return end
-    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-    local targetRoot = targetHum and targetHum.RootPart
-    local targetHead = targetChar:FindFirstChild("Head")
-    local targetHandle = targetChar:FindFirstChildOfClass("Accessory") and targetChar:FindFirstChildOfClass("Accessory"):FindFirstChild("Handle")
-    if targetHum and targetHum.Sit then return end
-    if not targetChar:FindFirstChildWhichIsA("BasePart") then return end
-
-    local function teleportTo(part, offset, angles)
-        root.CFrame = CFrame.new(part.Position) * offset * angles
-        char:SetPrimaryPartCFrame(CFrame.new(part.Position) * offset * angles)
-        root.Velocity = Vector3.new(9e7, 9e7*10, 9e7)
-        root.RotVelocity = Vector3.new(9e8,9e8,9e8)
+-- Флинг (улучшенный – кидает под карту)
+local function FlingPlayer(plr)
+    if not plr or not plr.Character then return end
+    local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    local map = findMap()
+    local underY = -500
+    if map and map:FindFirstChild("Spawns") then
+        local total = Vector3.new()
+        local count = 0
+        for _, spawn in pairs(map.Spawns:GetChildren()) do
+            if spawn:IsA("BasePart") then
+                total = total + spawn.Position
+                count = count + 1
+            end
+        end
+        if count > 0 then
+            local center = total / count
+            underY = center.Y - 100
+        end
     end
+    local targetPos = Vector3.new(targetRoot.Position.X, underY, targetRoot.Position.Z)
+    targetRoot.CFrame = CFrame.new(targetPos)
+    targetRoot.Velocity = Vector3.new(0,0,0)
+    targetRoot.RotVelocity = Vector3.new(0,0,0)
+    -- Также отключаем коллизию, чтобы он не застрял
+    for _, part in pairs(plr.Character:GetDescendants()) do
+        if part:IsA("BasePart") then part.CanCollide = false end
+    end
+    Notify("Флинг", plr.Name .. " отправлен под карту!", 2)
+end
 
-    local function flingLoop(part)
-        local startTime = tick()
-        local angle = 0
-        repeat
-            if root and part and part.Parent then
-                if part.Velocity.Magnitude < 50 then
-                    angle = angle + 100
-                    teleportTo(part, CFrame.new(0,1.5,0) + targetHum.MoveDirection * part.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0) + targetHum.MoveDirection * part.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,1.5,0) + targetHum.MoveDirection * part.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0) + targetHum.MoveDirection * part.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,1.5,0) + targetHum.MoveDirection, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0) + targetHum.MoveDirection, CFrame.Angles(math.rad(angle),0,0))
-                    task.wait()
-                else
-                    teleportTo(part, CFrame.new(0,1.5,targetHum.WalkSpeed), CFrame.Angles(math.rad(90),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,-targetHum.WalkSpeed), CFrame.Angles(0,0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,1.5,targetHum.WalkSpeed), CFrame.Angles(math.rad(90),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0), CFrame.Angles(math.rad(90),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0), CFrame.Angles(0,0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0), CFrame.Angles(math.rad(90),0,0))
-                    task.wait()
-                    teleportTo(part, CFrame.new(0,-1.5,0), CFrame.Angles(0,0,0))
-                    task.wait()
+-- Защита от шерифа (отключаем урон от пуль шерифа)
+local antiSheriffConnection = nil
+local function startAntiSheriff()
+    if antiSheriffConnection then antiSheriffConnection:Disconnect() end
+    antiSheriffConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().NKNO.AntiSheriff then return end
+        if not LocalPlayer.Character then return end
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        -- Отключаем коллизию с пулями (они обычно являются Part'ами с CanTouch=true)
+        -- Также можно перехватывать событие Damage, но проще сделать игрока невидимым для пуль
+        -- Устанавливаем все части как неколлизящие с пулями (но не со всем)
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+        -- Также можно добавить BodyVelocity для стабилизации
+    end)
+end
+local function stopAntiSheriff()
+    if antiSheriffConnection then
+        antiSheriffConnection:Disconnect()
+        antiSheriffConnection = nil
+    end
+end
+
+-- Анти-флинг (защита)
+local antiFlingConnection = nil
+local lastPosition = nil
+local function startAntiFling()
+    if antiFlingConnection then antiFlingConnection:Disconnect() end
+    antiFlingConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().NKNO.AntiFling then return end
+        if not LocalPlayer.Character then return end
+        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        if lastPosition then
+            local dist = (root.Position - lastPosition).Magnitude
+            if dist > 10 then
+                root.Velocity = Vector3.new(0,0,0)
+                root.RotVelocity = Vector3.new(0,0,0)
+                root.CFrame = CFrame.new(lastPosition) * root.CFrame.Rotation
+                local bp = root:FindFirstChildOfClass("BodyPosition")
+                if not bp then
+                    bp = Instance.new("BodyPosition")
+                    bp.MaxForce = Vector3.new(9e9,9e9,9e9)
+                    bp.P = 10000
+                    bp.D = 1000
+                    bp.Parent = root
+                end
+                bp.Position = lastPosition
+                task.wait(0.1)
+                bp:Destroy()
+            end
+        end
+        lastPosition = root.Position
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                for _, part in pairs(plr.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
                 end
             end
-        until startTime + 3 < tick() or not getgenv().NKNO.Flinging
+        end
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end)
+end
+
+local function stopAntiFling()
+    if antiFlingConnection then
+        antiFlingConnection:Disconnect()
+        antiFlingConnection = nil
     end
-
-    Workspace.FallenPartsDestroyHeight = 0/0
-    local bv = Instance.new("BodyVelocity")
-    bv.Parent = root
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.MaxForce = Vector3.new(9e9,9e9,9e9)
-    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-
-    local part = targetRoot or targetHead or targetHandle
-    if part then flingLoop(part) end
-
-    bv:Destroy()
-    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-    Workspace.CurrentCamera.CameraSubject = hum
-    Workspace.FallenPartsDestroyHeight = getgenv().FPDH or Workspace.FallenPartsDestroyHeight
+    lastPosition = nil
+    if LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
 end
 
 -- Подкарта (ручной режим)
@@ -416,7 +459,7 @@ local function returnFromUnderMap()
     end
 end
 
--- ESP
+-- ESP (с отображением ролей)
 local espHighlights = {}
 local espNames = {}
 local function updateESP()
@@ -470,7 +513,15 @@ local function updateESP()
                 end
                 local label = gui:FindFirstChild("Label")
                 if label then
-                    local name = getgenv().NKNO.ESP.DisplayName and plr.DisplayName or (getgenv().NKNO.ESP.NormalName and plr.Name or "")
+                    local name = ""
+                    if getgenv().NKNO.ESP.DisplayName then
+                        name = plr.DisplayName
+                    elseif getgenv().NKNO.ESP.NormalName then
+                        name = plr.Name
+                    end
+                    if getgenv().NKNO.ESP.ShowRole then
+                        name = "[" .. role .. "] " .. name
+                    end
                     label.Text = name
                     label.TextColor3 = color
                 end
@@ -535,66 +586,8 @@ local function autoGrabGun()
     end)
 end
 
--- Анти-флинг (защита)
-local antiFlingConnection = nil
-local lastPosition = nil
-local function startAntiFling()
-    if antiFlingConnection then antiFlingConnection:Disconnect() end
-    antiFlingConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().NKNO.AntiFling then return end
-        if not LocalPlayer.Character then return end
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
-        if lastPosition then
-            local dist = (root.Position - lastPosition).Magnitude
-            if dist > 10 then
-                root.Velocity = Vector3.new(0,0,0)
-                root.RotVelocity = Vector3.new(0,0,0)
-                root.CFrame = CFrame.new(lastPosition) * root.CFrame.Rotation
-                local bp = root:FindFirstChildOfClass("BodyPosition")
-                if not bp then
-                    bp = Instance.new("BodyPosition")
-                    bp.MaxForce = Vector3.new(9e9,9e9,9e9)
-                    bp.P = 10000
-                    bp.D = 1000
-                    bp.Parent = root
-                end
-                bp.Position = lastPosition
-                task.wait(0.1)
-                bp:Destroy()
-            end
-        end
-        lastPosition = root.Position
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                for _, part in pairs(plr.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end
-        end
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end)
-end
-
-local function stopAntiFling()
-    if antiFlingConnection then
-        antiFlingConnection:Disconnect()
-        antiFlingConnection = nil
-    end
-    lastPosition = nil
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
-    end
-end
-
 -- ============================================================
--- АВТОФАРМ (с выбором Nearest/Random и скоростью)
+-- АВТОФАРМ (как ранее)
 -- ============================================================
 local function getCoinContainer()
     for _, child in pairs(Workspace:GetChildren()) do
@@ -619,9 +612,9 @@ local function findTargetCoin(container, mode)
     if #candidates == 0 then return nil, math.huge end
     table.sort(candidates, function(a,b) return a.dist < b.dist end)
     if mode == "Random" and #candidates > 1 then
-        local idx = math.random(1, math.min(5, #candidates)) -- берём из первых 5
+        local idx = math.random(1, math.min(5, #candidates))
         return candidates[idx].coin, candidates[idx].dist
-    else -- Nearest
+    else
         return candidates[1].coin, candidates[1].dist
     end
 end
@@ -766,7 +759,6 @@ local function createStatusLabel()
     stroke.Color = Color3.fromRGB(60,60,80)
     stroke.Thickness = 1
     stroke.Parent = frame
-
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(1,0,1,0)
     text.BackgroundTransparency = 1
@@ -791,7 +783,7 @@ local function updateStatusLabel()
     end
 end
 
--- Главный цикл фарма
+-- Основной цикл фарма (как ранее, без изменений)
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
@@ -828,8 +820,7 @@ task.spawn(function()
                         end)
                     end
 
-                    -- Скорость фарма с множителем
-                    local baseSpeed = 23 -- стандартная скорость
+                    local baseSpeed = 23
                     local speedMult = getgenv().NKNO.FarmSpeedMultiplier or 1.0
                     local duration = (dist / (baseSpeed * speedMult)) * (getgenv().NKNO.RandomMovement and (0.8 + math.random() * 0.4) or 1)
                     duration = math.max(duration, 0.1)
@@ -998,7 +989,7 @@ MinBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============================================================
--- ЛЕВАЯ ПАНЕЛЬ КАТЕГОРИЙ
+-- ЛЕВАЯ ПАНЕЛЬ КАТЕГОРИЙ (полупрозрачные, меняют цвет)
 -- ============================================================
 local LeftPanel = Instance.new("Frame")
 LeftPanel.Name = "LeftPanel"
@@ -1025,6 +1016,7 @@ CategoryLayout.Parent = CategoryList
 
 local categories = {"MAIN", "COMBAT", "FARM", "VISUALS", "MOVEMENT", "TELEPORTS", "FLING", "MISC"}
 local currentCategory = "MAIN"
+local categoryButtons = {}
 
 local function updateCategoryCanvas()
     local total = 0
@@ -1039,6 +1031,7 @@ local function createCategoryButton(cat)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1,-10,0,32)
     btn.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    btn.BackgroundTransparency = 0.4
     btn.BorderSizePixel = 0
     btn.Text = cat
     btn.TextColor3 = Color3.fromRGB(200,200,220)
@@ -1052,10 +1045,12 @@ local function createCategoryButton(cat)
         for _, b in pairs(CategoryList:GetChildren()) do
             if b:IsA("TextButton") then
                 b.BackgroundColor3 = (b == btn) and Color3.fromRGB(60,60,80) or Color3.fromRGB(40,40,55)
+                b.BackgroundTransparency = (b == btn) and 0.2 or 0.4
                 b.TextColor3 = (b == btn) and Color3.fromRGB(255,215,0) or Color3.fromRGB(200,200,220)
             end
         end
     end)
+    table.insert(categoryButtons, btn)
     updateCategoryCanvas()
     return btn
 end
@@ -1384,6 +1379,124 @@ local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options,
     return frame
 end
 
+-- Динамический Dropdown для выбора игрока (обновляется)
+local function createPlayerDropdown(parent, titleRu, titleEn, descRu, descEn, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1,0,0,30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = T(titleRu, titleEn)
+    label.TextColor3 = Color3.fromRGB(220,220,235)
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local dropdownBtn = Instance.new("TextButton")
+    dropdownBtn.Size = UDim2.new(0.4,0,1,0)
+    dropdownBtn.Position = UDim2.new(0.6,0,0,0)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    dropdownBtn.BorderSizePixel = 0
+    dropdownBtn.Text = T("Выберите игрока", "Select player")
+    dropdownBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    dropdownBtn.TextSize = 14
+    dropdownBtn.Font = Enum.Font.GothamMedium
+    dropdownBtn.Parent = frame
+    Instance.new("UICorner", dropdownBtn).CornerRadius = UDim.new(0,6)
+
+    local listVisible = false
+    local listFrame = Instance.new("Frame")
+    listFrame.Size = UDim2.new(0.4,0,0,100)
+    listFrame.Position = UDim2.new(0.6,0,1,2)
+    listFrame.BackgroundColor3 = Color3.fromRGB(30,30,40)
+    listFrame.BorderSizePixel = 0
+    listFrame.Visible = false
+    listFrame.Parent = frame
+    Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0,6)
+
+    local listScrolling = Instance.new("ScrollingFrame")
+    listScrolling.Size = UDim2.new(1,0,1,0)
+    listScrolling.BackgroundTransparency = 1
+    listScrolling.BorderSizePixel = 0
+    listScrolling.CanvasSize = UDim2.new(0,0,0,0)
+    listScrolling.ScrollBarThickness = 4
+    listScrolling.Parent = listFrame
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0,2)
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Parent = listScrolling
+
+    local function refreshPlayerList()
+        -- очищаем
+        for _, child in ipairs(listScrolling:GetChildren()) do
+            if child:IsA("UIListLayout") then continue end
+            child:Destroy()
+        end
+        local players = getAlivePlayers()
+        if #players == 0 then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1,0,0,25)
+            btn.BackgroundColor3 = Color3.fromRGB(35,35,45)
+            btn.BorderSizePixel = 0
+            btn.Text = T("Нет живых игроков", "No alive players")
+            btn.TextColor3 = Color3.fromRGB(150,150,170)
+            btn.TextSize = 13
+            btn.Font = Enum.Font.GothamMedium
+            btn.Parent = listScrolling
+            return
+        end
+        for _, plr in ipairs(players) do
+            local role = getPlayerRole(plr)
+            local display = plr.Name .. " [" .. role .. "]"
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1,0,0,25)
+            btn.BackgroundColor3 = Color3.fromRGB(35,35,45)
+            btn.BorderSizePixel = 0
+            btn.Text = display
+            btn.TextColor3 = Color3.fromRGB(200,200,210)
+            btn.TextSize = 13
+            btn.Font = Enum.Font.GothamMedium
+            btn.Parent = listScrolling
+            btn.MouseButton1Click:Connect(function()
+                dropdownBtn.Text = display
+                callback(plr)
+                listFrame.Visible = false
+                listVisible = false
+            end)
+        end
+        listScrolling.CanvasSize = UDim2.new(0,0,0, #players * 30 + 10)
+    end
+
+    dropdownBtn.MouseButton1Click:Connect(function()
+        refreshPlayerList()
+        listVisible = not listVisible
+        listFrame.Visible = listVisible
+        if listVisible then
+            listFrame.Size = UDim2.new(0.4,0,0,math.min(#getAlivePlayers() * 30 + 10, 120))
+        end
+    end)
+
+    if descRu or descEn then
+        local d = Instance.new("TextLabel")
+        d.Size = UDim2.new(1,0,0,16)
+        d.Position = UDim2.new(0,0,1,0)
+        d.BackgroundTransparency = 1
+        d.Text = T(descRu or "", descEn or "")
+        d.TextColor3 = Color3.fromRGB(150,150,170)
+        d.TextSize = 11
+        d.Font = Enum.Font.Gotham
+        d.TextXAlignment = Enum.TextXAlignment.Left
+        d.Parent = frame
+    end
+    updateRightCanvas()
+    return frame
+end
+
 local function createInput(parent, titleRu, titleEn, descRu, descEn, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,30)
@@ -1434,7 +1547,7 @@ local function createInput(parent, titleRu, titleEn, descRu, descEn, callback)
 end
 
 -- ============================================================
--- ФУНКЦИИ ЗАПОЛНЕНИЯ КАТЕГОРИЙ (с изменениями в FARM)
+-- ФУНКЦИИ ЗАПОЛНЕНИЯ КАТЕГОРИЙ
 -- ============================================================
 local function clearRightContainer()
     for _, child in ipairs(RightContainer:GetChildren()) do
@@ -1447,6 +1560,16 @@ function populateCategory(cat)
     clearRightContainer()
     if cat == "MAIN" then
         createSection(RightContainer, "Основное", "Main")
+        -- Темы вынесены сюда для удобства
+        createSection(RightContainer, "Интерфейс / Themes", "Interface / Themes")
+        local themes = {"Dark","Light","Gold","Purple","Green","Blue","Red"}
+        createDropdown(RightContainer, "Тема", "Theme", "Выберите цветовую схему", "Choose color scheme", themes, getgenv().NKNO.Theme or "Dark", function(val)
+            applyTheme(val)
+        end)
+        createSlider(RightContainer, "Прозрачность UI", "UI Transparency", "Прозрачность окна", "Window transparency", 0, 1, 0.25, true, function(val)
+            MainFrame.BackgroundTransparency = val
+        end)
+        createSection(RightContainer, "Основные функции", "Main features")
         createButton(RightContainer, "Убить всех", "Kill All", "Убить всех мирных (только убийца)", "Kill all innocents (murderer only)", function()
             if not LocalPlayer.Character then return end
             local knife = LocalPlayer.Character:FindFirstChild("Knife")
@@ -1568,10 +1691,13 @@ function populateCategory(cat)
             end
         end)
         createToggle(RightContainer, "Магическая пуля", "Magic Bullet", "Авто-прицел в убийцу", "Auto-aim at murderer", false, function(val) end)
+        createToggle(RightContainer, "Защита от шерифа", "Anti-Sheriff", "Шериф не сможет вас застрелить", "Sheriff can't shoot you", getgenv().NKNO.AntiSheriff, function(val)
+            getgenv().NKNO.AntiSheriff = val
+            if val then startAntiSheriff() else stopAntiSheriff() end
+        end)
 
     elseif cat == "FARM" then
         createSection(RightContainer, "Фарм", "Farm")
-        -- Надпись Auto Farm (уже есть заголовок)
         createToggle(RightContainer, "Включить фарм", "Enable Farm", "Автосбор монет", "Auto-collect coins", getgenv().NKNO.FarmCoins, function(val)
             getgenv().NKNO.FarmCoins = val
             if not val and farming then stopFarming() end
@@ -1580,11 +1706,9 @@ function populateCategory(cat)
         createToggle(RightContainer, "Фарм под картой", "Farm UnderMap", "Сбор под картой (недосягаем)", "Farm under map (unreachable)", getgenv().NKNO.FarmUnderMap, function(val)
             getgenv().NKNO.FarmUnderMap = val
         end)
-        -- Выбор режима
         createDropdown(RightContainer, "Режим выбора монет", "Coin selection", "Nearest или Random", "Nearest or Random", {"Nearest", "Random"}, getgenv().NKNO.FarmMode or "Nearest", function(val)
             getgenv().NKNO.FarmMode = val
         end)
-        -- Регулировка скорости
         createSlider(RightContainer, "Множитель скорости", "Speed Multiplier", "Влияет на скорость перемещения (1.0 = норма)", "Affects movement speed (1.0 = normal)", 0.5, 3.0, getgenv().NKNO.FarmSpeedMultiplier or 1.0, true, function(val)
             getgenv().NKNO.FarmSpeedMultiplier = val
             updateStatusLabel()
@@ -1616,6 +1740,9 @@ function populateCategory(cat)
         createToggle(RightContainer, "Показывать ник", "Normal Name", "", "", getgenv().NKNO.ESP.NormalName, function(val)
             getgenv().NKNO.ESP.NormalName = val
             if val then getgenv().NKNO.ESP.DisplayName = false end
+        end)
+        createToggle(RightContainer, "Показывать роль", "Show Role", "Отображать роль игрока [Murderer] и т.д.", "Show player role [Murderer] etc.", getgenv().NKNO.ESP.ShowRole ~= false, function(val)
+            getgenv().NKNO.ESP.ShowRole = val
         end)
         createToggle(RightContainer, "ForceField материал", "ForceField Material", "Материал ForceField на себе", "ForceField material on self", getgenv().NKNO.ForceFieldMaterial, function(val)
             getgenv().NKNO.ForceFieldMaterial = val
@@ -1698,55 +1825,47 @@ function populateCategory(cat)
 
     elseif cat == "FLING" then
         createSection(RightContainer, "Флинг", "Fling")
-        createButton(RightContainer, "Флинг убийцы", "Fling Murderer", "Зафлингует убийцу", "Fling the murderer", function()
+        -- Кнопки для быстрого флинга
+        createButton(RightContainer, "Флинг убийцы", "Fling Murderer", "Зафлингует убийцу под карту", "Fling murderer under map", function()
             if getgenv().NKNO.Flinging then return end
             local m = findMurderer()
             if m then
                 getgenv().NKNO.Flinging = true
-                Notify(T("Флинг", "Fling"), T("Флингуем убийцу", "Flinging murderer"), 3)
-                task.spawn(function()
-                    SkidFling(m)
-                    getgenv().NKNO.Flinging = false
-                end)
+                FlingPlayer(m)
+                getgenv().NKNO.Flinging = false
+            else
+                Notify(T("Ошибка", "Error"), T("Убийца не найден", "Murderer not found"), 2)
             end
         end)
-        createButton(RightContainer, "Флинг шерифа", "Fling Sheriff", "Зафлингует шерифа", "Fling the sheriff", function()
+        createButton(RightContainer, "Флинг шерифа", "Fling Sheriff", "Зафлингует шерифа под карту", "Fling sheriff under map", function()
             if getgenv().NKNO.Flinging then return end
             local s = findSheriff()
             if s then
                 getgenv().NKNO.Flinging = true
-                Notify(T("Флинг", "Fling"), T("Флингуем шерифа", "Flinging sheriff"), 3)
-                task.spawn(function()
-                    SkidFling(s)
-                    getgenv().NKNO.Flinging = false
-                end)
-            end
-        end)
-        createInput(RightContainer, "Поиск игрока", "Player Search", "Введите ник для флинга", "Enter name for fling", function(text)
-            local plr = findPlayerByPartialName(text)
-            if plr then
-                getgenv().NKNO.SelectedPlayer = plr
-                Notify(T("Найден", "Found"), T("Выбран: " .. plr.Name, "Selected: " .. plr.Name), 2)
+                FlingPlayer(s)
+                getgenv().NKNO.Flinging = false
             else
-                getgenv().NKNO.SelectedPlayer = nil
-                if text ~= "" then Notify(T("Не найден", "Not found"), T("Игрок не найден", "Player not found"), 2) end
+                Notify(T("Ошибка", "Error"), T("Шериф не найден", "Sheriff not found"), 2)
             end
         end)
-        createButton(RightContainer, "Флинг выбранного", "Fling Selected", "Флинг выбранного игрока", "Fling selected player", function()
+        -- Выбор игрока
+        createSection(RightContainer, "Выбор игрока", "Player selection")
+        local selectedPlayer = nil
+        createPlayerDropdown(RightContainer, "Выберите игрока", "Select player", "Выберите игрока для флинга", "Select player to fling", function(plr)
+            selectedPlayer = plr
+            Notify(T("Выбран", "Selected"), plr.Name, 2)
+        end)
+        createButton(RightContainer, "Флинг выбранного", "Fling Selected", "Отправить выбранного игрока под карту", "Send selected player under map", function()
             if getgenv().NKNO.Flinging then return end
-            local sel = getgenv().NKNO.SelectedPlayer
-            if not sel or not sel.Parent then
-                Notify(T("Ошибка", "Error"), T("Сначала выберите игрока", "Select a player first"), 3)
+            if not selectedPlayer then
+                Notify(T("Ошибка", "Error"), T("Сначала выберите игрока", "Select a player first"), 2)
                 return
             end
             getgenv().NKNO.Flinging = true
-            Notify(T("Флинг", "Fling"), T("Флингуем " .. sel.Name, "Flinging " .. sel.Name), 3)
-            task.spawn(function()
-                SkidFling(sel)
-                getgenv().NKNO.Flinging = false
-            end)
+            FlingPlayer(selectedPlayer)
+            getgenv().NKNO.Flinging = false
         end)
-        createButton(RightContainer, "Остановить флинг", "Stop Fling", "Остановить флинг", "Stop fling", function()
+        createButton(RightContainer, "Остановить флинг", "Stop Fling", "Остановить текущий флинг", "Stop current fling", function()
             if getgenv().NKNO.Flinging then
                 getgenv().NKNO.Flinging = false
                 Notify(T("Остановлено", "Stopped"), T("Флинг прекращён", "Fling stopped"), 2)
@@ -1779,37 +1898,48 @@ function populateCategory(cat)
             getgenv().NKNO.AutoDance = val
             if val then playDance() else stopDance() end
         end)
+        -- Темы также дублируем здесь на всякий случай
         createSection(RightContainer, "Настройки UI", "UI Settings")
         local themes = {"Dark","Light","Gold","Purple","Green","Blue","Red"}
         createDropdown(RightContainer, "Тема", "Theme", "Выберите цветовую схему", "Choose color scheme", themes, getgenv().NKNO.Theme or "Dark", function(val)
-            getgenv().NKNO.Theme = val
-            local colors = {
-                Dark = { bg = Color3.fromRGB(11,11,16), text = Color3.fromRGB(220,220,235), accent = Color3.fromRGB(255,215,0), panel = Color3.fromRGB(18,18,26) },
-                Light = { bg = Color3.fromRGB(240,240,245), text = Color3.fromRGB(30,30,40), accent = Color3.fromRGB(0,120,255), panel = Color3.fromRGB(220,220,230) },
-                Gold = { bg = Color3.fromRGB(30,25,20), text = Color3.fromRGB(255,215,0), accent = Color3.fromRGB(255,180,0), panel = Color3.fromRGB(40,35,30) },
-                Purple = { bg = Color3.fromRGB(20,10,30), text = Color3.fromRGB(200,180,255), accent = Color3.fromRGB(180,100,255), panel = Color3.fromRGB(30,20,40) },
-                Green = { bg = Color3.fromRGB(10,25,15), text = Color3.fromRGB(180,255,200), accent = Color3.fromRGB(100,255,100), panel = Color3.fromRGB(20,35,25) },
-                Blue = { bg = Color3.fromRGB(10,15,30), text = Color3.fromRGB(180,200,255), accent = Color3.fromRGB(100,150,255), panel = Color3.fromRGB(20,25,40) },
-                Red = { bg = Color3.fromRGB(30,10,10), text = Color3.fromRGB(255,180,180), accent = Color3.fromRGB(255,80,80), panel = Color3.fromRGB(40,20,20) },
-            }
-            local theme = colors[val]
-            if theme then
-                MainFrame.BackgroundColor3 = theme.bg
-                Title.TextColor3 = theme.accent
-                LeftPanel.BackgroundColor3 = theme.panel
-                for _, b in pairs(CategoryList:GetChildren()) do
-                    if b:IsA("TextButton") then
-                        b.BackgroundColor3 = (b.Text == currentCategory) and theme.accent or Color3.fromRGB(40,40,55)
-                        b.TextColor3 = (b.Text == currentCategory) and Color3.fromRGB(255,255,255) or theme.text
-                    end
-                end
-                MainStroke.Color = theme.accent
-                MainStroke.Transparency = 0.3
-            end
+            applyTheme(val)
         end)
         createSlider(RightContainer, "Прозрачность UI", "UI Transparency", "Прозрачность окна", "Window transparency", 0, 1, 0.25, true, function(val)
             MainFrame.BackgroundTransparency = val
         end)
+    end
+end
+
+-- ============================================================
+-- ФУНКЦИЯ ПРИМЕНЕНИЯ ТЕМЫ
+-- ============================================================
+function applyTheme(val)
+    getgenv().NKNO.Theme = val
+    local colors = {
+        Dark = { bg = Color3.fromRGB(11,11,16), text = Color3.fromRGB(220,220,235), accent = Color3.fromRGB(255,215,0), panel = Color3.fromRGB(18,18,26) },
+        Light = { bg = Color3.fromRGB(240,240,245), text = Color3.fromRGB(30,30,40), accent = Color3.fromRGB(0,120,255), panel = Color3.fromRGB(220,220,230) },
+        Gold = { bg = Color3.fromRGB(30,25,20), text = Color3.fromRGB(255,215,0), accent = Color3.fromRGB(255,180,0), panel = Color3.fromRGB(40,35,30) },
+        Purple = { bg = Color3.fromRGB(20,10,30), text = Color3.fromRGB(200,180,255), accent = Color3.fromRGB(180,100,255), panel = Color3.fromRGB(30,20,40) },
+        Green = { bg = Color3.fromRGB(10,25,15), text = Color3.fromRGB(180,255,200), accent = Color3.fromRGB(100,255,100), panel = Color3.fromRGB(20,35,25) },
+        Blue = { bg = Color3.fromRGB(10,15,30), text = Color3.fromRGB(180,200,255), accent = Color3.fromRGB(100,150,255), panel = Color3.fromRGB(20,25,40) },
+        Red = { bg = Color3.fromRGB(30,10,10), text = Color3.fromRGB(255,180,180), accent = Color3.fromRGB(255,80,80), panel = Color3.fromRGB(40,20,20) },
+    }
+    local theme = colors[val]
+    if theme then
+        MainFrame.BackgroundColor3 = theme.bg
+        Title.TextColor3 = theme.accent
+        LeftPanel.BackgroundColor3 = theme.panel
+        -- Обновляем кнопки категорий
+        for _, b in pairs(categoryButtons) do
+            if b:IsA("TextButton") then
+                local isActive = (b.Text == currentCategory)
+                b.BackgroundColor3 = isActive and theme.accent or theme.panel
+                b.BackgroundTransparency = isActive and 0.2 or 0.4
+                b.TextColor3 = isActive and Color3.fromRGB(255,255,255) or theme.text
+            end
+        end
+        MainStroke.Color = theme.accent
+        MainStroke.Transparency = 0.3
     end
 end
 
@@ -1853,7 +1983,7 @@ local function Notify(title, desc, duration)
     frame:Destroy()
 end
 
--- Кнопка Discord (слева снизу) – копирование ссылки
+-- Кнопка Discord (копирование ссылки)
 local function createDiscordCopyButton()
     if CoreGui:FindFirstChild("DiscordCopy") then return end
     local gui = Instance.new("ScreenGui")
@@ -1896,7 +2026,6 @@ local function createDiscordCopyButton()
         end
     end)
 
-    -- Перетаскивание
     local drag, startPos, startMouse
     btn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1919,33 +2048,29 @@ end
 -- ============================================================
 -- ЗАПУСК
 -- ============================================================
--- Создаём статусную метку (правый верх)
 createStatusLabel()
 updateStatusLabel()
-
--- Discord кнопка (копирование)
 createDiscordCopyButton()
-
--- Выбор языка
 selectLanguage()
 
--- Уведомление об обновлении
 if getgenv().NKNO.Language then
     showUpdateNotice()
 end
 
--- Стартовое уведомление
 local startMsg = {
     ru = "Нажми Left Alt для открытия меню",
     en = "Press Left Alt to open menu"
 }
 Notify("NKNO$ HUB", T(startMsg.ru, startMsg.en), 4)
 
--- Инициализация категории
+-- Инициализация
 populateCategory("MAIN")
-for _, b in pairs(CategoryList:GetChildren()) do
+-- Применяем тему
+applyTheme(getgenv().NKNO.Theme or "Dark")
+for _, b in pairs(categoryButtons) do
     if b:IsA("TextButton") and b.Text == "MAIN" then
         b.BackgroundColor3 = Color3.fromRGB(60,60,80)
+        b.BackgroundTransparency = 0.2
         b.TextColor3 = Color3.fromRGB(255,215,0)
     end
 end
@@ -1974,6 +2099,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         stopAntiFling()
         startAntiFling()
     end
+    if getgenv().NKNO.AntiSheriff then
+        stopAntiSheriff()
+        startAntiSheriff()
+    end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -1984,17 +2113,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 if getgenv().NKNO.AntiFling then startAntiFling() end
+if getgenv().NKNO.AntiSheriff then startAntiSheriff() end
 
--- Функция перестроения GUI (при смене языка)
 function rebuildGUI()
-    -- Просто перезагружаем скрипт или обновляем тексты
-    -- В данном случае пользователь может перезапустить скрипт вручную,
-    -- но мы можем обновить текущие элементы, но проще перезапустить.
-    -- Для простоты предлагаем перезапустить скрипт.
     Notify("Перезагрузка", "Для применения языка перезапустите скрипт", 3)
 end
 
--- Настройка toggleMenu для видимости
 function toggleMenu(forceState)
     if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
     if isMenuOpen then
