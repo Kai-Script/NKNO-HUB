@@ -1,13 +1,9 @@
 do
-    -- ===== ЗАЩИТА ОТ ОШИБОК И ГАРАНТИРОВАННОЕ ОТКРЫТИЕ =====
     local function safeCall(fn, ...)
         local ok, err = pcall(fn, ...)
-        if not ok then
-            warn("[nkno$ hub] Ошибка: ", err)
-        end
+        if not ok then warn("[nkno$] Ошибка: ", err) end
         return ok, err
     end
-
     safeCall(function()
         local Players = game:GetService("Players")
         local TweenService = game:GetService("TweenService")
@@ -15,18 +11,8 @@ do
         local RunService = game:GetService("RunService")
         local VirtualUser = game:GetService("VirtualUser")
         local LocalPlayer = Players.LocalPlayer
-
-        -- Очистка старых объектов
-        if game.CoreGui:FindFirstChild("nkno$ hub") then
-            game.CoreGui["nkno$ hub"]:Destroy()
-        end
-        for _, obj in pairs(workspace:GetChildren()) do
-            if obj.Name:find("Kitagawa_WayPoint_") then
-                obj:Destroy()
-            end
-        end
-
-        -- AFK-обход с защитой
+        if game.CoreGui:FindFirstChild("nkno$ hub") then game.CoreGui["nkno$ hub"]:Destroy() end
+        for _, obj in pairs(workspace:GetChildren()) do if obj.Name:find("Kitagawa_WayPoint_") then obj:Destroy() end end
         local afkConnection
         safeCall(function()
             afkConnection = LocalPlayer.Idled:Connect(function()
@@ -34,8 +20,6 @@ do
                 VirtualUser:ClickButton2(Vector2.new())
             end)
         end)
-
-        -- ===== ЛОКАЛИЗАЦИЯ =====
         local lang = "EN"
         local Locales = {
             RU = {
@@ -121,10 +105,9 @@ do
                 BuyFailed = "Failed to buy %s"
             }
         }
-
         local function L(key) return Locales[lang][key] end
 
-        -- ===== ПЕРЕМЕННЫЕ СОСТОЯНИЙ =====
+        -- ===== ПЕРЕМЕННЫЕ =====
         local savedPositions = {}
         local visualParts = {}
         local currentWorld = "1 World"
@@ -144,13 +127,22 @@ do
         local checkModelConnection = nil
         local mouse = LocalPlayer:GetMouse()
 
-        -- Списки магазина
-        local shopItems = {}
-        local shopAuras = {}
-        local shopTrails = {}
+        -- ===== СПИСКИ МАГАЗИНА =====
+        local shopItems = {
+            {name = "Dumbbell", checked = true},
+            {name = "Gloves", checked = true},
+            {name = "Dollars", checked = true},
+            {name = "Watch", checked = true},
+            {name = "We Love Brazil", checked = true},
+            {name = "Edamame", checked = true},
+            {name = "67 67", checked = true},
+            {name = "Canada Earth", checked = true}
+        }
+        local shopAuras = {}   -- сюда можно добавить названия аур
+        local shopTrails = {}  -- сюда можно добавить названия следов
         local shopRemote = nil
 
-        -- ===== WAYPOINTS (полный список, как был) =====
+        -- ===== ПОЛНЫЙ СПИСОК WAYPOINTS (сокращён для экономии места – вставьте свой) =====
         local Waypoints = {
             ["1 World"] = {
                 ["+1 wins"] = {Vector3.new(2.8, 8.5, 74.3), Vector3.new(-22.3, 10.4, 286)},
@@ -458,7 +450,6 @@ do
         ScreenGui.Parent = game:GetService("CoreGui")
         ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-        -- Shadow
         local ShadowFrame = Instance.new("Frame")
         ShadowFrame.Name = "ShadowFrame"
         ShadowFrame.Parent = ScreenGui
@@ -472,7 +463,6 @@ do
         local ShadowScale = Instance.new("UIScale", ShadowFrame)
         ShadowScale.Scale = 0.3
 
-        -- Main
         local MainFrame = Instance.new("Frame")
         MainFrame.Name = "MainFrame"
         MainFrame.Parent = ScreenGui
@@ -491,7 +481,7 @@ do
         BgImage.Parent = MainFrame
         BgImage.BackgroundTransparency = 1
         BgImage.Size = UDim2.new(1, 0, 1, 0)
-        BgImage.Image = "rbxassetid://138913032331139"  -- Ваше новое фото
+        BgImage.Image = "rbxassetid://138913032331139"
         BgImage.ScaleType = Enum.ScaleType.Crop
         BgImage.ImageTransparency = 0.35
         BgImage.ZIndex = 0
@@ -510,7 +500,7 @@ do
         MainStroke.Color = Color3.fromRGB(35, 35, 50)
         MainStroke.Thickness = 1.5
 
-        -- Toggle widget (кнопка вызова)
+        -- Toggle Widget (мини-кнопка)
         local ToggleWidget = Instance.new("Frame")
         ToggleWidget.Name = "ToggleWidget"
         ToggleWidget.Parent = ScreenGui
@@ -562,17 +552,22 @@ do
             if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
                 dragToggle = false
                 if ((tick() - dragStartTime) < 0.25) then
-                    toggleMenu()
-                    -- дополнительная проверка
-                    task.wait(0.1)
-                    if not isMenuOpen then
-                        toggleMenu(true)
+                    if isMinimized then
+                        -- если свернуто, разворачиваем
+                        isMinimized = false
+                        MainFrame.Visible = true
+                        ShadowFrame.Visible = true
+                        MinBtn.Text = "-"
+                        TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 420)}):Play()
+                        TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 426)}):Play()
+                    else
+                        toggleMenu()
                     end
                 end
             end
         end)
 
-        -- Окно выбора языка
+        -- Lang Frame
         local LangFrame = Instance.new("Frame")
         LangFrame.Name = "LangFrame"
         LangFrame.Parent = ScreenGui
@@ -629,16 +624,24 @@ do
                 task.wait(0.2)
                 LangFrame.Visible = false
                 ToggleWidget.Visible = true
-                toggleMenu(true)
-                -- дополнительная гарантия
-                task.wait(0.1)
-                if not isMenuOpen then toggleMenu(true) end
+                -- после выбора языка выполняем автопокупку и не показываем GUI
+                task.spawn(function()
+                    task.wait(0.5)
+                    buySelectedItems()
+                    -- оставляем GUI скрытым (свернутым)
+                    isMinimized = true
+                    MainFrame.Visible = false
+                    ShadowFrame.Visible = false
+                    MinBtn.Text = "+"
+                    TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
+                    TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
+                    print("[nkno$] Автопокупка завершена. GUI скрыт.")
+                end)
             end)
         end
         buildLangButton("RU", "Русский", 65, "RU")
         buildLangButton("EN", "English", 205, "EN")
 
-        -- Функция toggleMenu (объявлена после создания окон)
         local function toggleMenu(forceState)
             if (forceState ~= nil) then isMenuOpen = forceState
             else isMenuOpen = not isMenuOpen end
@@ -657,7 +660,7 @@ do
             end
         end
 
-        -- Drag для MainFrame
+        -- MainFrame drag
         local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
         MainFrame.InputBegan:Connect(function(input)
             if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
@@ -685,7 +688,7 @@ do
             end
         end)
 
-        -- Top controls (close, min)
+        -- Top controls
         local TopControls = Instance.new("Frame")
         TopControls.Parent = MainFrame
         TopControls.BackgroundTransparency = 1
@@ -728,13 +731,21 @@ do
         MinBtn.MouseButton1Click:Connect(function()
             isMinimized = not isMinimized
             if isMinimized then
-                TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
-                TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
+                -- Сворачиваем: скрываем MainFrame и ShadowFrame
+                MainFrame.Visible = false
+                ShadowFrame.Visible = false
                 MinBtn.Text = "+"
+                -- при сворачивании также закрываем меню (чтобы не было видно)
+                isMenuOpen = false
             else
+                -- Разворачиваем
+                MainFrame.Visible = true
+                ShadowFrame.Visible = true
+                MinBtn.Text = "-"
+                isMenuOpen = true
+                -- анимация раскрытия
                 TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 420)}):Play()
                 TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 426)}):Play()
-                MinBtn.Text = "-"
             end
         end)
 
@@ -784,7 +795,6 @@ do
         SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))})
         SepGradient.Parent = SepLine
 
-        -- Tab container
         local TabContainer = Instance.new("Frame")
         TabContainer.Parent = Sidebar
         TabContainer.BackgroundTransparency = 1
@@ -795,7 +805,6 @@ do
         TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
         TabListLayout.Padding = UDim.new(0, 10)
 
-        -- ContentArea
         local ContentArea = Instance.new("Frame")
         ContentArea.Parent = MainFrame
         ContentArea.BackgroundTransparency = 1
@@ -835,7 +844,7 @@ do
         ShopPage.Size = UDim2.new(1, 0, 1, 0)
         ShopPage.Visible = false
 
-        -- Табы
+        -- Tabs
         local tabButtons = {}
         local function createTabButton(text, page)
             local btn = Instance.new("TextButton")
@@ -897,7 +906,7 @@ do
             })
         end)
 
-        -- ===== PAGE: SHOP =====
+        -- ===== SHOP PAGE =====
         local ShopScroll = Instance.new("ScrollingFrame")
         ShopScroll.Parent = ShopPage
         ShopScroll.BackgroundTransparency = 1
@@ -1869,7 +1878,7 @@ do
             end
         end)
 
-        -- ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЯ =====
+        -- ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
         _G.UpdateColors = function(col)
             accentColor = col
             SliderFillAuto.BackgroundColor3 = col
@@ -1905,7 +1914,7 @@ do
             end
             buildDistanceOptions()
 
-            -- Обновление текстов магазина (перебор)
+            -- Обновление текстов магазина
             for _, child in ipairs(ShopScroll:GetChildren()) do
                 if child:IsA("Frame") and child:FindFirstChild("TextLabel") then
                     local title = child:FindFirstChild("TextLabel")
@@ -1933,7 +1942,7 @@ do
             end
         end
 
-        -- ===== ГАРАНТИРОВАННОЕ ОТКРЫТИЕ МЕНЮ =====
+        -- ===== ГАРАНТИРОВАННОЕ ОТКРЫТИЕ =====
         local function ensureMenuOpened()
             if not LangFrame.Visible and not isMenuOpen then
                 toggleMenu(true)
@@ -1943,13 +1952,11 @@ do
             end
         end
 
-        -- После построения всего UI даём время на инициализацию и открываем
         task.spawn(function()
             task.wait(0.5)
             ensureMenuOpened()
         end)
 
-        -- Переопределим ApplyLanguage для вызова ensureMenuOpened
         local oldApply = _G.ApplyLanguage
         _G.ApplyLanguage = function()
             oldApply()
@@ -1957,14 +1964,12 @@ do
             ensureMenuOpened()
         end
 
-        -- Финальный вызов
         buildDistanceOptions()
         task.spawn(function()
             task.wait(0.3)
             ensureMenuOpened()
         end)
 
-        -- Если по какой-то причине меню не открылось, повторяем через 2 секунды
         task.delay(2, function()
             if not isMenuOpen then
                 toggleMenu(true)
@@ -1972,5 +1977,6 @@ do
             end
         end)
 
-    end) -- конец safeCall
+        print("[nkno$] Скрипт загружен! Автопокупка выполняется при выборе языка.")
+    end)
 end
