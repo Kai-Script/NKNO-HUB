@@ -1,5 +1,5 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.7 (ПОЛНЫЙ РАБОЧИЙ)
+-- NKNO$ HUB ULTIMATE v5.8 (ИСПРАВЛЕННЫЙ)
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -19,7 +19,7 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-local SCRIPT_VERSION = "5.7"
+local SCRIPT_VERSION = "5.8"
 
 if not getgenv().NKNO then getgenv().NKNO = {} end
 local lang = getgenv().NKNO.Language or "ru"
@@ -784,6 +784,44 @@ local accentColor = Color3.fromRGB(0, 150, 255)
 local isMinimized = false
 local isMenuOpen = false
 
+-- ======== ФУНКЦИЯ УВЕДОМЛЕНИЙ (должна быть объявлена раньше) ========
+local function Notify(title, desc, duration)
+    duration = duration or 3
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0,340,0,70)
+    frame.Position = UDim2.new(0.5,-170,0.85,0)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,28)
+    frame.BorderSizePixel = 0
+    frame.BackgroundTransparency = 0.3
+    frame.Parent = ScreenGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1,-20,0,28)
+    titleLabel.Position = UDim2.new(0,10,0,0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(255,215,0)
+    titleLabel.TextSize = 17
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = frame
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1,-20,0,30)
+    descLabel.Position = UDim2.new(0,10,0,28)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = desc
+    descLabel.TextColor3 = Color3.fromRGB(200,200,210)
+    descLabel.TextSize = 13
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.Parent = frame
+    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 0.1 }):Play()
+    task.wait(duration)
+    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+    task.wait(0.3)
+    frame:Destroy()
+end
+
 -- ======== КНОПКА DISCORD (справа снизу) ========
 local DiscordBtn = Instance.new("ImageButton")
 DiscordBtn.Name = "DiscordButton"
@@ -814,13 +852,12 @@ DiscordBtn.MouseButton1Click:Connect(function()
     end)
 end)
 -- Drag
-local dragDiscord, dragDiscordStart, dragDiscordPos, dragDiscordTime
+local dragDiscord, dragDiscordStart, dragDiscordPos
 DiscordBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragDiscord = true
         dragDiscordStart = input.Position
         dragDiscordPos = DiscordBtn.Position
-        dragDiscordTime = tick()
     end
 end)
 DiscordBtn.InputChanged:Connect(function(input)
@@ -914,6 +951,24 @@ local ToggleGradient = Instance.new("UIGradient")
 ToggleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))})
 ToggleGradient.Parent = ToggleLabelText
 
+-- Функция открытия/закрытия меню (объявлена до вызова)
+function toggleMenu(forceState)
+    if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
+    if isMenuOpen then
+        MainFrame.Visible = true
+        if not isMinimized then ShadowFrame.Visible = true end
+        TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
+        TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
+    else
+        local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
+        TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        closeTween:Play()
+        closeTween.Completed:Connect(function()
+            if not isMenuOpen then MainFrame.Visible = false ShadowFrame.Visible = false end
+        end)
+    end
+end
+
 -- Drag для ToggleWidget
 local dragToggle, dragInputT, dragStartT, startPosT, dragStartTime
 ToggleWidget.InputBegan:Connect(function(input)
@@ -943,24 +998,6 @@ ToggleWidget.InputEnded:Connect(function(input)
         end
     end
 end)
-
--- Функция открытия/закрытия
-function toggleMenu(forceState)
-    if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
-    if isMenuOpen then
-        MainFrame.Visible = true
-        if not isMinimized then ShadowFrame.Visible = true end
-        TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
-        TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
-    else
-        local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
-        TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
-        closeTween:Play()
-        closeTween.Completed:Connect(function()
-            if not isMenuOpen then MainFrame.Visible = false ShadowFrame.Visible = false end
-        end)
-    end
-end
 
 -- Drag для MainFrame
 local dragging, dragInput, dragStart, startPos
@@ -1140,7 +1177,7 @@ updateUserInfo()
 LocalPlayer.CharacterAdded:Connect(updateUserInfo)
 Players.PlayerAdded:Connect(updateUserInfo)
 
--- Внутренняя кнопка Discord в нижней панели (для красоты, но можно убрать)
+-- Внутренняя кнопка Discord в нижней панели
 local DiscordBtnInner = Instance.new("ImageButton")
 DiscordBtnInner.Parent = BottomBar
 DiscordBtnInner.Size = UDim2.new(0,30,0,30)
@@ -1541,6 +1578,10 @@ local themeColors = {
     {Color3.fromRGB(245,158,11), Color3.fromRGB(160,80,0), T("Янтарный Неон", "Amber Neon")},
     {Color3.fromRGB(220,220,230), Color3.fromRGB(100,100,110), T("Белый Фантом", "White Phantom")},
 }
+
+-- Объявляем tabButtons до использования в обработчиках тем
+local tabButtons = {}
+
 for _, t in ipairs(themeColors) do
     local row = Instance.new("TextButton")
     row.Parent = visScroll
@@ -1576,7 +1617,7 @@ for _, t in ipairs(themeColors) do
         ToggleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))})
         SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25,25,35)), ColorSequenceKeypoint.new(0.5, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(25,25,35))})
         ToggleStroke.Color = accentColor
-        ToggleWidget.BackgroundColor3 = accentColor:lerp(Color3.fromRGB(15,15,22), 0.7)
+        ToggleWidget.BackgroundColor3 = accentColor:Lerp(Color3.fromRGB(15,15,22), 0.7)
         for _, b in ipairs(tabButtons) do
             if b.BackgroundColor3 ~= Color3.fromRGB(20,20,28) then
                 TweenService:Create(b, TweenInfo.new(0.3), {BackgroundColor3 = accentColor}):Play()
@@ -1770,9 +1811,9 @@ createButton(setScroll, T("Убить всех", "Kill All"), T("Убить вс
 end)
 
 -- ============================================================
--- ВКЛАДКИ (табы)
+-- ВКЛАДКИ (табы) - создаём после объявления tabButtons
 -- ============================================================
-local tabButtons = {}
+
 local function createTabButton(text, page)
     local btn = Instance.new("TextButton")
     btn.Parent = TabContainer
@@ -1810,43 +1851,6 @@ AutoFarmPage.Visible = true
 -- ============================================================
 -- ЗАПУСК
 -- ============================================================
-
-local function Notify(title, desc, duration)
-    duration = duration or 3
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0,340,0,70)
-    frame.Position = UDim2.new(0.5,-170,0.85,0)
-    frame.BackgroundColor3 = Color3.fromRGB(20,20,28)
-    frame.BorderSizePixel = 0
-    frame.BackgroundTransparency = 0.3
-    frame.Parent = ScreenGui
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1,-20,0,28)
-    titleLabel.Position = UDim2.new(0,10,0,0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,215,0)
-    titleLabel.TextSize = 17
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = frame
-    local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1,-20,0,30)
-    descLabel.Position = UDim2.new(0,10,0,28)
-    descLabel.BackgroundTransparency = 1
-    descLabel.Text = desc
-    descLabel.TextColor3 = Color3.fromRGB(200,200,210)
-    descLabel.TextSize = 13
-    descLabel.Font = Enum.Font.Gotham
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.Parent = frame
-    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 0.1 }):Play()
-    task.wait(duration)
-    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
-    task.wait(0.3)
-    frame:Destroy()
-end
 
 Notify("NKNO$ HUB " .. SCRIPT_VERSION, T("Нажми Left Alt для открытия меню", "Press Left Alt to open menu"), 4)
 
@@ -1886,4 +1890,4 @@ end)
 
 if getgenv().NKNO.AntiFling then startAntiFling() end
 
-print("NKNO$ HUB v5.7 loaded successfully.")
+print("NKNO$ HUB v5.8 loaded successfully.")
