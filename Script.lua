@@ -13,6 +13,7 @@ do
         local LocalPlayer = Players.LocalPlayer
         if game.CoreGui:FindFirstChild("nkno$ hub") then game.CoreGui["nkno$ hub"]:Destroy() end
         for _, obj in pairs(workspace:GetChildren()) do if obj.Name:find("Kitagawa_WayPoint_") then obj:Destroy() end end
+
         local afkConnection
         safeCall(function()
             afkConnection = LocalPlayer.Idled:Connect(function()
@@ -20,6 +21,7 @@ do
                 VirtualUser:ClickButton2(Vector2.new())
             end)
         end)
+
         local lang = "EN"
         local Locales = {
             RU = {
@@ -30,7 +32,7 @@ do
                 ThemeTab = "Темы",
                 AdminTab = "AdminPanel",
                 MovementTab = "Moovement",
-                ShopTab = "Магазин",
+                TagTab = "TAG",
                 AutoFarmToggle = "Авто Фарм",
                 SpeedLabel = "Скорость: %d",
                 DistLabel = "WinsFarmer:",
@@ -52,16 +54,9 @@ do
                 FlyToggle = "Fly (Джойстик/WASD)",
                 FlySpeedLabel = "Скорость полета: %d",
                 Themes = {"Синий Космос", "Фиолетовый Кибер", "Кислотный Лайм", "Пылкая Роза", "Янтарный Неон", "Белый Фантом"},
-                ShopItemsLabel = "Предметы (обычный маркет)",
-                ShopAurasLabel = "Ауры",
-                ShopTrailsLabel = "Следы",
-                AddItemBtn = "+ Добавить",
-                BuySelectedBtn = "Купить отмеченные",
-                BuyAllBtn = "Купить всё",
-                NoShopRemote = "Не найден RemoteEvent для покупки!",
-                Buying = "Покупка: %s",
-                BuySuccess = "Куплено: %s",
-                BuyFailed = "Ошибка покупки %s"
+                TagToggle = "Показать ник NKNO$",
+                TagOn = "TAG включен",
+                TagOff = "TAG выключен"
             },
             EN = {
                 ChooseLang = "Choose language",
@@ -71,7 +66,7 @@ do
                 ThemeTab = "Themes",
                 AdminTab = "AdminPanel",
                 MovementTab = "Moovement",
-                ShopTab = "Shop",
+                TagTab = "TAG",
                 AutoFarmToggle = "Auto Farm",
                 SpeedLabel = "Speed: %d",
                 DistLabel = "WinsFarmer:",
@@ -93,16 +88,9 @@ do
                 FlyToggle = "Fly (Joystick/WASD)",
                 FlySpeedLabel = "Fly Speed: %d",
                 Themes = {"Blue Space", "Purple Cyber", "Acid Lime", "Fiery Rose", "Amber Neon", "White Phantom"},
-                ShopItemsLabel = "Items (regular market)",
-                ShopAurasLabel = "Auras",
-                ShopTrailsLabel = "Trails",
-                AddItemBtn = "+ Add",
-                BuySelectedBtn = "Buy Selected",
-                BuyAllBtn = "Buy All",
-                NoShopRemote = "No RemoteEvent found for purchase!",
-                Buying = "Buying: %s",
-                BuySuccess = "Bought: %s",
-                BuyFailed = "Failed to buy %s"
+                TagToggle = "Show NKNO$ tag",
+                TagOn = "TAG enabled",
+                TagOff = "TAG disabled"
             }
         }
         local function L(key) return Locales[lang][key] end
@@ -127,22 +115,12 @@ do
         local checkModelConnection = nil
         local mouse = LocalPlayer:GetMouse()
 
-        -- ===== СПИСКИ МАГАЗИНА =====
-        local shopItems = {
-            {name = "Dumbbell", checked = true},
-            {name = "Gloves", checked = true},
-            {name = "Dollars", checked = true},
-            {name = "Watch", checked = true},
-            {name = "We Love Brazil", checked = true},
-            {name = "Edamame", checked = true},
-            {name = "67 67", checked = true},
-            {name = "Canada Earth", checked = true}
-        }
-        local shopAuras = {}   -- сюда можно добавить названия аур
-        local shopTrails = {}  -- сюда можно добавить названия следов
-        local shopRemote = nil
+        -- === TAG ===
+        local tagEnabled = false
+        local tagBillboard = nil
+        local tagConnection = nil
 
-        -- ===== ПОЛНЫЙ СПИСОК WAYPOINTS (сокращён для экономии места – вставьте свой) =====
+        -- ===== WAYPOINTS (полный список) =====
         local Waypoints = {
             ["1 World"] = {
                 ["+1 wins"] = {Vector3.new(2.8, 8.5, 74.3), Vector3.new(-22.3, 10.4, 286)},
@@ -347,99 +325,66 @@ do
             end
         end
 
-        -- ===== ФУНКЦИИ МАГАЗИНА =====
-        local function findShopRemote()
-            if shopRemote then return shopRemote end
-            local rs = game:GetService("ReplicatedStorage")
-            for _, child in ipairs(rs:GetDescendants()) do
-                if child:IsA("RemoteEvent") then
-                    local name = child.Name:lower()
-                    if name:find("buy") or name:find("purchase") or name:find("shop") then
-                        shopRemote = child
-                        return child
-                    end
+        -- === TAG ФУНКЦИИ ===
+        local function createTag()
+            if tagBillboard then tagBillboard:Destroy() tagBillboard = nil end
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("Head") then return end
+
+            tagBillboard = Instance.new("BillboardGui")
+            tagBillboard.Parent = char.Head
+            tagBillboard.Size = UDim2.new(0, 300, 0, 60)
+            tagBillboard.StudsOffset = Vector3.new(0, 2.5, 0)
+            tagBillboard.AlwaysOnTop = true
+            tagBillboard.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+            local frame = Instance.new("Frame")
+            frame.Parent = tagBillboard
+            frame.BackgroundTransparency = 1
+            frame.Size = UDim2.new(1, 0, 1, 0)
+
+            -- Корона
+            local crown = Instance.new("TextLabel")
+            crown.Parent = frame
+            crown.BackgroundTransparency = 1
+            crown.Size = UDim2.new(0, 40, 0, 40)
+            crown.Position = UDim2.new(0.5, -20, 0, -10)
+            crown.Font = Enum.Font.GothamBold
+            crown.Text = "👑"
+            crown.TextColor3 = Color3.fromRGB(255, 215, 0)
+            crown.TextSize = 36
+            crown.TextScaled = false
+            crown.ZIndex = 2
+
+            -- Ник
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Parent = frame
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.Position = UDim2.new(0, 0, 0, 10)
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.Text = "NKNO$"
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            nameLabel.TextSize = 28
+            nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+            nameLabel.TextStrokeTransparency = 0.3
+            nameLabel.TextScaled = true
+            nameLabel.ZIndex = 1
+        end
+
+        local function toggleTag(state)
+            tagEnabled = state
+            if tagEnabled then
+                createTag()
+                -- обновляем при появлении персонажа
+                if not tagConnection then
+                    tagConnection = LocalPlayer.CharacterAdded:Connect(function()
+                        if tagEnabled then createTag() end
+                    end)
                 end
-            end
-            return nil
-        end
-
-        local function purchaseItem(itemName, itemType)
-            local remote = findShopRemote()
-            if not remote then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Shop",
-                    Text = L("NoShopRemote"),
-                    Duration = 4
-                })
-                return false
-            end
-            local success, err = pcall(function()
-                remote:FireServer(itemName, itemType or "item")
-            end)
-            if success then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Shop",
-                    Text = string.format(L("BuySuccess"), itemName),
-                    Duration = 3
-                })
-                return true
             else
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Shop",
-                    Text = string.format(L("BuyFailed"), itemName),
-                    Duration = 3
-                })
-                return false
-            end
-        end
-
-        local function buySelectedItems()
-            local toBuy = {}
-            for _, item in ipairs(shopItems) do
-                if item.checked then table.insert(toBuy, {name = item.name, type = "item"}) end
-            end
-            for _, item in ipairs(shopAuras) do
-                if item.checked then table.insert(toBuy, {name = item.name, type = "aura"}) end
-            end
-            for _, item in ipairs(shopTrails) do
-                if item.checked then table.insert(toBuy, {name = item.name, type = "trail"}) end
-            end
-            if #toBuy == 0 then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Shop",
-                    Text = "No items selected.",
-                    Duration = 3
-                })
-                return
-            end
-            for _, entry in ipairs(toBuy) do
-                purchaseItem(entry.name, entry.type)
-                task.wait(0.3)
-            end
-        end
-
-        local function buyAllItems()
-            local toBuy = {}
-            for _, item in ipairs(shopItems) do
-                table.insert(toBuy, {name = item.name, type = "item"})
-            end
-            for _, item in ipairs(shopAuras) do
-                table.insert(toBuy, {name = item.name, type = "aura"})
-            end
-            for _, item in ipairs(shopTrails) do
-                table.insert(toBuy, {name = item.name, type = "trail"})
-            end
-            if #toBuy == 0 then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Shop",
-                    Text = "No items in lists.",
-                    Duration = 3
-                })
-                return
-            end
-            for _, entry in ipairs(toBuy) do
-                purchaseItem(entry.name, entry.type)
-                task.wait(0.3)
+                if tagBillboard then tagBillboard:Destroy(); tagBillboard = nil end
+                if tagConnection then tagConnection:Disconnect(); tagConnection = nil end
             end
         end
 
@@ -500,7 +445,7 @@ do
         MainStroke.Color = Color3.fromRGB(35, 35, 50)
         MainStroke.Thickness = 1.5
 
-        -- Toggle Widget (мини-кнопка)
+        -- Toggle Widget
         local ToggleWidget = Instance.new("Frame")
         ToggleWidget.Name = "ToggleWidget"
         ToggleWidget.Parent = ScreenGui
@@ -553,7 +498,6 @@ do
                 dragToggle = false
                 if ((tick() - dragStartTime) < 0.25) then
                     if isMinimized then
-                        -- если свернуто, разворачиваем
                         isMinimized = false
                         MainFrame.Visible = true
                         ShadowFrame.Visible = true
@@ -624,19 +568,14 @@ do
                 task.wait(0.2)
                 LangFrame.Visible = false
                 ToggleWidget.Visible = true
-                -- после выбора языка выполняем автопокупку и не показываем GUI
-                task.spawn(function()
-                    task.wait(0.5)
-                    buySelectedItems()
-                    -- оставляем GUI скрытым (свернутым)
-                    isMinimized = true
-                    MainFrame.Visible = false
-                    ShadowFrame.Visible = false
-                    MinBtn.Text = "+"
-                    TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
-                    TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
-                    print("[nkno$] Автопокупка завершена. GUI скрыт.")
-                end)
+                -- Показываем GUI в свёрнутом виде (виджет)
+                isMinimized = true
+                MainFrame.Visible = false
+                ShadowFrame.Visible = false
+                MinBtn.Text = "+"
+                TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
+                TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
+                print("[nkno$] Интерфейс скрыт, виджет активен.")
             end)
         end
         buildLangButton("RU", "Русский", 65, "RU")
@@ -713,6 +652,8 @@ do
             if flyBV then toggleManualFly(false) end
             if afkConnection then afkConnection:Disconnect() end
             if checkModelConnection then checkModelConnection:Disconnect() end
+            if tagBillboard then tagBillboard:Destroy(); tagBillboard = nil end
+            if tagConnection then tagConnection:Disconnect(); tagConnection = nil end
             toggleMenu(false)
             task.wait(0.3)
             ScreenGui:Destroy()
@@ -731,19 +672,15 @@ do
         MinBtn.MouseButton1Click:Connect(function()
             isMinimized = not isMinimized
             if isMinimized then
-                -- Сворачиваем: скрываем MainFrame и ShadowFrame
                 MainFrame.Visible = false
                 ShadowFrame.Visible = false
                 MinBtn.Text = "+"
-                -- при сворачивании также закрываем меню (чтобы не было видно)
                 isMenuOpen = false
             else
-                -- Разворачиваем
                 MainFrame.Visible = true
                 ShadowFrame.Visible = true
                 MinBtn.Text = "-"
                 isMenuOpen = true
-                -- анимация раскрытия
                 TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 420)}):Play()
                 TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 426)}):Play()
             end
@@ -838,11 +775,12 @@ do
         AdminPage.Size = UDim2.new(1, 0, 1, 0)
         AdminPage.Visible = false
 
-        local ShopPage = Instance.new("Frame")
-        ShopPage.Parent = ContentArea
-        ShopPage.BackgroundTransparency = 1
-        ShopPage.Size = UDim2.new(1, 0, 1, 0)
-        ShopPage.Visible = false
+        -- Новая страница TAG
+        local TagPage = Instance.new("Frame")
+        TagPage.Parent = ContentArea
+        TagPage.BackgroundTransparency = 1
+        TagPage.Size = UDim2.new(1, 0, 1, 0)
+        TagPage.Visible = false
 
         -- Tabs
         local tabButtons = {}
@@ -866,7 +804,7 @@ do
                 MovementPage.Visible = (page == MovementPage)
                 ThemePage.Visible = (page == ThemePage)
                 AdminPage.Visible = (page == AdminPage)
-                ShopPage.Visible = (page == ShopPage)
+                TagPage.Visible = (page == TagPage)
             end)
             table.insert(tabButtons, btn)
             return btn
@@ -876,7 +814,7 @@ do
         local movementTabBtn = createTabButton("Moovement", MovementPage)
         local themeTabBtn = createTabButton("Theme", ThemePage)
         local adminTabBtn = createTabButton("AdminPanel", AdminPage)
-        local shopTabBtn = createTabButton("Shop", ShopPage)
+        local tagTabBtn = createTabButton("TAG", TagPage)
         autoFarmTabBtn.BackgroundColor3 = accentColor
         autoFarmTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
@@ -906,184 +844,69 @@ do
             })
         end)
 
-        -- ===== SHOP PAGE =====
-        local ShopScroll = Instance.new("ScrollingFrame")
-        ShopScroll.Parent = ShopPage
-        ShopScroll.BackgroundTransparency = 1
-        ShopScroll.Size = UDim2.new(1, 0, 1, 0)
-        ShopScroll.ScrollBarThickness = 0
-        ShopScroll.CanvasSize = UDim2.new(0, 0, 0, 600)
+        -- === PAGE: TAG ===
+        local TagContent = Instance.new("Frame")
+        TagContent.Parent = TagPage
+        TagContent.BackgroundTransparency = 1
+        TagContent.Size = UDim2.new(1, 0, 1, 0)
 
-        local ShopListLayout = Instance.new("UIListLayout")
-        ShopListLayout.Parent = ShopScroll
-        ShopListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        ShopListLayout.Padding = UDim.new(0, 10)
+        local TagToggleFrame = Instance.new("Frame")
+        TagToggleFrame.Parent = TagContent
+        TagToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
+        TagToggleFrame.BackgroundTransparency = 0.15
+        TagToggleFrame.Position = UDim2.new(0, 20, 0, 30)
+        TagToggleFrame.Size = UDim2.new(1, -40, 0, 60)
+        Instance.new("UICorner", TagToggleFrame).CornerRadius = UDim.new(0, 10)
 
-        local function createShopSection(parent, titleKey, listData, listName)
-            local frame = Instance.new("Frame")
-            frame.Parent = parent
-            frame.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
-            frame.BackgroundTransparency = 0.15
-            frame.Size = UDim2.new(1, -10, 0, 160)
-            Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+        local TagLabel = Instance.new("TextLabel")
+        TagLabel.Parent = TagToggleFrame
+        TagLabel.BackgroundTransparency = 1
+        TagLabel.Position = UDim2.new(0, 16, 0, 0)
+        TagLabel.Size = UDim2.new(0.7, 0, 1, 0)
+        TagLabel.Font = Enum.Font.GothamBold
+        TagLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TagLabel.TextSize = 15
+        TagLabel.TextXAlignment = Enum.TextXAlignment.Left
+        TagLabel.Text = L("TagToggle")
 
-            local titleLabel = Instance.new("TextLabel")
-            titleLabel.Parent = frame
-            titleLabel.BackgroundTransparency = 1
-            titleLabel.Position = UDim2.new(0, 12, 0, 6)
-            titleLabel.Size = UDim2.new(0.6, 0, 0, 22)
-            titleLabel.Font = Enum.Font.GothamBold
-            titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            titleLabel.TextSize = 14
-            titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-            titleLabel.Text = L(titleKey)
+        local TagSwitchBG = Instance.new("TextButton")
+        TagSwitchBG.Parent = TagToggleFrame
+        TagSwitchBG.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+        TagSwitchBG.Position = UDim2.new(1, -65, 0.5, -14)
+        TagSwitchBG.Size = UDim2.new(0, 50, 0, 28)
+        TagSwitchBG.Text = ""
+        Instance.new("UICorner", TagSwitchBG).CornerRadius = UDim.new(0, 14)
+        local TagSwitchDot = Instance.new("Frame")
+        TagSwitchDot.Parent = TagSwitchBG
+        TagSwitchDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        TagSwitchDot.Position = UDim2.new(0, 3, 0.5, -11)
+        TagSwitchDot.Size = UDim2.new(0, 22, 0, 22)
+        Instance.new("UICorner", TagSwitchDot).CornerRadius = UDim.new(0, 11)
 
-            local addBox = Instance.new("TextBox")
-            addBox.Parent = frame
-            addBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-            addBox.Position = UDim2.new(0, 12, 0, 34)
-            addBox.Size = UDim2.new(0.7, -16, 0, 30)
-            addBox.Font = Enum.Font.GothamSemibold
-            addBox.Text = ""
-            addBox.TextColor3 = Color3.fromRGB(200, 200, 220)
-            addBox.TextSize = 13
-            addBox.ClearTextOnFocus = false
-            addBox.PlaceholderText = "Item name..."
-            Instance.new("UICorner", addBox).CornerRadius = UDim.new(0, 8)
-
-            local addBtn = Instance.new("TextButton")
-            addBtn.Parent = frame
-            addBtn.BackgroundColor3 = accentColor
-            addBtn.Position = UDim2.new(0.72, 0, 0, 34)
-            addBtn.Size = UDim2.new(0.25, -8, 0, 30)
-            addBtn.Font = Enum.Font.GothamBold
-            addBtn.Text = L("AddItemBtn")
-            addBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            addBtn.TextSize = 13
-            Instance.new("UICorner", addBtn).CornerRadius = UDim.new(0, 8)
-
-            local listFrame = Instance.new("ScrollingFrame")
-            listFrame.Parent = frame
-            listFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-            listFrame.BackgroundTransparency = 0.3
-            listFrame.Position = UDim2.new(0, 6, 0, 72)
-            listFrame.Size = UDim2.new(1, -12, 0, 80)
-            listFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-            listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-            listFrame.ScrollBarThickness = 3
-            Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0, 8)
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.Parent = listFrame
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.Padding = UDim.new(0, 4)
-
-            local function refreshList()
-                for _, child in ipairs(listFrame:GetChildren()) do
-                    if child:IsA("Frame") then child:Destroy() end
-                end
-                for idx, item in ipairs(listData) do
-                    local row = Instance.new("Frame")
-                    row.Parent = listFrame
-                    row.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                    row.Size = UDim2.new(1, -8, 0, 30)
-                    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
-
-                    local check = Instance.new("ImageButton")
-                    check.Parent = row
-                    check.BackgroundTransparency = 1
-                    check.Size = UDim2.new(0, 22, 0, 22)
-                    check.Position = UDim2.new(0, 8, 0.5, -11)
-                    check.Image = item.checked and "rbxassetid://6011895293" or "rbxassetid://6011897658"
-                    check.ScaleType = Enum.ScaleType.Fit
-                    check.MouseButton1Click:Connect(function()
-                        item.checked = not item.checked
-                        check.Image = item.checked and "rbxassetid://6011895293" or "rbxassetid://6011897658"
-                    end)
-
-                    local lbl = Instance.new("TextLabel")
-                    lbl.Parent = row
-                    lbl.BackgroundTransparency = 1
-                    lbl.Position = UDim2.new(0, 36, 0, 0)
-                    lbl.Size = UDim2.new(1, -50, 1, 0)
-                    lbl.Font = Enum.Font.GothamSemibold
-                    lbl.Text = item.name
-                    lbl.TextColor3 = Color3.fromRGB(220, 220, 240)
-                    lbl.TextSize = 13
-                    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-                    local delBtn = Instance.new("TextButton")
-                    delBtn.Parent = row
-                    delBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-                    delBtn.Position = UDim2.new(1, -26, 0.5, -11)
-                    delBtn.Size = UDim2.new(0, 22, 0, 22)
-                    delBtn.Font = Enum.Font.GothamBold
-                    delBtn.Text = "X"
-                    delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    delBtn.TextSize = 14
-                    Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 6)
-                    delBtn.MouseButton1Click:Connect(function()
-                        table.remove(listData, idx)
-                        refreshList()
-                    end)
-                end
-                task.spawn(function()
-                    task.wait(0.05)
-                    listFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 4)
-                end)
+        TagSwitchBG.MouseButton1Click:Connect(function()
+            tagEnabled = not tagEnabled
+            if tagEnabled then
+                TweenService:Create(TagSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34, 197, 94)}):Play()
+                TweenService:Create(TagSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0, 25, 0.5, -11)}):Play()
+                toggleTag(true)
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "TAG",
+                    Text = L("TagOn"),
+                    Duration = 2
+                })
+            else
+                TweenService:Create(TagSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 55)}):Play()
+                TweenService:Create(TagSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -11)}):Play()
+                toggleTag(false)
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "TAG",
+                    Text = L("TagOff"),
+                    Duration = 2
+                })
             end
+        end)
 
-            addBtn.MouseButton1Click:Connect(function()
-                local name = addBox.Text:gsub("^%s*(.-)%s*$", "%1")
-                if name ~= "" then
-                    table.insert(listData, {name = name, checked = true})
-                    addBox.Text = ""
-                    refreshList()
-                end
-            end)
-
-            addBox.FocusLost:Connect(function(enterPressed)
-                if enterPressed then addBtn.MouseButton1Click:Fire() end
-            end)
-
-            refreshList()
-            return frame
-        end
-
-        createShopSection(ShopScroll, "ShopItemsLabel", shopItems, "items")
-        createShopSection(ShopScroll, "ShopAurasLabel", shopAuras, "auras")
-        createShopSection(ShopScroll, "ShopTrailsLabel", shopTrails, "trails")
-
-        local buyFrame = Instance.new("Frame")
-        buyFrame.Parent = ShopScroll
-        buyFrame.BackgroundTransparency = 1
-        buyFrame.Size = UDim2.new(1, -10, 0, 50)
-
-        local buySelectedBtn = Instance.new("TextButton")
-        buySelectedBtn.Parent = buyFrame
-        buySelectedBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
-        buySelectedBtn.Position = UDim2.new(0, 0, 0, 0)
-        buySelectedBtn.Size = UDim2.new(0.48, -4, 1, 0)
-        buySelectedBtn.Font = Enum.Font.GothamBold
-        buySelectedBtn.Text = L("BuySelectedBtn")
-        buySelectedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        buySelectedBtn.TextSize = 14
-        Instance.new("UICorner", buySelectedBtn).CornerRadius = UDim.new(0, 10)
-        buySelectedBtn.MouseButton1Click:Connect(buySelectedItems)
-
-        local buyAllBtn = Instance.new("TextButton")
-        buyAllBtn.Parent = buyFrame
-        buyAllBtn.BackgroundColor3 = Color3.fromRGB(245, 158, 11)
-        buyAllBtn.Position = UDim2.new(0.52, 0, 0, 0)
-        buyAllBtn.Size = UDim2.new(0.48, -4, 1, 0)
-        buyAllBtn.Font = Enum.Font.GothamBold
-        buyAllBtn.Text = L("BuyAllBtn")
-        buyAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        buyAllBtn.TextSize = 14
-        Instance.new("UICorner", buyAllBtn).CornerRadius = UDim.new(0, 10)
-        buyAllBtn.MouseButton1Click:Connect(buyAllItems)
-
-        -- ===== PAGE: THEMES =====
+        -- ===== PAGE: THEMES (без изменений) =====
         local ThemeScroll = Instance.new("ScrollingFrame")
         ThemeScroll.Parent = ThemePage
         ThemeScroll.BackgroundTransparency = 1
@@ -1895,7 +1718,7 @@ do
             themeTabBtn.Text = L("ThemeTab")
             movementTabBtn.Text = L("MovementTab")
             adminTabBtn.Text = L("AdminTab")
-            shopTabBtn.Text = L("ShopTab")
+            tagTabBtn.Text = L("TagTab")
             ToggleLabel.Text = L("AutoFarmToggle")
             SliderLabel.Text = string.format(L("SpeedLabel"), currentSpeed)
             FlySpeedLabelUI.Text = string.format(L("FlySpeedLabel"), flySpeed)
@@ -1909,37 +1732,11 @@ do
             CheckModelToggleLabel.Text = L("CheckModelToggle")
             InfJumpLabel.Text = L("InfJumpToggle")
             FlyLabel.Text = L("FlyToggle")
+            TagLabel.Text = L("TagToggle")
             for i, rowText in ipairs(ThemeRows) do
                 if L("Themes")[i] then rowText.Text = L("Themes")[i] end
             end
             buildDistanceOptions()
-
-            -- Обновление текстов магазина
-            for _, child in ipairs(ShopScroll:GetChildren()) do
-                if child:IsA("Frame") and child:FindFirstChild("TextLabel") then
-                    local title = child:FindFirstChild("TextLabel")
-                    if title and title:IsA("TextLabel") then
-                        if title.Text:find("Items") or title.Text:find("Предметы") then
-                            title.Text = L("ShopItemsLabel")
-                        elseif title.Text:find("Auras") or title.Text:find("Ауры") then
-                            title.Text = L("ShopAurasLabel")
-                        elseif title.Text:find("Trails") or title.Text:find("Следы") then
-                            title.Text = L("ShopTrailsLabel")
-                        end
-                    end
-                    local addBtn = child:FindFirstChild("TextButton")
-                    if addBtn and addBtn:IsA("TextButton") and (addBtn.Text:find("Add") or addBtn.Text:find("Добавить")) then
-                        addBtn.Text = L("AddItemBtn")
-                    end
-                end
-            end
-            for _, btn in ipairs({buySelectedBtn, buyAllBtn}) do
-                if btn.Text:find("Selected") or btn.Text:find("отмечен") then
-                    btn.Text = L("BuySelectedBtn")
-                elseif btn.Text:find("All") or btn.Text:find("всё") then
-                    btn.Text = L("BuyAllBtn")
-                end
-            end
         end
 
         -- ===== ГАРАНТИРОВАННОЕ ОТКРЫТИЕ =====
@@ -1977,6 +1774,6 @@ do
             end
         end)
 
-        print("[nkno$] Скрипт загружен! Автопокупка выполняется при выборе языка.")
+        print("[nkno$] Скрипт загружен! Добавлена вкладка TAG для отображения ника NKNO$ с короной.")
     end)
 end
