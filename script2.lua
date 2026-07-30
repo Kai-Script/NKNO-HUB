@@ -1,8 +1,7 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.1
--- Исправлен анти-флинг, новая категория FLING,
--- полупрозрачное меню, выбор темы, защита от шерифа,
--- выбор игроков из списка, улучшенный фарм (Nearest/Random)
+-- NKNO$ HUB ULTIMATE v5.2
+-- Исправлен флинг, автофарм, добавлены категории Scam Trade и Add Weapons
+-- Прозрачные категории, выбор языка, заморозка трейда, спавн оружия
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -15,6 +14,8 @@ local Workspace = game:GetService("Workspace")
 local Stats = game:GetService("Stats")
 local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
+local CollectionService = game:GetService("CollectionService")
+local Debris = game:GetService("Debris")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -22,10 +23,10 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- Версия
-local SCRIPT_VERSION = "5.1"
+local SCRIPT_VERSION = "5.2"
 local UPDATE_MESSAGE = {
-    ru = "Обновление v5.1:\n- Прозрачные категории\n- Исправлен флинг\n- Выбор игроков из списка\n- Режим фарма Nearest/Random\n- Защита от шерифа",
-    en = "Update v5.1:\n- Transparent categories\n- Fling fixed\n- Player selection from list\n- Farm mode Nearest/Random\n- Anti-Sheriff protection"
+    ru = "Обновление v5.2:\n- Прозрачные категории\n- Исправлен флинг\n- Автофарм починен\n- Scam Trade (заморозка трейда)\n- Add Weapons (спавн оружия)",
+    en = "Update v5.2:\n- Transparent categories\n- Fling fixed\n- Auto-farm fixed\n- Scam Trade (freeze trade)\n- Add Weapons (spawn weapons)"
 }
 
 -- Настройки языка
@@ -162,7 +163,7 @@ getgenv().NKNO.AntiFling = getgenv().NKNO.AntiFling or false
 getgenv().NKNO.AutoGrabGun = getgenv().NKNO.AutoGrabGun or false
 getgenv().NKNO.FarmCoins = getgenv().NKNO.FarmCoins or false
 getgenv().NKNO.FarmUnderMap = getgenv().NKNO.FarmUnderMap ~= false
-getgenv().NKNO.FarmMode = getgenv().NKNO.FarmMode or "Nearest"  -- или "Random"
+getgenv().NKNO.FarmMode = getgenv().NKNO.FarmMode or "Nearest"
 getgenv().NKNO.AntiAFK = getgenv().NKNO.AntiAFK or false
 getgenv().NKNO.UnderMap = getgenv().NKNO.UnderMap or false
 getgenv().NKNO.CustomWalkSpeed = getgenv().NKNO.CustomWalkSpeed or false
@@ -178,9 +179,11 @@ getgenv().NKNO.AutoRespawn = getgenv().NKNO.AutoRespawn or false
 getgenv().NKNO.GodMode = getgenv().NKNO.GodMode or false
 getgenv().NKNO.Theme = getgenv().NKNO.Theme or "Dark"
 getgenv().NKNO.AntiSheriff = getgenv().NKNO.AntiSheriff or false
+getgenv().NKNO.ScamTrade = getgenv().NKNO.ScamTrade or false  -- заморозка трейда
+getgenv().NKNO.ScamTarget = nil
 getgenv().NKNO.ESP = getgenv().NKNO.ESP or {
     Murderer = false, Sheriff = false, Innocent = false, Hero = false,
-    Box2D = false, DisplayName = false, NormalName = true, AvatarDisplay = false,
+    Box2D = false, DisplayName = false, NormalName = true,
     ColorMurderer = Color3.fromRGB(255,0,0),
     ColorSheriff = Color3.fromRGB(0,0,255),
     ColorHero = Color3.fromRGB(255,255,0),
@@ -238,7 +241,7 @@ local function findSheriff()
 end
 
 -- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (ФЛИНГ, ПОДКАРТА, ESP, ФАРМ и т.д.)
+-- ОСНОВНЫЕ ФУНКЦИИ
 -- ============================================================
 
 local function applyWalkSpeed()
@@ -311,7 +314,7 @@ local function stopDance()
 end
 
 -- ============================================================
--- ФЛИНГ (ИСПРАВЛЕННЫЙ)
+-- ФЛИНГ (АГРЕССИВНЫЙ, ИСПРАВЛЕННЫЙ)
 -- ============================================================
 local function SkidFling(plr)
     local char = LocalPlayer.Character
@@ -335,23 +338,35 @@ local function SkidFling(plr)
         end
     end
 
-    local startPos = root.Position
-    local targetPos = targetRoot.Position
-    local direction = (targetPos - startPos).Unit
-    local time = 0
+    -- Создаём BodyVelocity для постоянного движения
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bv.P = 9e9
+    bv.Parent = root
 
-    while getgenv().NKNO.Flinging and time < 3 do
-        root.CFrame = CFrame.new(targetPos + direction * 5)
-        root.Velocity = direction * 9e7
-        root.RotVelocity = Vector3.new(9e8,9e8,9e8)
-        task.wait(0.01)
-        root.CFrame = CFrame.new(targetPos - direction * 5)
-        root.Velocity = -direction * 9e7
-        task.wait(0.01)
-        time = time + 0.02
-        targetPos = targetRoot.Position
+    local startTime = tick()
+    while getgenv().NKNO.Flinging and tick() - startTime < 4 do
+        local targetPos = targetRoot.Position
+        local dir = (targetPos - root.Position).Unit
+        -- Резкие телепортации в разные стороны относительно цели
+        for i = 1, 10 do
+            local offset = Vector3.new(math.random(-20,20), math.random(5,30), math.random(-20,20))
+            root.CFrame = CFrame.new(targetPos + offset)
+            root.Velocity = dir * 9e7 + Vector3.new(0, 5e6, 0)
+            bv.Velocity = dir * 9e7 + Vector3.new(0, 5e6, 0)
+            task.wait(0.01)
+        end
+        -- Пролёт сквозь цель
+        for i = 1, 5 do
+            root.CFrame = CFrame.new(targetPos + dir * (5 + i*2))
+            root.Velocity = dir * 9e7
+            bv.Velocity = dir * 9e7
+            task.wait(0.01)
+        end
+        task.wait()
     end
 
+    bv:Destroy()
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
     Workspace.FallenPartsDestroyHeight = getgenv().FPDH or Workspace.FallenPartsDestroyHeight
     for _, part in pairs(char:GetDescendants()) do
@@ -556,7 +571,7 @@ local function autoGrabGun()
 end
 
 -- ============================================================
--- АНТИ-ФЛИНГ (исправленная версия)
+-- АНТИ-ФЛИНГ
 -- ============================================================
 local antiFlingConnection = nil
 local lastPosition = nil
@@ -624,23 +639,21 @@ local function stopAntiFling()
 end
 
 -- ============================================================
--- АНТИ ШЕРИФ (ЗАЩИТА ОТ ВЫСТРЕЛОВ)
+-- АНТИ ШЕРИФ
 -- ============================================================
 local function antiSheriff()
     if not getgenv().NKNO.AntiSheriff then return end
-    -- Отключаем коллизию со всеми пулями
     for _, bullet in pairs(Workspace:GetDescendants()) do
         if bullet:IsA("BasePart") and bullet.Name:lower():find("bullet") then
             bullet.CanCollide = false
         end
     end
-    -- Перехват Remote урона
     local damageRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Gameplay") and ReplicatedStorage.Remotes.Gameplay:FindFirstChild("Damage")
     if damageRemote then
         local oldFire = damageRemote.FireServer
         damageRemote.FireServer = function(self, target, ...)
             if target == LocalPlayer and getgenv().NKNO.AntiSheriff then
-                return  -- не отправляем урон
+                return
             end
             return oldFire(self, target, ...)
         end
@@ -648,7 +661,92 @@ local function antiSheriff()
 end
 
 -- ============================================================
--- АВТОФАРМ (упрощённый, только Nearest/Random)
+-- SCAM TRADE (ЗАМОРОЗКА ТРЕЙДА)
+-- ============================================================
+local scamActive = false
+local scamTarget = nil
+local function startScamTrade(target)
+    scamTarget = target
+    scamActive = true
+    Notify("Scam Trade", "Активирована для " .. target.Name, 2)
+    -- Перехват удаления инструментов из Character
+    local function onChildRemoved(child)
+        if not scamActive then return end
+        if not scamTarget or not scamTarget.Character then return end
+        if child:IsA("Tool") and child.Parent == LocalPlayer.Character then
+            -- Оружие было удалено (брошено)
+            task.wait(0.1)
+            -- Создаём копию у цели
+            local clone = child:Clone()
+            clone.Parent = scamTarget.Character
+            -- Возвращаем оригинал себе
+            child.Parent = LocalPlayer.Character
+            Notify("Scam", "Оружие скопировано " .. scamTarget.Name, 2)
+        end
+    end
+    LocalPlayer.Character.ChildRemoved:Connect(onChildRemoved)
+    -- Сохраняем соединение для отключения
+    getgenv()._scamConnection = onChildRemoved
+end
+
+local function stopScamTrade()
+    scamActive = false
+    scamTarget = nil
+    Notify("Scam Trade", "Отключена", 2)
+end
+
+-- ============================================================
+-- ADD WEAPONS (СПАВН ОРУЖИЯ)
+-- ============================================================
+local function spawnWeapon(weaponId)
+    if not weaponId or weaponId == "" then return end
+    local model = nil
+    -- Ищем в ReplicatedStorage или Workspace
+    local function findModel(id)
+        for _, item in pairs(ReplicatedStorage:GetDescendants()) do
+            if item:IsA("Model") and item:FindFirstChild("Handle") then
+                if item.Name:lower():find(id:lower()) or item:GetAttribute("WeaponID") == id then
+                    return item
+                end
+            end
+        end
+        for _, item in pairs(Workspace:GetDescendants()) do
+            if item:IsA("Model") and item:FindFirstChild("Handle") then
+                if item.Name:lower():find(id:lower()) or item:GetAttribute("WeaponID") == id then
+                    return item
+                end
+            end
+        end
+        return nil
+    end
+    
+    model = findModel(weaponId)
+    if not model then
+        -- Пробуем как число
+        local idNum = tonumber(weaponId)
+        if idNum then
+            -- Можно попробовать загрузить из Roblox
+            local success, result = pcall(function()
+                return game:GetService("InsertService"):LoadAsset(idNum)
+            end)
+            if success and result then
+                model = result
+            end
+        end
+    end
+    
+    if model then
+        local clone = model:Clone()
+        clone.Parent = LocalPlayer.Character or LocalPlayer.Backpack
+        clone:SetPrimaryPartCFrame(LocalPlayer.Character.HumanoidRootPart.CFrame)
+        Notify("Weapon", "Оружие заспавнено: " .. model.Name, 2)
+    else
+        Notify("Error", "Оружие не найдено", 2)
+    end
+end
+
+-- ============================================================
+-- АВТОФАРМ (ИСПРАВЛЕННЫЙ)
 -- ============================================================
 
 local function getCoinContainer()
@@ -805,14 +903,14 @@ task.spawn(function()
         if getgenv().NKNO.FarmCoins and not coinCollected and LocalPlayer:GetAttribute("Alive") == true and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local container = getCoinContainer()
             if container then
-                local coin, dist = findNearestCoin(container, true) -- useRandom = true, но внутри проверяет режим
+                local coin, dist = findNearestCoin(container, true)
                 if coin and coin.Transparency == 1 and not coinCollected then
                     if not farming then startFarming() end
                     local root = LocalPlayer.Character.HumanoidRootPart
                     local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
                     root.Velocity = Vector3.new(0,0,0)
                     root.RotVelocity = Vector3.new(0,0,0)
-                    local offset = Vector3.new() -- больше не используем случайное движение
+                    local offset = Vector3.new()
                     local targetPos
                     if getgenv().NKNO.FarmUnderMap then
                         targetPos = coin.Position + offset
@@ -831,7 +929,7 @@ task.spawn(function()
                         end)
                     end
 
-                    local duration = dist / 23  -- простая скорость, без случайных задержек
+                    local duration = math.min(dist / 23, 2) -- ограничим время, чтобы не зависало
                     farmTween = TweenService:Create(root, TweenInfo.new(duration, Enum.EasingStyle.Linear), { CFrame = targetCF })
                     farmTween:Play()
 
@@ -846,8 +944,11 @@ task.spawn(function()
                         end
                     end)
 
+                    local timeout = 0
                     while coin and coin:FindFirstChild("TouchInterest") and coin.Transparency == 1 and not coinCollected and getgenv().NKNO.FarmCoins and LocalPlayer:GetAttribute("Alive") == true do
                         RunService.Heartbeat:Wait()
+                        timeout = timeout + 1
+                        if timeout > 200 then break end -- защита от зависания
                     end
 
                     if conn then conn:Disconnect() end
@@ -869,7 +970,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- ПОСТРОЕНИЕ GUI (НОВАЯ СТРУКТУРА С КАТЕГОРИЯМИ)
+-- ПОСТРОЕНИЕ GUI
 -- ============================================================
 
 if CoreGui:FindFirstChild("NKNO_HUB") then CoreGui["NKNO_HUB"]:Destroy() end
@@ -897,7 +998,7 @@ Instance.new("UICorner", ShadowFrame).CornerRadius = UDim.new(0,16)
 local ShadowScale = Instance.new("UIScale", ShadowFrame)
 ShadowScale.Scale = 0.3
 
--- Главное окно (полупрозрачное)
+-- Главное окно
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -918,7 +1019,6 @@ MainStroke.Color = Color3.fromRGB(60,60,80)
 MainStroke.Thickness = 1.2
 MainStroke.Transparency = 0.5
 
--- Фон с градиентом
 local BgGradient = Instance.new("ImageLabel")
 BgGradient.Name = "BgGradient"
 BgGradient.Parent = MainFrame
@@ -1000,7 +1100,7 @@ local LeftPanel = Instance.new("Frame")
 LeftPanel.Name = "LeftPanel"
 LeftPanel.Parent = MainFrame
 LeftPanel.BackgroundColor3 = Color3.fromRGB(18,18,26)
-LeftPanel.BackgroundTransparency = 0.6   -- более прозрачная
+LeftPanel.BackgroundTransparency = 0.6
 LeftPanel.Position = UDim2.new(0,0,0,55)
 LeftPanel.Size = UDim2.new(0,150,1,-70)
 LeftPanel.BorderSizePixel = 0
@@ -1019,7 +1119,8 @@ CategoryLayout.Padding = UDim.new(0,4)
 CategoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 CategoryLayout.Parent = CategoryList
 
-local categories = {"MAIN", "COMBAT", "FARM", "VISUALS", "MOVEMENT", "TELEPORTS", "FLING", "MISC"}
+-- Добавляем новые категории
+local categories = {"MAIN", "COMBAT", "FARM", "VISUALS", "MOVEMENT", "TELEPORTS", "FLING", "SCAM TRADE", "ADD WEAPONS", "MISC"}
 local currentCategory = "MAIN"
 
 local function updateCategoryCanvas()
@@ -1034,7 +1135,7 @@ end
 local function createCategoryButton(cat)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1,-10,0,32)
-    btn.BackgroundTransparency = 0.5   -- прозрачная кнопка
+    btn.BackgroundTransparency = 0.5   -- прозрачная
     btn.BackgroundColor3 = Color3.fromRGB(40,40,55)
     btn.BorderSizePixel = 0
     btn.Text = cat
@@ -1062,7 +1163,7 @@ for _, cat in ipairs(categories) do
 end
 
 -- ============================================================
--- ПРАВАЯ ОБЛАСТЬ (динамический контент)
+-- ПРАВАЯ ОБЛАСТЬ
 -- ============================================================
 local RightContainer = Instance.new("ScrollingFrame")
 RightContainer.Name = "RightContainer"
@@ -1090,7 +1191,6 @@ local function updateRightCanvas()
     RightContainer.CanvasSize = UDim2.new(0,0,0,total + 20)
 end
 
--- Функции создания элементов
 local lang = getgenv().NKNO.Language or "ru"
 local function T(ru, en)
     return lang == "ru" and ru or en
@@ -1288,8 +1388,8 @@ local function createSlider(parent, titleRu, titleEn, descRu, descEn, min, max, 
     return frame
 end
 
--- Улучшенный dropdown с возможностью обновления опций
-local dropdownObjects = {} -- для хранения ссылок на дропдауны, чтобы обновлять
+-- Улучшенный dropdown
+local dropdownObjects = {}
 local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options, default, callback, dynamic)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1,0,0,30)
@@ -1341,7 +1441,6 @@ local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options,
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
     listLayout.Parent = listScrolling
 
-    -- Сохраняем кнопки для возможного обновления
     local optionButtons = {}
     for _, opt in ipairs(options) do
         local btn = Instance.new("TextButton")
@@ -1362,14 +1461,11 @@ local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options,
         table.insert(optionButtons, btn)
     end
 
-    -- Функция обновления списка опций
     local function updateOptions(newOptions)
-        -- Удаляем старые кнопки
         for _, btn in ipairs(optionButtons) do
             btn:Destroy()
         end
         optionButtons = {}
-        -- Создаём новые
         for _, opt in ipairs(newOptions) do
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1,0,0,25)
@@ -1416,7 +1512,6 @@ local function createDropdown(parent, titleRu, titleEn, descRu, descEn, options,
         d.Parent = frame
     end
     updateRightCanvas()
-    -- Возвращаем объект с методами для обновления
     local dropdownObj = {
         frame = frame,
         updateOptions = updateOptions,
@@ -1485,8 +1580,9 @@ local function clearRightContainer()
     RightContainer.CanvasSize = UDim2.new(0,0,0,0)
 end
 
--- Глобальная переменная для хранения ссылки на dropdown игроков
 local playerDropdownObj = nil
+local scamDropdownObj = nil
+local weaponDropdownObj = nil
 
 function populateCategory(cat)
     clearRightContainer()
@@ -1627,7 +1723,6 @@ function populateCategory(cat)
         createToggle(RightContainer, "Фарм под картой", "Farm UnderMap", "Сбор под картой (недосягаем)", "Farm under map (unreachable)", getgenv().NKNO.FarmUnderMap, function(val)
             getgenv().NKNO.FarmUnderMap = val
         end)
-        -- Переключатель режима сбора
         createDropdown(RightContainer, "Режим сбора", "Collect Mode", "Nearest – ближайшая, Random – случайная", "Nearest or Random", {"Nearest", "Random"}, getgenv().NKNO.FarmMode or "Nearest", function(val)
             getgenv().NKNO.FarmMode = val
         end)
@@ -1753,7 +1848,6 @@ function populateCategory(cat)
             end
         end)
 
-        -- Выбор игрока из списка (динамический)
         local function getPlayerNames()
             local names = {}
             for _, plr in pairs(Players:GetPlayers()) do
@@ -1764,7 +1858,6 @@ function populateCategory(cat)
             return names
         end
 
-        -- Создаём dropdown с обновляемым списком
         local options = getPlayerNames()
         if #options == 0 then options = {"Нет игроков"} end
         local defaultName = getgenv().NKNO.SelectedPlayerName or options[1]
@@ -1780,13 +1873,11 @@ function populateCategory(cat)
             end
         end)
 
-        -- Функция обновления списка при изменении игроков
         local function refreshPlayerDropdown()
             local newOptions = getPlayerNames()
             if #newOptions == 0 then newOptions = {"Нет игроков"} end
             if playerDropdownObj then
                 playerDropdownObj.updateOptions(newOptions)
-                -- Если выбранный игрок исчез, сбрасываем
                 if getgenv().NKNO.SelectedPlayerName and not Players:FindFirstChild(getgenv().NKNO.SelectedPlayerName) then
                     getgenv().NKNO.SelectedPlayer = nil
                     getgenv().NKNO.SelectedPlayerName = nil
@@ -1795,7 +1886,6 @@ function populateCategory(cat)
             end
         end
 
-        -- Подписываемся на события изменения списка игроков (ещё не подписаны)
         if not getgenv()._playerListConnected then
             getgenv()._playerListConnected = true
             Players.PlayerAdded:Connect(refreshPlayerDropdown)
@@ -1821,6 +1911,69 @@ function populateCategory(cat)
                 getgenv().NKNO.Flinging = false
                 Notify(T("Остановлено", "Stopped"), T("Флинг прекращён", "Fling stopped"), 2)
             end
+        end)
+
+    elseif cat == "SCAM TRADE" then
+        createSection(RightContainer, "Scam Trade", "Scam Trade")
+        createSection(RightContainer, "Заморозка трейда", "Freeze Trade")
+        -- Выбор цели
+        local function getPlayerNames()
+            local names = {}
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer then
+                    table.insert(names, plr.Name)
+                end
+            end
+            return names
+        end
+        local opts = getPlayerNames()
+        if #opts == 0 then opts = {"Нет игроков"} end
+        scamDropdownObj = createDropdown(RightContainer, "Цель", "Target", "Игрок, которому будет скопировано оружие", "Player to copy weapon to", opts, opts[1], function(val)
+            local plr = Players:FindFirstChild(val)
+            if plr then
+                getgenv().NKNO.ScamTarget = plr
+            else
+                getgenv().NKNO.ScamTarget = nil
+            end
+        end)
+
+        createButton(RightContainer, "Включить заморозку", "Enable Freeze", "При броске оружия оно остаётся у вас и копируется цели", "On throw, weapon stays and copies to target", function()
+            if not getgenv().NKNO.ScamTarget then
+                Notify("Ошибка", "Выберите цель", 2)
+                return
+            end
+            startScamTrade(getgenv().NKNO.ScamTarget)
+        end)
+        createButton(RightContainer, "Выключить заморозку", "Disable Freeze", "Отключить", "Disable", function()
+            stopScamTrade()
+        end)
+        createToggle(RightContainer, "Активна", "Active", "", "", getgenv().NKNO.ScamTrade or false, function(val)
+            getgenv().NKNO.ScamTrade = val
+            if val then
+                if not getgenv().NKNO.ScamTarget then
+                    Notify("Ошибка", "Сначала выберите цель", 2)
+                    return
+                end
+                startScamTrade(getgenv().NKNO.ScamTarget)
+            else
+                stopScamTrade()
+            end
+        end)
+
+    elseif cat == "ADD WEAPONS" then
+        createSection(RightContainer, "Add Weapons", "Add Weapons")
+        createSection(RightContainer, "Спавн оружия", "Spawn Weapon")
+        -- Предустановленные оружия
+        local presetWeapons = {"Knife", "Gun", "Golden Knife", "Sword", "Axe", "Candy Cane", "Laser Gun"}
+        weaponDropdownObj = createDropdown(RightContainer, "Выберите оружие", "Select Weapon", "Известные модели", "Known models", presetWeapons, presetWeapons[1], function(val)
+            getgenv().NKNO._selectedWeapon = val
+        end)
+        createInput(RightContainer, "ID или имя", "ID or Name", "Можно ввести ID модели или название", "Enter model ID or name", function(text)
+            spawnWeapon(text)
+        end)
+        createButton(RightContainer, "Спавн выбранного", "Spawn Selected", "Создать оружие в руках", "Spawn in hands", function()
+            local name = getgenv().NKNO._selectedWeapon or "Knife"
+            spawnWeapon(name)
         end)
 
     elseif cat == "MISC" then
@@ -2055,27 +2208,20 @@ end)
 -- ЗАПУСК
 -- ============================================================
 
--- Показываем выбор языка, если ещё не выбран
 selectLanguage()
-
--- Создаём Discord кнопку
 createDiscordButton()
 
--- Если язык уже был выбран, показываем уведомление об обновлении
 if getgenv().NKNO.Language then
     showUpdateNotice()
 end
 
--- Стартовое уведомление
 local startMsg = {
     ru = "Нажми Left Alt для открытия меню",
     en = "Press Left Alt to open menu"
 }
 Notify("NKNO$ HUB", T(startMsg.ru, startMsg.en), 4)
 
--- Инициализация: показываем первую категорию
 populateCategory("MAIN")
--- Подсветим кнопку MAIN
 for _, b in pairs(CategoryList:GetChildren()) do
     if b:IsA("TextButton") and b.Text == "MAIN" then
         b.BackgroundColor3 = Color3.fromRGB(60,60,80)
@@ -2083,13 +2229,12 @@ for _, b in pairs(CategoryList:GetChildren()) do
     end
 end
 
--- Фоновые процессы
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
         updateESP()
         autoGrabGun()
-        antiSheriff()  -- постоянная защита от шерифа
+        antiSheriff()
     end
 end)
 
@@ -2117,10 +2262,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- В случае, если анти-флинг был включён до загрузки, запускаем
 if getgenv().NKNO.AntiFling then
     startAntiFling()
 end
-
--- Обновляем список игроков в дропдауне при входе/выходе (дополнительно)
--- уже подписаны в категории FLING
