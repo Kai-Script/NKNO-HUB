@@ -71,7 +71,7 @@ if not r then
 end
 
 local t, u = s:CreateWindow({
-    Title = '???',
+    Title = 'NKNO$ HUB',  -- изменено
     Theme = 'Dark',
     Size = UDim2.fromOffset(570, 370),
     Transparency = 0.2,
@@ -960,7 +960,7 @@ t:AddSlider({
     end,
 })
 t:Notify({
-    Title = 'Hello World!',
+    Title = 'NKNO$ HUB Loaded!',   -- изменено
     Description = 'Press Left Alt to Minimize and Open the tab!',
     Duration = 10,
 })
