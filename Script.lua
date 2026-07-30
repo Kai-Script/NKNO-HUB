@@ -1,9 +1,13 @@
 do
+    -- ===== ЗАЩИТА ОТ ОШИБОК И ГАРАНТИРОВАННОЕ ОТКРЫТИЕ =====
     local function safeCall(fn, ...)
         local ok, err = pcall(fn, ...)
-        if not ok then warn("[nkno$] Ошибка: ", err) end
+        if not ok then
+            warn("[nkno$ hub] Ошибка: ", err)
+        end
         return ok, err
     end
+
     safeCall(function()
         local Players = game:GetService("Players")
         local TweenService = game:GetService("TweenService")
@@ -11,8 +15,18 @@ do
         local RunService = game:GetService("RunService")
         local VirtualUser = game:GetService("VirtualUser")
         local LocalPlayer = Players.LocalPlayer
-        if game.CoreGui:FindFirstChild("nkno$ hub") then game.CoreGui["nkno$ hub"]:Destroy() end
-        for _, obj in pairs(workspace:GetChildren()) do if obj.Name:find("Kitagawa_WayPoint_") then obj:Destroy() end end
+
+        -- Очистка старых объектов
+        if game.CoreGui:FindFirstChild("nkno$ hub") then
+            game.CoreGui["nkno$ hub"]:Destroy()
+        end
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj.Name:find("Kitagawa_WayPoint_") then
+                obj:Destroy()
+            end
+        end
+
+        -- AFK-обход с защитой
         local afkConnection
         safeCall(function()
             afkConnection = LocalPlayer.Idled:Connect(function()
@@ -20,6 +34,8 @@ do
                 VirtualUser:ClickButton2(Vector2.new())
             end)
         end)
+
+        -- ===== ЛОКАЛИЗАЦИЯ =====
         local lang = "EN"
         local Locales = {
             RU = {
@@ -105,9 +121,10 @@ do
                 BuyFailed = "Failed to buy %s"
             }
         }
+
         local function L(key) return Locales[lang][key] end
 
-        -- ===== ПЕРЕМЕННЫЕ =====
+        -- ===== ПЕРЕМЕННЫЕ СОСТОЯНИЙ =====
         local savedPositions = {}
         local visualParts = {}
         local currentWorld = "1 World"
@@ -127,22 +144,13 @@ do
         local checkModelConnection = nil
         local mouse = LocalPlayer:GetMouse()
 
-        -- ===== СПИСКИ МАГАЗИНА (ПРЕДУСТАНОВЛЕНЫ) =====
-        local shopItems = {
-            {name = "Dumbbell", checked = true},
-            {name = "Gloves", checked = true},
-            {name = "Dollars", checked = true},
-            {name = "Watch", checked = true},
-            {name = "We Love Brazil", checked = true},
-            {name = "Edamame", checked = true},
-            {name = "67 67", checked = true},
-            {name = "Canada Earth", checked = true}
-        }
+        -- Списки магазина
+        local shopItems = {}
         local shopAuras = {}
         local shopTrails = {}
         local shopRemote = nil
 
-        -- ===== WAYPOINTS (ПОЛНЫЙ СПИСОК) =====
+        -- ===== WAYPOINTS (полный список, как был) =====
         local Waypoints = {
             ["1 World"] = {
                 ["+1 wins"] = {Vector3.new(2.8, 8.5, 74.3), Vector3.new(-22.3, 10.4, 286)},
@@ -450,6 +458,7 @@ do
         ScreenGui.Parent = game:GetService("CoreGui")
         ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+        -- Shadow
         local ShadowFrame = Instance.new("Frame")
         ShadowFrame.Name = "ShadowFrame"
         ShadowFrame.Parent = ScreenGui
@@ -463,6 +472,7 @@ do
         local ShadowScale = Instance.new("UIScale", ShadowFrame)
         ShadowScale.Scale = 0.3
 
+        -- Main
         local MainFrame = Instance.new("Frame")
         MainFrame.Name = "MainFrame"
         MainFrame.Parent = ScreenGui
@@ -481,7 +491,7 @@ do
         BgImage.Parent = MainFrame
         BgImage.BackgroundTransparency = 1
         BgImage.Size = UDim2.new(1, 0, 1, 0)
-        BgImage.Image = "rbxassetid://138913032331139"
+        BgImage.Image = "rbxassetid://138913032331139"  -- Ваше новое фото
         BgImage.ScaleType = Enum.ScaleType.Crop
         BgImage.ImageTransparency = 0.35
         BgImage.ZIndex = 0
@@ -500,7 +510,7 @@ do
         MainStroke.Color = Color3.fromRGB(35, 35, 50)
         MainStroke.Thickness = 1.5
 
-        -- Toggle Widget
+        -- Toggle widget (кнопка вызова)
         local ToggleWidget = Instance.new("Frame")
         ToggleWidget.Name = "ToggleWidget"
         ToggleWidget.Parent = ScreenGui
@@ -553,13 +563,16 @@ do
                 dragToggle = false
                 if ((tick() - dragStartTime) < 0.25) then
                     toggleMenu()
+                    -- дополнительная проверка
                     task.wait(0.1)
-                    if not isMenuOpen then toggleMenu(true) end
+                    if not isMenuOpen then
+                        toggleMenu(true)
+                    end
                 end
             end
         end)
 
-        -- Lang Frame
+        -- Окно выбора языка
         local LangFrame = Instance.new("Frame")
         LangFrame.Name = "LangFrame"
         LangFrame.Parent = ScreenGui
@@ -617,6 +630,7 @@ do
                 LangFrame.Visible = false
                 ToggleWidget.Visible = true
                 toggleMenu(true)
+                -- дополнительная гарантия
                 task.wait(0.1)
                 if not isMenuOpen then toggleMenu(true) end
             end)
@@ -624,6 +638,7 @@ do
         buildLangButton("RU", "Русский", 65, "RU")
         buildLangButton("EN", "English", 205, "EN")
 
+        -- Функция toggleMenu (объявлена после создания окон)
         local function toggleMenu(forceState)
             if (forceState ~= nil) then isMenuOpen = forceState
             else isMenuOpen = not isMenuOpen end
@@ -642,7 +657,7 @@ do
             end
         end
 
-        -- MainFrame drag
+        -- Drag для MainFrame
         local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
         MainFrame.InputBegan:Connect(function(input)
             if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
@@ -670,7 +685,7 @@ do
             end
         end)
 
-        -- Top controls
+        -- Top controls (close, min)
         local TopControls = Instance.new("Frame")
         TopControls.Parent = MainFrame
         TopControls.BackgroundTransparency = 1
@@ -769,6 +784,7 @@ do
         SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))})
         SepGradient.Parent = SepLine
 
+        -- Tab container
         local TabContainer = Instance.new("Frame")
         TabContainer.Parent = Sidebar
         TabContainer.BackgroundTransparency = 1
@@ -779,6 +795,7 @@ do
         TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
         TabListLayout.Padding = UDim.new(0, 10)
 
+        -- ContentArea
         local ContentArea = Instance.new("Frame")
         ContentArea.Parent = MainFrame
         ContentArea.BackgroundTransparency = 1
@@ -818,7 +835,7 @@ do
         ShopPage.Size = UDim2.new(1, 0, 1, 0)
         ShopPage.Visible = false
 
-        -- Tabs
+        -- Табы
         local tabButtons = {}
         local function createTabButton(text, page)
             local btn = Instance.new("TextButton")
@@ -880,7 +897,7 @@ do
             })
         end)
 
-        -- ===== SHOP PAGE =====
+        -- ===== PAGE: SHOP =====
         local ShopScroll = Instance.new("ScrollingFrame")
         ShopScroll.Parent = ShopPage
         ShopScroll.BackgroundTransparency = 1
@@ -1024,7 +1041,6 @@ do
             return frame
         end
 
-        -- Создаём секции с уже заполненными списками
         createShopSection(ShopScroll, "ShopItemsLabel", shopItems, "items")
         createShopSection(ShopScroll, "ShopAurasLabel", shopAuras, "auras")
         createShopSection(ShopScroll, "ShopTrailsLabel", shopTrails, "trails")
@@ -1853,7 +1869,7 @@ do
             end
         end)
 
-        -- ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ =====
+        -- ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЯ =====
         _G.UpdateColors = function(col)
             accentColor = col
             SliderFillAuto.BackgroundColor3 = col
@@ -1889,7 +1905,7 @@ do
             end
             buildDistanceOptions()
 
-            -- Обновление текстов магазина
+            -- Обновление текстов магазина (перебор)
             for _, child in ipairs(ShopScroll:GetChildren()) do
                 if child:IsA("Frame") and child:FindFirstChild("TextLabel") then
                     local title = child:FindFirstChild("TextLabel")
@@ -1917,7 +1933,7 @@ do
             end
         end
 
-        -- ===== ГАРАНТИРОВАННОЕ ОТКРЫТИЕ =====
+        -- ===== ГАРАНТИРОВАННОЕ ОТКРЫТИЕ МЕНЮ =====
         local function ensureMenuOpened()
             if not LangFrame.Visible and not isMenuOpen then
                 toggleMenu(true)
@@ -1927,11 +1943,13 @@ do
             end
         end
 
+        -- После построения всего UI даём время на инициализацию и открываем
         task.spawn(function()
             task.wait(0.5)
             ensureMenuOpened()
         end)
 
+        -- Переопределим ApplyLanguage для вызова ensureMenuOpened
         local oldApply = _G.ApplyLanguage
         _G.ApplyLanguage = function()
             oldApply()
@@ -1939,12 +1957,14 @@ do
             ensureMenuOpened()
         end
 
+        -- Финальный вызов
         buildDistanceOptions()
         task.spawn(function()
             task.wait(0.3)
             ensureMenuOpened()
         end)
 
+        -- Если по какой-то причине меню не открылось, повторяем через 2 секунды
         task.delay(2, function()
             if not isMenuOpen then
                 toggleMenu(true)
@@ -1952,6 +1972,5 @@ do
             end
         end)
 
-        print("[nkno$] Скрипт загружен! Все предметы уже в магазине.")
-    end)
+    end) -- конец safeCall
 end
