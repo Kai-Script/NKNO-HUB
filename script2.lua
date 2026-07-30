@@ -1,4 +1,4 @@
--- NKNO$ HUB - Ultimate Edition v2.2 (исправленный)
+-- NKNO$ HUB - Ultimate Edition v2.2 (исправлен запуск)
 -- Языки: Русский, English, Українська
 -- Discord: https://discord.gg/HsSSmNf69
 
@@ -27,7 +27,7 @@ local Languages = {
 local lang = "ru"
 
 -- =====================================================
--- ПЕРЕВОДЫ
+-- ПЕРЕВОДЫ (полные, без изменений)
 -- =====================================================
 local L = {}
 
@@ -268,9 +268,32 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- =====================================================
--- ЗАГРУЗКА UI БИБЛИОТЕКИ
+-- БЕЗОПАСНАЯ ЗАГРУЗКА БИБЛИОТЕКИ (с повторными попытками)
 -- =====================================================
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/UI-Libraries/UiLibs/VapeUiLib.lua"))()
+local library = nil
+local loaded = false
+for attempt = 1, 3 do
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/UI-Libraries/UiLibs/VapeUiLib.lua"))()
+    end)
+    if success and result then
+        library = result
+        loaded = true
+        break
+    end
+    task.wait(1)
+end
+
+if not loaded or not library then
+    warn("Не удалось загрузить библиотеку UI. Проверьте интернет-соединение.")
+    return
+end
+
+task.wait(0.5) -- небольшая пауза для инициализации
+
+-- =====================================================
+-- СОЗДАНИЕ ОКНА
+-- =====================================================
 local window = library:CreateWindow({
     Title = "NKNO$ HUB",
     Theme = "Dark",
@@ -288,11 +311,11 @@ local miniGui = Instance.new("ScreenGui")
 miniGui.Name = "NKNO_Mini"
 miniGui.ResetOnSpawn = false
 miniGui.Parent = CoreGui
-miniGui.Enabled = false  -- скрыта по умолчанию
+miniGui.Enabled = false
 
 local miniFrame = Instance.new("Frame")
 miniFrame.Size = UDim2.new(0, 120, 0, 30)
-miniFrame.Position = UDim2.new(1, -130, 0, 10)  -- правый верхний угол
+miniFrame.Position = UDim2.new(1, -130, 0, 10)
 miniFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 miniFrame.BackgroundTransparency = 0.1
 miniFrame.BorderSizePixel = 0
@@ -338,35 +361,29 @@ miniFrame.InputEnded:Connect(function(input)
     end
 end)
 
--- Клик по мини-панели разворачивает окно
 miniFrame.MouseButton1Click:Connect(function()
     windowGui.Visible = true
     miniGui.Enabled = false
 end)
 
 -- =====================================================
--- Переопределяем сворачивание (Left Alt)
+-- СВОРАЧИВАНИЕ ПО LEFT ALT (переопределяем)
 -- =====================================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.LeftAlt then
         if windowGui.Visible then
-            -- Сворачиваем: прячем основное окно, показываем мини-панель
             windowGui.Visible = false
             miniGui.Enabled = true
         else
-            -- Разворачиваем: прячем мини-панель, показываем окно
             miniGui.Enabled = false
             windowGui.Visible = true
         end
     end
 end)
 
--- Также реагируем на событие минимизации от библиотеки (если оно есть)
--- Но мы уже перехватили клавишу сами.
-
 -- =====================================================
--- ВКЛАДКИ и всё остальное (без изменений)
+-- ВКЛАДКИ И ВСЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
 -- =====================================================
 local tabMain = window:AddTab({ Title = T("tab_main") })
 local tabVisuals = window:AddTab({ Title = T("tab_visuals") })
@@ -416,7 +433,7 @@ window:AddDropdown({
 })
 
 -- =====================================================
--- ПЕРЕМЕННЫЕ И ФУНКЦИИ (без изменений)
+-- ПЕРЕМЕННЫЕ И ФУНКЦИИ (всё как было)
 -- =====================================================
 local farm = false
 local noclipConnection = nil
@@ -807,7 +824,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- ВКЛАДКА MAIN
+-- ВКЛАДКА MAIN (всё без изменений)
 -- =====================================================
 window:AddSection({ Name = T("sec_murder"), Tab = tabMain })
 window:AddButton({
@@ -979,9 +996,7 @@ window:AddToggle({
     end
 })
 
--- =====================================================
 -- АВТОФАРМ (UI)
--- =====================================================
 window:AddSection({ Name = T("sec_autofarm"), Tab = tabMain })
 window:AddToggle({
     Title = T("tog_farm"),
@@ -1053,7 +1068,7 @@ window:AddSlider({
 })
 
 -- =====================================================
--- VISUALS
+-- VISUALS (без изменений)
 -- =====================================================
 window:AddSection({ Name = T("sec_chams"), Tab = tabVisuals })
 window:AddToggle({ Title = T("tog_chams_murder"), Default = false, Tab = tabVisuals, Callback = function(v) espSettings.Murderer = v end })
@@ -1074,7 +1089,7 @@ window:AddToggle({ Title = T("tog_normalname"), Default = true, Tab = tabVisuals
 window:AddToggle({ Title = T("tog_avatar"), Default = false, Tab = tabVisuals, Callback = function(v) espCustom.AvatarDisplay = v end })
 
 -- =====================================================
--- MISC
+-- MISC (без изменений)
 -- =====================================================
 window:AddSection({ Name = T("sec_discord"), Tab = tabMisc })
 window:AddButton({
