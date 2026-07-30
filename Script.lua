@@ -187,6 +187,18 @@ do
             if (char and char:FindFirstChild("HumanoidRootPart")) then char.HumanoidRootPart.CanCollide=true;end
         end
     end
+    -- ===== ДОБАВЛЕНО: функция ожидания респавна =====
+    local function waitForRespawn()
+        local player = game.Players.LocalPlayer
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") and player.Character.Humanoid.Health > 0 then
+            return player.Character -- уже жив
+        end
+        print("⏳ Персонаж мёртв, ждём респавна...")
+        local char = player.CharacterAdded:Wait()
+        print("✅ Респавн выполнен!")
+        return char
+    end
+    -- ===== КОНЕЦ ДОБАВЛЕННОГО БЛОКА =====
     local function flyTo(targetPos)
         local char=LocalPlayer.Character;
         if ( not char or  not char:FindFirstChild("HumanoidRootPart")) then return false;end
@@ -196,7 +208,20 @@ do
         bv.Parent=hrp;
         local reached=false;
         while autoFarmActive and  not reached  do
-            if ( not char or  not char:FindFirstChild("HumanoidRootPart")) then break;end
+            -- ===== ДОБАВЛЕНО: проверка жизни внутри цикла =====
+            local charNow = LocalPlayer.Character
+            if not charNow or not charNow:FindFirstChildOfClass("Humanoid") or charNow.Humanoid.Health <= 0 then
+                waitForRespawn()
+                -- после респавна обновляем hrp
+                charNow = LocalPlayer.Character
+                if charNow and charNow:FindFirstChild("HumanoidRootPart") then
+                    hrp = charNow.HumanoidRootPart
+                    bv.Parent = hrp
+                else
+                    break
+                end
+            end
+            if ( not charNow or  not charNow:FindFirstChild("HumanoidRootPart")) then break;end
             local distance=(hrp.Position-targetPos).Magnitude;
             if (distance<=6) then
                 reached=true;
@@ -227,6 +252,12 @@ do
                     end
                     for i,waypoint in ipairs(currentWaypoints) do
                         if  not autoFarmActive then break;end
+                        -- ===== ДОБАВЛЕНО: перед каждым перемещением проверяем жизнь =====
+                        local char = LocalPlayer.Character
+                        if not char or not char:FindFirstChildOfClass("Humanoid") or char.Humanoid.Health <= 0 then
+                            waitForRespawn()
+                            setNoClip(true) -- заново включаем после респавна
+                        end
                         flyTo(waypoint);
                         if ((currentWorld=="Bbnos World") and (currentDistance=="+50k cash") and (i== #currentWaypoints)) then
                             task.wait(1);
