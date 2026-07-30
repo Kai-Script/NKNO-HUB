@@ -1,5 +1,5 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.4 FINAL (исправлен + скорость фарма)
+-- NKNO$ HUB ULTIMATE v5.4 FINAL (выбор языка + обновление 31 авг)
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -20,18 +20,83 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- Версия
+-- Версия и дата
 local SCRIPT_VERSION = "5.4 FINAL"
+local UPDATE_DATE = "31 августа"
 
--- === ИНИЦИАЛИЗАЦИЯ ВСЕХ НАСТРОЕК ПО УМОЛЧАНИЮ ===
+-- === ИНИЦИАЛИЗАЦИЯ НАСТРОЕК С ВЫБОРОМ ЯЗЫКА ===
 if not getgenv().NKNO then getgenv().NKNO = {} end
 local NKNO = getgenv().NKNO
 
-NKNO.Language = NKNO.Language or "ru"
+-- Если язык не задан, показать выбор
+if not NKNO.Language then
+    local choiceGui = Instance.new("ScreenGui")
+    choiceGui.Name = "LanguageChooser"
+    choiceGui.Parent = CoreGui
+
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(0, 400, 0, 150)
+    bg.Position = UDim2.new(0.5, -200, 0.5, -75)
+    bg.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+    bg.BorderSizePixel = 0
+    bg.Parent = choiceGui
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 12)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Position = UDim2.new(0, 0, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "Выберите язык / Choose language"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 18
+    title.Font = Enum.Font.GothamBold
+    title.Parent = bg
+
+    local btnRu = Instance.new("TextButton")
+    btnRu.Size = UDim2.new(0, 120, 0, 40)
+    btnRu.Position = UDim2.new(0.25, -60, 0.7, -20)
+    btnRu.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    btnRu.Text = "Русский"
+    btnRu.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnRu.TextSize = 16
+    btnRu.Font = Enum.Font.GothamBold
+    btnRu.Parent = bg
+    Instance.new("UICorner", btnRu).CornerRadius = UDim.new(0, 8)
+
+    local btnEn = Instance.new("TextButton")
+    btnEn.Size = UDim2.new(0, 120, 0, 40)
+    btnEn.Position = UDim2.new(0.75, -60, 0.7, -20)
+    btnEn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    btnEn.Text = "English"
+    btnEn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btnEn.TextSize = 16
+    btnEn.Font = Enum.Font.GothamBold
+    btnEn.Parent = bg
+    Instance.new("UICorner", btnEn).CornerRadius = UDim.new(0, 8)
+
+    local selected = false
+    btnRu.MouseButton1Click:Connect(function()
+        NKNO.Language = "ru"
+        selected = true
+        choiceGui:Destroy()
+    end)
+    btnEn.MouseButton1Click:Connect(function()
+        NKNO.Language = "en"
+        selected = true
+        choiceGui:Destroy()
+    end)
+
+    repeat task.wait() until selected
+end
+
+local lang = NKNO.Language
+local function T(ru, en) return lang == "ru" and ru or en end
+
+-- === ОСТАЛЬНЫЕ НАСТРОЙКИ ПО УМОЛЧАНИЮ ===
 NKNO.FarmCoins = NKNO.FarmCoins or false
 NKNO.FarmUnderMap = NKNO.FarmUnderMap or false
 NKNO.FarmMode = NKNO.FarmMode or "Nearest"
-NKNO.FarmSpeed = NKNO.FarmSpeed or 23          -- базовая скорость (чем выше, тем быстрее)
+NKNO.FarmSpeed = NKNO.FarmSpeed or 20
 NKNO.AutoGrabGun = NKNO.AutoGrabGun or false
 NKNO.ESP = NKNO.ESP or {}
 NKNO.ESP.Murderer = NKNO.ESP.Murderer or false
@@ -48,6 +113,7 @@ NKNO.FOVValue = NKNO.FOVValue or 70
 NKNO.GodMode = NKNO.GodMode or false
 NKNO.AntiFling = NKNO.AntiFling or false
 NKNO.AntiSheriff = NKNO.AntiSheriff or false
+NKNO.AntiWater = NKNO.AntiWater or true
 NKNO.UnderMap = NKNO.UnderMap or false
 NKNO.AutoRespawn = NKNO.AutoRespawn or false
 NKNO.CustomWalkSpeed = NKNO.CustomWalkSpeed or false
@@ -62,12 +128,8 @@ NKNO.SelectedPlayerName = NKNO.SelectedPlayerName or ""
 NKNO.Flinging = NKNO.Flinging or false
 NKNO.DanceID = NKNO.DanceID or "507771464"
 
-local lang = NKNO.Language
-
-local function T(ru, en) return lang == "ru" and ru or en end
-
 -- ============================================================
--- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (улучшенные)
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 -- ============================================================
 
 local function findMap()
@@ -110,7 +172,7 @@ local function findSheriff()
 end
 
 -- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (с исправлениями)
+-- ОСНОВНЫЕ ФУНКЦИИ
 -- ============================================================
 
 local function applyWalkSpeed()
@@ -182,8 +244,9 @@ local function stopDance()
     end
 end
 
--- Флинг (агрессивный) с защитой от ошибок
+-- Флинг (агрессивный)
 local function SkidFling(plr)
+    if not plr or not plr.Parent then return end
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -314,7 +377,7 @@ local function returnFromUnderMap()
     end
 end
 
--- ESP (исправлен)
+-- ESP
 local espHighlights = {}
 local espNames = {}
 local function updateESP()
@@ -331,7 +394,6 @@ local function updateESP()
             else color = Color3.fromRGB(255,255,255) end
 
             if alive and show and plr.Character then
-                -- Highlight
                 local highlight = espHighlights[plr]
                 if not highlight then
                     highlight = Instance.new("Highlight")
@@ -346,7 +408,6 @@ local function updateESP()
                 highlight.OutlineColor = color
                 highlight.Adornee = plr.Character
 
-                -- Имя
                 local head = plr.Character:FindFirstChild("Head")
                 if head then
                     local gui = espNames[plr]
@@ -376,7 +437,6 @@ local function updateESP()
                         label.Text = name
                         label.TextColor3 = color
                     end
-                    -- Box2D
                     local root = plr.Character:FindFirstChild("HumanoidRootPart")
                     if root and NKNO.ESP.Box2D then
                         local box = root:FindFirstChild("NKNO_Box")
@@ -504,9 +564,9 @@ local function stopAntiFling()
     end
 end
 
--- Анти-шериф
+-- Анти-шериф + защита от воды
 local function antiSheriff()
-    if not NKNO.AntiSheriff then return end
+    if not NKNO.AntiSheriff and not NKNO.AntiWater then return end
     for _, bullet in pairs(Workspace:GetDescendants()) do
         if bullet:IsA("BasePart") and bullet.Name:lower():find("bullet") then
             bullet.CanCollide = false
@@ -516,7 +576,7 @@ local function antiSheriff()
     if damageRemote then
         local oldFire = damageRemote.FireServer
         damageRemote.FireServer = function(self, target, ...)
-            if target == LocalPlayer and NKNO.AntiSheriff then
+            if target == LocalPlayer and (NKNO.AntiSheriff or NKNO.AntiWater) then
                 return
             end
             return oldFire(self, target, ...)
@@ -588,13 +648,14 @@ local function spawnWeapon(weaponId)
 end
 
 -- ============================================================
--- ФАРМ МОНЕТ (с регулировкой скорости)
+-- ФАРМ МОНЕТ (лежание + защита от воды)
 -- ============================================================
 local farming = false
 local farmTween = nil
 local farmConnection = nil
 local savedCollision = {}
 local underMapModeForFarm = false
+local coinCollected = false
 
 local function getCoinContainer()
     for _, child in pairs(Workspace:GetChildren()) do
@@ -663,8 +724,8 @@ local function startFarming()
             if part:IsA("BasePart") then part.CanCollide = false end
         end
     else
-        root.CFrame = root.CFrame - Vector3.new(0,2.5,0)
-        root.CFrame = root.CFrame * CFrame.Angles(math.rad(90),0,0)
+        -- Лежание на боку: сдвиг вниз и поворот на 90° вокруг оси Z
+        root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0) * CFrame.Angles(0, 0, math.rad(90))
     end
     if hum then
         hum.PlatformStand = true
@@ -704,8 +765,8 @@ local function stopFarming()
                 end
                 underMapModeForFarm = false
             else
-                root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90),0,0)
-                root.CFrame = root.CFrame + Vector3.new(0,2.5,0)
+                -- Возврат в нормальное положение
+                root.CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(-90)) + Vector3.new(0, 2.5, 0)
             end
         end
         if hum then
@@ -717,14 +778,33 @@ local function stopFarming()
     savedCollision = {}
 end
 
--- Предупреждение о высокой скорости фарма
+local function teleportToSpawn()
+    if not LocalPlayer.Character then return false end
+    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    local map = findMap()
+    if map and map:FindFirstChild("Spawns") then
+        local spawns = map.Spawns:GetChildren()
+        if #spawns > 0 then
+            local spawn = spawns[math.random(1, #spawns)]
+            if spawn:IsA("BasePart") then
+                root.CFrame = spawn.CFrame + Vector3.new(0, 5, 0)
+                root.Velocity = Vector3.new(0,0,0)
+                root.RotVelocity = Vector3.new(0,0,0)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 local function warnHighSpeed()
     if NKNO.FarmSpeed > 40 then
         Notify("⚠️ Внимание!", T("Высокая скорость фарма может вызвать кик античита. Рекомендуем ≤ 40.", "High farm speed may trigger anti-cheat kick. Recommend ≤ 40."), 5)
     end
 end
 
-coinCollectedRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes.Gameplay:FindFirstChild("CoinCollected")
+local coinCollectedRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes.Gameplay:FindFirstChild("CoinCollected")
 if coinCollectedRemote then
     coinCollectedRemote.OnClientEvent:Connect(function(plr, current, total)
         if plr == LocalPlayer then
@@ -763,6 +843,13 @@ task.spawn(function()
                     local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
                     root.Velocity = Vector3.new(0,0,0)
                     root.RotVelocity = Vector3.new(0,0,0)
+                    
+                    if NKNO.AntiWater and root.Position.Y < -10 then
+                        if teleportToSpawn() then
+                            task.wait(0.2)
+                        end
+                    end
+                    
                     local offset = Vector3.new()
                     local targetPos
                     if NKNO.FarmUnderMap then
@@ -770,7 +857,7 @@ task.spawn(function()
                     else
                         targetPos = coin.Position - Vector3.new(0,2.5,0) + offset
                     end
-                    local targetCF = CFrame.new(targetPos) * (NKNO.FarmUnderMap and CFrame.new() or CFrame.Angles(math.rad(90),0,0))
+                    local targetCF = CFrame.new(targetPos) * (NKNO.FarmUnderMap and CFrame.new() or CFrame.Angles(0, 0, math.rad(90)))
 
                     if not farmConnection then
                         farmConnection = RunService.Stepped:Connect(function()
@@ -782,8 +869,7 @@ task.spawn(function()
                         end)
                     end
 
-                    -- Используем настраиваемую скорость
-                    local speed = NKNO.FarmSpeed or 23
+                    local speed = NKNO.FarmSpeed or 20
                     local duration = math.min(dist / speed, 2)
                     farmTween = TweenService:Create(root, TweenInfo.new(duration, Enum.EasingStyle.Linear), { CFrame = targetCF })
                     farmTween:Play()
@@ -794,6 +880,9 @@ task.spawn(function()
                             root.Velocity = Vector3.new(0,0,0)
                             root.RotVelocity = Vector3.new(0,0,0)
                             if hum then hum.PlatformStand = true end
+                            if NKNO.AntiWater and root.Position.Y < -10 then
+                                teleportToSpawn()
+                            end
                         else
                             if conn then conn:Disconnect() end
                         end
@@ -825,7 +914,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- НОВЫЙ GUI (УПРОЩЁННЫЙ С ВКЛАДКАМИ) – без изменений
+-- GUI (полный интерфейс)
 -- ============================================================
 
 if CoreGui:FindFirstChild("nkno$ hub") then CoreGui["nkno$ hub"]:Destroy() end
@@ -1461,7 +1550,6 @@ local function createDropdown(parent, title, options, default, callback)
         end
     end)
 
-    -- Обновление списка при добавлении игроков
     Players.PlayerAdded:Connect(function()
         local newNames = {}
         for _, plr in pairs(Players:GetPlayers()) do
@@ -1508,12 +1596,9 @@ end)
 createDropdown(afScroll, T("Режим сбора", "Collect Mode"), {"Nearest", "Random"}, NKNO.FarmMode, function(val)
     NKNO.FarmMode = val
 end)
--- НОВЫЙ СЛАЙДЕР СКОРОСТИ ФАРМА
 createSlider(afScroll, T("Скорость фарма", "Farm Speed"), T("Чем выше, тем быстрее (осторожно, античит)", "Higher = faster (anti-cheat risk)"), 10, 100, NKNO.FarmSpeed, false, function(val)
     NKNO.FarmSpeed = val
-    if val > 40 then
-        warnHighSpeed()
-    end
+    if val > 40 then warnHighSpeed() end
 end)
 createSection(afScroll, T("Авто-граб", "Auto Grab"))
 createToggle(afScroll, T("Авто-граб пистолета", "Auto Grab Gun"), T("Забрать пистолет, если шериф умер", "Grab gun when sheriff dies"), NKNO.AutoGrabGun, function(val)
@@ -1684,6 +1769,10 @@ createToggle(setScroll, T("Anti Sheriff", "Anti Sheriff"), T("Защита от 
     NKNO.AntiSheriff = val
     if val then antiSheriff() end
 end)
+createToggle(setScroll, T("Защита от воды", "Anti Water"), T("Телепорт при падении в воду", "Teleport when falling into water"), NKNO.AntiWater, function(val)
+    NKNO.AntiWater = val
+    if val then antiSheriff() end
+end)
 createToggle(setScroll, T("Под картой (ручной)", "UnderMap Mode"), T("Уйти под карту", "Go under map"), NKNO.UnderMap, function(val)
     NKNO.UnderMap = val
     if val then goUnderMap() else returnFromUnderMap() end
@@ -1816,7 +1905,6 @@ local tabTarget = createTabButton(T("Target", "Target"), TargetPage)
 local tabFling = createTabButton(T("Fling", "Fling"), FlingPage)
 local tabSettings = createTabButton(T("Settings", "Settings"), SettingsPage)
 
--- По умолчанию выбрана AutoFarm
 tabAutoFarm.BackgroundColor3 = accentColor
 tabAutoFarm.TextColor3 = Color3.fromRGB(255,255,255)
 AutoFarmPage.Visible = true
@@ -1825,7 +1913,6 @@ AutoFarmPage.Visible = true
 -- ЗАПУСК И ОБРАБОТЧИКИ
 -- ============================================================
 
--- Обновление ESP в фоне
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
@@ -1835,7 +1922,6 @@ task.spawn(function()
     end
 end)
 
--- Обработчики смены персонажа
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     applyWalkSpeed()
@@ -1853,7 +1939,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     updateUserInfo()
 end)
 
--- Открытие по LeftAlt
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.LeftAlt then
@@ -1861,36 +1946,35 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Если AntiFling включён при старте
 if NKNO.AntiFling then startAntiFling() end
 
--- Уведомления
+-- Уведомление с датой обновления
 local function Notify(title, desc, duration)
     duration = duration or 3
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0,340,0,70)
-    frame.Position = UDim2.new(0.5,-170,0.85,0)
-    frame.BackgroundColor3 = Color3.fromRGB(20,20,28)
+    frame.Size = UDim2.new(0, 340, 0, 70)
+    frame.Position = UDim2.new(0.5, -170, 0.85, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
     frame.BorderSizePixel = 0
     frame.BackgroundTransparency = 0.3
     frame.Parent = ScreenGui
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1,-20,0,28)
-    titleLabel.Position = UDim2.new(0,10,0,0)
+    titleLabel.Size = UDim2.new(1, -20, 0, 28)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.fromRGB(255,215,0)
+    titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
     titleLabel.TextSize = 17
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = frame
     local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1,-20,0,30)
-    descLabel.Position = UDim2.new(0,10,0,28)
+    descLabel.Size = UDim2.new(1, -20, 0, 30)
+    descLabel.Position = UDim2.new(0, 10, 0, 28)
     descLabel.BackgroundTransparency = 1
     descLabel.Text = desc
-    descLabel.TextColor3 = Color3.fromRGB(200,200,210)
+    descLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
     descLabel.TextSize = 13
     descLabel.Font = Enum.Font.Gotham
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1902,6 +1986,13 @@ local function Notify(title, desc, duration)
     frame:Destroy()
 end
 
-Notify("NKNO$ HUB " .. SCRIPT_VERSION, T("Нажми Left Alt для открытия меню", "Press Left Alt to open menu"), 4)
+Notify(
+    "NKNO$ HUB " .. SCRIPT_VERSION,
+    T(
+        "Обновлён " .. UPDATE_DATE .. " | Нажми Left Alt для открытия меню",
+        "Updated " .. UPDATE_DATE .. " | Press Left Alt to open menu"
+    ),
+    5
+)
 
 print("NKNO$ HUB v5.4 FINAL загружен. Все функции активны.")
