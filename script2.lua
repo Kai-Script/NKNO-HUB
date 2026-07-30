@@ -1,685 +1,557 @@
--- ============================================================
--- NKNO$ HUB ULTIMATE v5.5 (с кнопкой включения таргета)
--- ============================================================
+-- Упрощённое меню "nkno$ hub" (только интерфейс)
+do
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
 
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Workspace = game:GetService("Workspace")
-local Stats = game:GetService("Stats")
-local CoreGui = game:GetService("CoreGui")
-local GuiService = game:GetService("GuiService")
-local CollectionService = game:GetService("CollectionService")
-local Debris = game:GetService("Debris")
-
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
-
-local SCRIPT_VERSION = "5.5"
-
-if not getgenv().NKNO then getgenv().NKNO = {} end
-local lang = getgenv().NKNO.Language or "ru"
-
-local function T(ru, en) return lang == "ru" and ru or en end
-
--- ============================================================
--- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (без изменений)
--- ============================================================
-
-local function findMap()
-    for _, child in pairs(Workspace:GetChildren()) do
-        if child:GetAttribute("MapID") then return child end
-    end
-    return nil
-end
-
-local function getPlayerData()
-    local remote = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
-    if not remote then return nil end
-    local success, data = pcall(function() return remote:InvokeServer() end)
-    return success and data or nil
-end
-
-local function getPing()
-    return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-end
-
-local function findMurderer()
-    local data = getPlayerData()
-    if not data then return nil end
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr:GetAttribute("Alive") == true then
-            local info = data[plr.Name]
-            if info and info.Role == "Murderer" then return plr end
-        end
-    end
-    return nil
-end
-
-local function findSheriff()
-    local data = getPlayerData()
-    if not data then return nil end
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr:GetAttribute("Alive") == true then
-            local info = data[plr.Name]
-            if info and info.Role == "Sheriff" then return plr end
-        end
-    end
-    return nil
-end
-
--- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (скопированы из v5.4, без изменений)
--- ============================================================
-
-local function applyWalkSpeed()
-    if getgenv().NKNO.CustomWalkSpeed and LocalPlayer.Character then
-        local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if h then h.WalkSpeed = getgenv().NKNO.WalkSpeedValue end
-    end
-end
-local function applyJumpPower()
-    if getgenv().NKNO.CustomJumpPower and LocalPlayer.Character then
-        local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if h then h.JumpPower = getgenv().NKNO.JumpPowerValue end
-    end
-end
-local function applyFOV()
-    if getgenv().NKNO.CustomFOV and Workspace.CurrentCamera then
-        Workspace.CurrentCamera.FieldOfView = getgenv().NKNO.FOVValue
-    end
-end
-local function applyForceField()
-    if not LocalPlayer.Character then return end
-    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("MeshPart") then
-            part.Material = Enum.Material.ForceField
-        end
-    end
-end
-local function restoreMaterial()
-    if not LocalPlayer.Character then return end
-    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") or part:IsA("MeshPart") then
-            part.Material = Enum.Material.Plastic
-        end
-    end
-end
-
-local danceAnim = nil
-local function playDance()
-    if not LocalPlayer.Character then return end
-    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local animator = hum:FindFirstChildOfClass("Animator")
-    if not animator then
-        animator = Instance.new("Animator")
-        animator.Parent = hum
-    end
-    if danceAnim then
-        pcall(function() danceAnim:Stop() end)
-        pcall(function() danceAnim:Destroy() end)
-        danceAnim = nil
-    end
-    task.wait(0.1)
-    local anim = Instance.new("Animation")
-    anim.AnimationId = "rbxassetid://" .. getgenv().NKNO.DanceID
-    pcall(function()
-        danceAnim = animator:LoadAnimation(anim)
-        danceAnim.Looped = true
-        danceAnim.Priority = Enum.AnimationPriority.Action
-        danceAnim:Play(0.1,1,1)
-    end)
-    anim:Destroy()
-end
-local function stopDance()
-    if danceAnim then
-        pcall(function() danceAnim:Stop() end)
-        pcall(function() danceAnim:Destroy() end)
-        danceAnim = nil
-    end
-end
-
-local function SkidFling(plr)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local root = hum.RootPart
-    if not root then return end
-    local targetChar = plr.Character
-    if not targetChar then return end
-    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-    local targetRoot = targetHum and targetHum.RootPart
-    if not targetRoot then return end
-    if targetHum and targetHum.Sit then return end
-
-    Workspace.FallenPartsDestroyHeight = 0/0
-    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
+    -- Если GUI уже существует, удаляем
+    if game.CoreGui:FindFirstChild("nkno$ hub") then
+        game.CoreGui["nkno$ hub"]:Destroy()
     end
 
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-    bv.P = 9e9
-    bv.Parent = root
+    -- Язык и локализация (оставлено для выбора)
+    local lang = "EN"
+    local Locales = {
+        RU = {
+            ChooseLang = "Выберите язык",
+            ThemeTitle = "Цветовая палитра интерфейса",
+            WorldLabel = "Мир: [ %s ]",
+            AutoFarmTab = "Авто Фарм",
+            ThemeTab = "Темы",
+            MovementTab = "Движение",
+            AdminTab = "Админка",
+            PointPrefix = "ТОЧКА",
+            Themes = {"Синий Космос", "Фиолетовый Кибер", "Кислотный Лайм", "Пылкая Роза", "Янтарный Неон", "Белый Фантом"},
+        },
+        EN = {
+            ChooseLang = "Choose language",
+            ThemeTitle = "Interface Color Palette",
+            WorldLabel = "World: [ %s ]",
+            AutoFarmTab = "Auto Farm",
+            ThemeTab = "Themes",
+            MovementTab = "Movement",
+            AdminTab = "Admin",
+            PointPrefix = "POINT",
+            Themes = {"Blue Space", "Purple Cyber", "Acid Lime", "Fiery Rose", "Amber Neon", "White Phantom"},
+        }
+    }
+    local function L(key) return Locales[lang][key] end
 
-    local startTime = tick()
-    while getgenv().NKNO.Flinging and tick() - startTime < 4 do
-        local targetPos = targetRoot.Position
-        local dir = (targetPos - root.Position).Unit
-        for i = 1, 10 do
-            local offset = Vector3.new(math.random(-20,20), math.random(5,30), math.random(-20,20))
-            root.CFrame = CFrame.new(targetPos + offset)
-            root.Velocity = dir * 9e7 + Vector3.new(0, 5e6, 0)
-            bv.Velocity = dir * 9e7 + Vector3.new(0, 5e6, 0)
-            task.wait(0.01)
-        end
-        for i = 1, 5 do
-            root.CFrame = CFrame.new(targetPos + dir * (5 + i*2))
-            root.Velocity = dir * 9e7
-            bv.Velocity = dir * 9e7
-            task.wait(0.01)
-        end
-        task.wait()
-    end
+    -- Глобальные переменные для интерфейса
+    local accentColor = Color3.fromRGB(0, 150, 255)
+    local isMinimized = false
+    local isMenuOpen = false
 
-    bv:Destroy()
-    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-    Workspace.FallenPartsDestroyHeight = getgenv().FPDH or Workspace.FallenPartsDestroyHeight
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
-        end
-    end
-    root.Velocity = Vector3.new(0,0,0)
-    root.RotVelocity = Vector3.new(0,0,0)
-end
+    -- Создание GUI
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "nkno$ hub"
+    ScreenGui.Parent = game:GetService("CoreGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local underMapConnection = nil
-local oldFallenHeight = Workspace.FallenPartsDestroyHeight
-local function goUnderMap()
-    if not LocalPlayer.Character then return end
-    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    oldFallenHeight = Workspace.FallenPartsDestroyHeight
-    Workspace.FallenPartsDestroyHeight = -1/0
-    local map = findMap()
-    local underY = -500
-    if map and map:FindFirstChild("Spawns") then
-        local total = Vector3.new()
-        local count = 0
-        for _, spawn in pairs(map.Spawns:GetChildren()) do
-            if spawn:IsA("BasePart") then
-                total = total + spawn.Position
-                count = count + 1
-            end
-        end
-        if count > 0 then
-            local center = total / count
-            underY = center.Y - 100
-        end
-    end
-    local targetCF = CFrame.new(root.Position.X, underY, root.Position.Z)
-    root.CFrame = targetCF
-    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") then part.CanCollide = false end
-    end
-    local bv = Instance.new("BodyVelocity")
-    bv.Parent = root
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.MaxForce = Vector3.new(9e9,9e9,9e9)
-    underMapConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().NKNO.UnderMap or not LocalPlayer.Character or not root then
-            if bv then bv:Destroy() end
-            if underMapConnection then underMapConnection:Disconnect() end
-            return
-        end
-        if (root.Position - targetCF.p).Magnitude > 5 then
-            root.CFrame = targetCF
-        end
-        root.Velocity = Vector3.new(0,0,0)
-        root.RotVelocity = Vector3.new(0,0,0)
-    end)
-end
-local function returnFromUnderMap()
-    if underMapConnection then
-        underMapConnection:Disconnect()
-        underMapConnection = nil
-    end
-    Workspace.FallenPartsDestroyHeight = oldFallenHeight
-    if LocalPlayer.Character then
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if root then
-            local bv = root:FindFirstChildOfClass("BodyVelocity")
-            if bv then bv:Destroy() end
-        end
-        local map = findMap()
-        if map and map:FindFirstChild("Spawns") then
-            local spawns = map.Spawns:GetChildren()
-            if #spawns > 0 then
-                local spawn = spawns[math.random(1,#spawns)]
-                if spawn:IsA("BasePart") then
-                    LocalPlayer.Character.HumanoidRootPart.CFrame = spawn.CFrame + Vector3.new(0,5,0)
-                end
-            end
-        end
-    end
-end
+    -- Тень
+    local ShadowFrame = Instance.new("Frame")
+    ShadowFrame.Name = "ShadowFrame"
+    ShadowFrame.Parent = ScreenGui
+    ShadowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ShadowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    ShadowFrame.Position = UDim2.new(0.5, 4, 0.5, 6)
+    ShadowFrame.Size = UDim2.new(0, 646, 0, 426)
+    ShadowFrame.BackgroundTransparency = 0.45
+    ShadowFrame.Visible = false
+    Instance.new("UICorner", ShadowFrame).CornerRadius = UDim.new(0, 16)
+    local ShadowScale = Instance.new("UIScale", ShadowFrame)
+    ShadowScale.Scale = 0.3
 
--- ESP (модифицирована для подсветки цели)
-local espHighlights = {}
-local espNames = {}
-local function updateESP()
-    local data = getPlayerData()
-    if not data then return end
-    local targetPlayer = getgenv().NKNO.SelectedPlayer
-    local targetEnabled = getgenv().NKNO.TargetEnabled or false
+    -- Основное окно
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Parent = ScreenGui
+    MainFrame.BackgroundColor3 = Color3.fromRGB(11, 11, 16)
+    MainFrame.BackgroundTransparency = 0.1
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    MainFrame.Size = UDim2.new(0, 640, 0, 420)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = false
+    MainFrame.Visible = false
+    Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
+    local BgImage = Instance.new("ImageLabel")
+    BgImage.Name = "BackgroundImage"
+    BgImage.Parent = MainFrame
+    BgImage.BackgroundTransparency = 1
+    BgImage.Size = UDim2.new(1, 0, 1, 0)
+    BgImage.Image = "rbxassetid://138913032331139"
+    BgImage.ScaleType = Enum.ScaleType.Crop
+    BgImage.ImageTransparency = 0.35
+    BgImage.ZIndex = 0
+    Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
+    local MainScale = Instance.new("UIScale", MainFrame)
+    MainScale.Scale = 0.3
+    local MainGradient = Instance.new("UIGradient")
+    MainGradient.Rotation = 90
+    MainGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0.5)})
+    MainGradient.Parent = MainFrame
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Parent = MainFrame
+    MainStroke.Color = Color3.fromRGB(35, 35, 50)
+    MainStroke.Thickness = 1.5
 
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr == LocalPlayer then continue end
-        local alive = plr:GetAttribute("Alive") == true
-        local role = "Innocent"
-        if data and data[plr.Name] then role = data[plr.Name].Role or "Innocent" end
-
-        -- Определяем, показывать ли ESP
-        local show = false
-        local color = Color3.fromRGB(255,255,255)
-
-        -- Если цель включена и это выбранный игрок - подсвечиваем зелёным
-        if targetEnabled and targetPlayer and plr == targetPlayer and alive then
-            show = true
-            color = Color3.fromRGB(0, 255, 100) -- ярко-зелёный
+    -- Функция открытия/закрытия меню
+    local function toggleMenu(forceState)
+        if forceState ~= nil then
+            isMenuOpen = forceState
         else
-            -- Иначе по настройкам ролей
-            show = getgenv().NKNO.ESP[role] or false
-            color = getgenv().NKNO.ESP["Color" .. role] or Color3.fromRGB(255,255,255)
+            isMenuOpen = not isMenuOpen
         end
-
-        if alive and show and plr.Character then
-            local highlight = espHighlights[plr]
-            if not highlight then
-                highlight = Instance.new("Highlight")
-                highlight.Name = "NKNO_ESP"
-                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                highlight.FillTransparency = 0.4
-                highlight.OutlineTransparency = 0
-                highlight.Parent = plr.Character
-                espHighlights[plr] = highlight
-            end
-            highlight.FillColor = color
-            highlight.OutlineColor = color
-            highlight.Adornee = plr.Character
-
-            local head = plr.Character:FindFirstChild("Head")
-            if head then
-                local gui = espNames[plr]
-                if not gui then
-                    gui = Instance.new("BillboardGui")
-                    gui.Name = "NKNO_Name"
-                    gui.AlwaysOnTop = true
-                    gui.Size = UDim2.new(0,200,0,50)
-                    gui.StudsOffset = Vector3.new(0,2.5,0)
-                    gui.Parent = head
-                    local label = Instance.new("TextLabel")
-                    label.Name = "Label"
-                    label.Size = UDim2.new(1,0,1,0)
-                    label.BackgroundTransparency = 1
-                    label.Text = ""
-                    label.TextColor3 = color
-                    label.TextSize = getgenv().NKNO.ESP.FontSize or 14
-                    label.Font = Enum.Font.GothamBold
-                    label.TextStrokeTransparency = 0.3
-                    label.TextStrokeColor3 = Color3.new(0,0,0)
-                    label.Parent = gui
-                    espNames[plr] = gui
-                end
-                local label = gui:FindFirstChild("Label")
-                if label then
-                    local name = getgenv().NKNO.ESP.DisplayName and plr.DisplayName or (getgenv().NKNO.ESP.NormalName and plr.Name or "")
-                    label.Text = name
-                    label.TextColor3 = color
-                end
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                if root and getgenv().NKNO.ESP.Box2D then
-                    local box = root:FindFirstChild("NKNO_Box")
-                    if not box then
-                        box = Instance.new("BillboardGui")
-                        box.Name = "NKNO_Box"
-                        box.AlwaysOnTop = true
-                        box.Size = UDim2.new(4,0,5,0)
-                        box.StudsOffset = Vector3.new(0,0,0)
-                        box.Parent = root
-                        local frame = Instance.new("Frame")
-                        frame.Name = "BoxFrame"
-                        frame.BackgroundTransparency = 1
-                        frame.Size = UDim2.new(1,0,1,0)
-                        frame.BorderSizePixel = 2
-                        frame.BorderColor3 = color
-                        frame.Parent = box
-                        local stroke = Instance.new("UIStroke")
-                        stroke.Thickness = 2
-                        stroke.Color = color
-                        stroke.Parent = frame
-                    end
-                else
-                    local box = root and root:FindFirstChild("NKNO_Box")
-                    if box then box:Destroy() end
-                end
-            end
+        if isMenuOpen then
+            MainFrame.Visible = true
+            if not isMinimized then ShadowFrame.Visible = true end
+            TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
+            TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
         else
-            if espHighlights[plr] then
-                espHighlights[plr]:Destroy()
-                espHighlights[plr] = nil
-            end
-            if espNames[plr] then
-                espNames[plr]:Destroy()
-                espNames[plr] = nil
-            end
-            if plr.Character then
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    local box = root:FindFirstChild("NKNO_Box")
-                    if box then box:Destroy() end
+            local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
+            TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+            closeTween:Play()
+            closeTween.Completed:Connect(function()
+                if not isMenuOpen then
+                    MainFrame.Visible = false
+                    ShadowFrame.Visible = false
                 end
-            end
-        end
-    end
-end
-
-local function autoGrabGun()
-    pcall(function()
-        if not getgenv().NKNO.AutoGrabGun then return end
-        if not LocalPlayer:GetAttribute("Alive") then return end
-        local map = findMap()
-        if not map then return end
-        local gunDrop = map:FindFirstChild("GunDrop")
-        if gunDrop then
-            gunDrop.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-        end
-    end)
-end
-
-local antiFlingConnection = nil
-local lastPosition = nil
-local function startAntiFling()
-    if antiFlingConnection then antiFlingConnection:Disconnect() end
-    antiFlingConnection = RunService.Heartbeat:Connect(function()
-        if not getgenv().NKNO.AntiFling then return end
-        if not LocalPlayer.Character then return end
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
-        
-        if lastPosition then
-            local dist = (root.Position - lastPosition).Magnitude
-            if dist > 10 then
-                root.Velocity = Vector3.new(0,0,0)
-                root.RotVelocity = Vector3.new(0,0,0)
-                root.CFrame = CFrame.new(lastPosition) * root.CFrame.Rotation
-                local bp = root:FindFirstChildOfClass("BodyPosition")
-                if not bp then
-                    bp = Instance.new("BodyPosition")
-                    bp.MaxForce = Vector3.new(9e9,9e9,9e9)
-                    bp.P = 10000
-                    bp.D = 1000
-                    bp.Parent = root
-                end
-                bp.Position = lastPosition
-                task.wait(0.1)
-                bp:Destroy()
-            end
-        end
-        lastPosition = root.Position
-        
-        for _, plr in pairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer and plr.Character then
-                for _, part in pairs(plr.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end)
-end
-local function stopAntiFling()
-    if antiFlingConnection then
-        antiFlingConnection:Disconnect()
-        antiFlingConnection = nil
-    end
-    lastPosition = nil
-    if LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-    end
-end
-
-local function antiSheriff()
-    if not getgenv().NKNO.AntiSheriff then return end
-    for _, bullet in pairs(Workspace:GetDescendants()) do
-        if bullet:IsA("BasePart") and bullet.Name:lower():find("bullet") then
-            bullet.CanCollide = false
-        end
-    end
-    local damageRemote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Gameplay") and ReplicatedStorage.Remotes.Gameplay:FindFirstChild("Damage")
-    if damageRemote then
-        local oldFire = damageRemote.FireServer
-        damageRemote.FireServer = function(self, target, ...)
-            if target == LocalPlayer and getgenv().NKNO.AntiSheriff then
-                return
-            end
-            return oldFire(self, target, ...)
-        end
-    end
-end
-
-local scamActive = false
-local scamTarget = nil
-local scamConnection = nil
-local function startScamTrade(target)
-    scamTarget = target
-    scamActive = true
-    if scamConnection then scamConnection:Disconnect() end
-    scamConnection = LocalPlayer.Character.ChildRemoved:Connect(function(child)
-        if not scamActive then return end
-        if not scamTarget or not scamTarget.Character then return end
-        if child:IsA("Tool") and child.Parent == LocalPlayer.Character then
-            task.wait(0.1)
-            local clone = child:Clone()
-            clone.Parent = scamTarget.Character
-            child.Parent = LocalPlayer.Character
-        end
-    end)
-end
-local function stopScamTrade()
-    scamActive = false
-    scamTarget = nil
-    if scamConnection then scamConnection:Disconnect() scamConnection = nil end
-end
-
-local function spawnWeapon(weaponId)
-    if not weaponId or weaponId == "" then return end
-    local model = nil
-    local function findModel(id)
-        for _, item in pairs(ReplicatedStorage:GetDescendants()) do
-            if item:IsA("Model") and item:FindFirstChild("Handle") then
-                if item.Name:lower():find(id:lower()) or item:GetAttribute("WeaponID") == id then
-                    return item
-                end
-            end
-        end
-        for _, item in pairs(Workspace:GetDescendants()) do
-            if item:IsA("Model") and item:FindFirstChild("Handle") then
-                if item.Name:lower():find(id:lower()) or item:GetAttribute("WeaponID") == id then
-                    return item
-                end
-            end
-        end
-        return nil
-    end
-    model = findModel(weaponId)
-    if not model then
-        local idNum = tonumber(weaponId)
-        if idNum then
-            local success, result = pcall(function()
-                return game:GetService("InsertService"):LoadAsset(idNum)
             end)
-            if success and result then model = result end
         end
     end
-    if model then
-        local clone = model:Clone()
-        clone.Parent = LocalPlayer.Character or LocalPlayer.Backpack
-        clone:SetPrimaryPartCFrame(LocalPlayer.Character.HumanoidRootPart.CFrame)
-    end
-end
 
--- Фарм монет (без изменений)
-local farming = false
-local farmTween = nil
-local farmConnection = nil
-local savedCollision = {}
-local underMapModeForFarm = false
+    -- Кнопка-переключатель (для открытия меню)
+    local ToggleWidget = Instance.new("Frame")
+    ToggleWidget.Name = "ToggleWidget"
+    ToggleWidget.Parent = ScreenGui
+    ToggleWidget.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    ToggleWidget.BackgroundTransparency = 0.15
+    ToggleWidget.Position = UDim2.new(0.5, -80, 0.08, 0)
+    ToggleWidget.Size = UDim2.new(0, 160, 0, 44)
+    ToggleWidget.Visible = false
+    Instance.new("UICorner", ToggleWidget).CornerRadius = UDim.new(0, 10)
+    local ToggleScale = Instance.new("UIScale", ToggleWidget)
+    ToggleScale.Scale = 0.85
+    local ToggleStroke = Instance.new("UIStroke")
+    ToggleStroke.Parent = ToggleWidget
+    ToggleStroke.Color = Color3.fromRGB(45, 45, 65)
+    ToggleStroke.Thickness = 1.5
+    local ToggleLabelText = Instance.new("TextLabel")
+    ToggleLabelText.Parent = ToggleWidget
+    ToggleLabelText.BackgroundTransparency = 1
+    ToggleLabelText.Size = UDim2.new(1, 0, 1, 0)
+    ToggleLabelText.Font = Enum.Font.GothamBold
+    ToggleLabelText.Text = "nkno$ hub"
+    ToggleLabelText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleLabelText.TextSize = 17
+    local ToggleGradient = Instance.new("UIGradient")
+    ToggleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
+    ToggleGradient.Parent = ToggleLabelText
 
-local function getCoinContainer()
-    for _, child in pairs(Workspace:GetChildren()) do
-        if child:FindFirstChild("CoinContainer") and child:IsA("Model") then
-            return child:FindFirstChild("CoinContainer")
+    -- Drag для ToggleWidget
+    local dragToggle, dragInputT, dragStartT, startPosT, dragStartTime
+    ToggleWidget.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragToggle = true
+            dragStartT = input.Position
+            startPosT = ToggleWidget.Position
+            dragStartTime = tick()
         end
-    end
-    return nil
-end
+    end)
+    ToggleWidget.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInputT = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInputT and dragToggle then
+            local delta = input.Position - dragStartT
+            ToggleWidget.Position = UDim2.new(startPosT.X.Scale, startPosT.X.Offset + delta.X, startPosT.Y.Scale, startPosT.Y.Offset + delta.Y)
+        end
+    end)
+    ToggleWidget.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragToggle = false
+            if tick() - dragStartTime < 0.25 then toggleMenu() end
+        end
+    end)
 
-local function findNearestCoin(container, useRandom)
-    if not container then return nil, math.huge end
-    local candidates = {}
-    for _, coin in pairs(container:GetChildren()) do
-        if coin:GetAttribute("CoinID") == "Coin" and coin:FindFirstChild("TouchInterest") and coin.Transparency == 1 then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local dist = (LocalPlayer.Character.HumanoidRootPart.Position - coin.Position).Magnitude
-                table.insert(candidates, { coin = coin, dist = dist })
+    -- Окно выбора языка (появляется при первом запуске)
+    local LangFrame = Instance.new("Frame")
+    LangFrame.Name = "LangFrame"
+    LangFrame.Parent = ScreenGui
+    LangFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+    LangFrame.BackgroundTransparency = 0.15
+    LangFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    LangFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    LangFrame.Size = UDim2.new(0, 380, 0, 230)
+    LangFrame.Visible = true
+    Instance.new("UICorner", LangFrame).CornerRadius = UDim.new(0, 14)
+    Instance.new("UIStroke", LangFrame).Color = Color3.fromRGB(45, 45, 60)
+    local LangScale = Instance.new("UIScale", LangFrame)
+    LangScale.Scale = 0.8
+    local LangTitle = Instance.new("TextLabel")
+    LangTitle.Parent = LangFrame
+    LangTitle.BackgroundTransparency = 1
+    LangTitle.Position = UDim2.new(0, 0, 0, 25)
+    LangTitle.Size = UDim2.new(1, 0, 0, 30)
+    LangTitle.Font = Enum.Font.GothamBold
+    LangTitle.Text = "Choose language / Выберите язык"
+    LangTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LangTitle.TextSize = 17
+
+    local function buildLangButton(emoji, text, posX, langCode)
+        local Btn = Instance.new("TextButton")
+        Btn.Parent = LangFrame
+        Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        Btn.BackgroundTransparency = 0.15
+        Btn.Position = UDim2.new(0, posX, 0, 75)
+        Btn.Size = UDim2.new(0, 110, 0, 110)
+        Btn.Text = ""
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+        Instance.new("UIStroke", Btn).Color = Color3.fromRGB(45, 45, 65)
+        local EmojiLabel = Instance.new("TextLabel")
+        EmojiLabel.Parent = Btn
+        EmojiLabel.BackgroundTransparency = 1
+        EmojiLabel.Size = UDim2.new(1, 0, 1, 0)
+        EmojiLabel.Font = Enum.Font.Gotham
+        EmojiLabel.Text = emoji
+        EmojiLabel.TextSize = 55
+        local TextLabel = Instance.new("TextLabel")
+        TextLabel.Parent = Btn
+        TextLabel.BackgroundTransparency = 1
+        TextLabel.Position = UDim2.new(0, 0, 1, 10)
+        TextLabel.Size = UDim2.new(1, 0, 0, 20)
+        TextLabel.Font = Enum.Font.GothamSemibold
+        TextLabel.Text = text
+        TextLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
+        TextLabel.TextSize = 15
+        Btn.MouseButton1Click:Connect(function()
+            lang = langCode
+            _G.ApplyLanguage()
+            TweenService:Create(LangScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0}):Play()
+            task.wait(0.2)
+            LangFrame.Visible = false
+            ToggleWidget.Visible = true
+            toggleMenu(true)
+        end)
+    end
+    buildLangButton("RU", "Русский", 65, "RU")
+    buildLangButton("EN", "English", 205, "EN")
+
+    -- Drag для MainFrame
+    local dragging, dragInput, dragStart, startPos
+    MainFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+        end
+    end)
+    MainFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            local targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            MainFrame.Position = targetPos
+            ShadowFrame.Position = UDim2.new(targetPos.X.Scale, targetPos.X.Offset + 4, targetPos.Y.Scale, targetPos.Y.Offset + 6)
+        end
+    end)
+    MainFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Верхние кнопки (закрыть, свернуть)
+    local TopControls = Instance.new("Frame")
+    TopControls.Parent = MainFrame
+    TopControls.BackgroundTransparency = 1
+    TopControls.Position = UDim2.new(1, -75, 0, 14)
+    TopControls.Size = UDim2.new(0, 65, 0, 26)
+    TopControls.ZIndex = 20
+
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Parent = TopControls
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(25, 18, 22)
+    CloseBtn.Position = UDim2.new(1, -26, 0, 0)
+    CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(250, 80, 80)
+    CloseBtn.TextSize = 18
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+    CloseBtn.MouseButton1Click:Connect(function()
+        toggleMenu(false)
+        task.wait(0.3)
+        ScreenGui:Destroy()
+    end)
+
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Parent = TopControls
+    MinBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
+    MinBtn.Position = UDim2.new(1, -58, 0, 0)
+    MinBtn.Size = UDim2.new(0, 26, 0, 26)
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.Text = "-"
+    MinBtn.TextColor3 = Color3.fromRGB(160, 160, 180)
+    MinBtn.TextSize = 18
+    Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+    MinBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 52)}):Play()
+            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 58)}):Play()
+            MinBtn.Text = "+"
+        else
+            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 640, 0, 420)}):Play()
+            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 646, 0, 426)}):Play()
+            MinBtn.Text = "-"
+        end
+    end)
+
+    -- Боковая панель (вкладки)
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Parent = MainFrame
+    Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    Sidebar.BackgroundTransparency = 0.1
+    Sidebar.Size = UDim2.new(0, 170, 1, 0)
+    Sidebar.BorderSizePixel = 0
+    Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 14)
+    local SidebarGradient = Instance.new("UIGradient")
+    SidebarGradient.Rotation = 90
+    SidebarGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.4)})
+    SidebarGradient.Parent = Sidebar
+    local SidebarFix = Instance.new("Frame")
+    SidebarFix.Parent = Sidebar
+    SidebarFix.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+    SidebarFix.BackgroundTransparency = 0.1
+    SidebarFix.Position = UDim2.new(1, -12, 0, 0)
+    SidebarFix.Size = UDim2.new(0, 12, 1, 0)
+    SidebarFix.BorderSizePixel = 0
+    local SidebarFixGradient = Instance.new("UIGradient")
+    SidebarFixGradient.Rotation = 90
+    SidebarFixGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.4)})
+    SidebarFixGradient.Parent = SidebarFix
+
+    local Title = Instance.new("TextLabel")
+    Title.Parent = Sidebar
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.new(0, 0, 0, 16)
+    Title.Size = UDim2.new(1, 0, 0, 26)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = "nkno$ hub"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 20
+    local TitleGradient = Instance.new("UIGradient")
+    TitleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
+    TitleGradient.Parent = Title
+
+    local SepLine = Instance.new("Frame")
+    SepLine.Parent = Sidebar
+    SepLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SepLine.Position = UDim2.new(0.1, 0, 0, 52)
+    SepLine.Size = UDim2.new(0.8, 0, 0, 1)
+    local SepGradient = Instance.new("UIGradient")
+    SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))})
+    SepGradient.Parent = SepLine
+
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Parent = Sidebar
+    TabContainer.BackgroundTransparency = 1
+    TabContainer.Position = UDim2.new(0, 12, 0, 72)
+    TabContainer.Size = UDim2.new(1, -24, 1, -85)
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.Parent = TabContainer
+    TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabListLayout.Padding = UDim.new(0, 10)
+
+    -- Область контента
+    local ContentArea = Instance.new("Frame")
+    ContentArea.Parent = MainFrame
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.ClipsDescendants = false
+    ContentArea.Position = UDim2.new(0, 185, 0, 15)
+    ContentArea.Size = UDim2.new(1, -200, 1, -30)
+
+    -- Страницы (только ThemePage будет содержать элементы)
+    local AutoFarmPage = Instance.new("Frame")
+    AutoFarmPage.Parent = ContentArea
+    AutoFarmPage.BackgroundTransparency = 1
+    AutoFarmPage.Size = UDim2.new(1, 0, 1, 0)
+    AutoFarmPage.Visible = true
+
+    local MovementPage = Instance.new("Frame")
+    MovementPage.Parent = ContentArea
+    MovementPage.BackgroundTransparency = 1
+    MovementPage.Size = UDim2.new(1, 0, 1, 0)
+    MovementPage.Visible = false
+
+    local ThemePage = Instance.new("Frame")
+    ThemePage.Parent = ContentArea
+    ThemePage.BackgroundTransparency = 1
+    ThemePage.Size = UDim2.new(1, 0, 1, 0)
+    ThemePage.Visible = false
+
+    local AdminPage = Instance.new("Frame")
+    AdminPage.Parent = ContentArea
+    AdminPage.BackgroundTransparency = 1
+    AdminPage.Size = UDim2.new(1, 0, 1, 0)
+    AdminPage.Visible = false
+
+    -- Создание кнопок вкладок
+    local tabButtons = {}
+    local function createTabButton(text, page)
+        local btn = Instance.new("TextButton")
+        btn.Parent = TabContainer
+        btn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+        btn.BackgroundTransparency = 0.15
+        btn.Size = UDim2.new(1, 0, 0, 40)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.Text = text
+        btn.TextColor3 = Color3.fromRGB(150, 150, 170)
+        btn.TextSize = 14
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+        btn.MouseButton1Click:Connect(function()
+            for _, b in ipairs(tabButtons) do
+                TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 28), TextColor3 = Color3.fromRGB(150, 150, 170)}):Play()
             end
-        end
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = accentColor, TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            AutoFarmPage.Visible = (page == AutoFarmPage)
+            MovementPage.Visible = (page == MovementPage)
+            ThemePage.Visible = (page == ThemePage)
+            AdminPage.Visible = (page == AdminPage)
+        end)
+        table.insert(tabButtons, btn)
+        return btn
     end
-    if #candidates == 0 then return nil, math.huge end
-    table.sort(candidates, function(a,b) return a.dist < b.dist end)
-    if useRandom and #candidates > 2 and getgenv().NKNO.FarmMode == "Random" then
-        local idx = math.random(1, math.min(3, #candidates))
-        return candidates[idx].coin, candidates[idx].dist
-    else
-        return candidates[1].coin, candidates[1].dist
-    end
-end
 
-local function startFarming()
-    if farming then return end
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-    if LocalPlayer:GetAttribute("Alive") ~= true then return end
-    local root = LocalPlayer.Character.HumanoidRootPart
-    local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-    savedCollision = {}
-    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            savedCollision[part] = { CanCollide = part.CanCollide, Massless = part.Massless }
-        end
-    end
-    if getgenv().NKNO.FarmUnderMap then
-        underMapModeForFarm = true
-        oldFallenHeight = Workspace.FallenPartsDestroyHeight
-        Workspace.FallenPartsDestroyHeight = -1/0
-        local map = findMap()
-        local underY = -500
-        if map and map:FindFirstChild("Spawns") then
-            local total = Vector3.new()
-            local count = 0
-            for _, spawn in pairs(map.Spawns:GetChildren()) do
-                if spawn:IsA("BasePart") then
-                    total = total + spawn.Position
-                    count = count + 1
+    local autoFarmTabBtn = createTabButton(L("AutoFarmTab"), AutoFarmPage)
+    local movementTabBtn = createTabButton(L("MovementTab"), MovementPage)
+    local themeTabBtn = createTabButton(L("ThemeTab"), ThemePage)
+    local adminTabBtn = createTabButton(L("AdminTab"), AdminPage)
+
+    -- По умолчанию выбрана вкладка AutoFarm (можно изменить на Theme)
+    autoFarmTabBtn.BackgroundColor3 = accentColor
+    autoFarmTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    -- Заполнение ThemePage (выбор цветовой темы)
+    local ThemeScroll = Instance.new("ScrollingFrame")
+    ThemeScroll.Parent = ThemePage
+    ThemeScroll.BackgroundTransparency = 1
+    ThemeScroll.Size = UDim2.new(1, 0, 1, 0)
+    ThemeScroll.ScrollBarThickness = 0
+    local ThemeList = Instance.new("UIListLayout")
+    ThemeList.Parent = ThemeScroll
+    ThemeList.SortOrder = Enum.SortOrder.LayoutOrder
+    ThemeList.Padding = UDim.new(0, 10)
+
+    local ThemeTitleLabel = Instance.new("TextLabel")
+    ThemeTitleLabel.Parent = ThemeScroll
+    ThemeTitleLabel.BackgroundTransparency = 1
+    ThemeTitleLabel.Size = UDim2.new(1, 0, 0, 32)
+    ThemeTitleLabel.Font = Enum.Font.GothamBold
+    ThemeTitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ThemeTitleLabel.TextSize = 16
+    ThemeTitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local ThemeRows = {}
+    local function createThemeRow(color1, color2)
+        local RowBtn = Instance.new("TextButton")
+        RowBtn.Parent = ThemeScroll
+        RowBtn.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
+        RowBtn.BackgroundTransparency = 0.15
+        RowBtn.Size = UDim2.new(1, -10, 0, 52)
+        RowBtn.Text = ""
+        Instance.new("UICorner", RowBtn).CornerRadius = UDim.new(0, 10)
+
+        local CirclePreview = Instance.new("Frame")
+        CirclePreview.Parent = RowBtn
+        CirclePreview.Size = UDim2.new(0, 26, 0, 26)
+        CirclePreview.Position = UDim2.new(0, 16, 0.5, -13)
+        Instance.new("UICorner", CirclePreview).CornerRadius = UDim.new(1, 0)
+        local Gradient = Instance.new("UIGradient")
+        Gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, color2)})
+        Gradient.Parent = CirclePreview
+
+        local ThemeText = Instance.new("TextLabel")
+        ThemeText.Parent = RowBtn
+        ThemeText.BackgroundTransparency = 1
+        ThemeText.Position = UDim2.new(0, 56, 0, 0)
+        ThemeText.Size = UDim2.new(1, -70, 1, 0)
+        ThemeText.Font = Enum.Font.GothamSemibold
+        ThemeText.TextColor3 = Color3.fromRGB(190, 190, 210)
+        ThemeText.TextSize = 15
+        ThemeText.TextXAlignment = Enum.TextXAlignment.Left
+
+        RowBtn.MouseButton1Click:Connect(function()
+            accentColor = color1
+            -- Обновляем элементы интерфейса, использующие accentColor
+            TitleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
+            ToggleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
+            SepGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))})
+            -- Обновляем выделенную вкладку
+            for _, b in ipairs(tabButtons) do
+                if b.BackgroundColor3 ~= Color3.fromRGB(20, 20, 28) then
+                    TweenService:Create(b, TweenInfo.new(0.3), {BackgroundColor3 = color1}):Play()
                 end
             end
-            if count > 0 then
-                local center = total / count
-                underY = center.Y - 100
-            end
-        end
-        root.CFrame = CFrame.new(root.Position.X, underY, root.Position.Z)
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    else
-        root.CFrame = root.CFrame - Vector3.new(0,2.5,0)
-        root.CFrame = root.CFrame * CFrame.Angles(math.rad(90),0,0)
+        end)
+        table.insert(ThemeRows, ThemeText)
     end
-    if hum then
-        hum.PlatformStand = true
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-    end
-    farming = true
-end
 
-local function stopFarming()
-    farming = false
-    if farmTween then farmTween:Cancel() farmTween = nil end
-    if farmConnection then farmConnection:Disconnect() farmConnection = nil end
-    if LocalPlayer.Character then
-        for part, data in pairs(savedCollision) do
-            if part and part.Parent then
-                part.CanCollide = data.CanCollide
-                part.Massless = data.Massless
-            end
-        end
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if root then
-            root.Velocity = Vector3.new(0,0,0)
-            root.RotVelocity = Vector3.new(0,0,0)
-            if underMapModeForFarm then
-                Workspace.FallenPartsDestroyHeight = oldFallenHeight
-                local map = findMap()
-                if map and map:FindFirstChild("Spawns") then
-                    local spawns = map.Spawns:GetChildren()
-                    if #spawns > 0 then
-                        local spawn = spawns[math.random(1,#spawns)]
-                        if spawn:IsA("BasePart") then
-                            root.CFrame = spawn.CFrame + Vector3.new(0,5,0)
-                        end
-                    end
-                end
-                underMapModeForFarm = false
-            else
-                root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90),0,0)
-                root.CFrame = root.CFrame + Vector3.new(0,2.5,0)
-            end
-        end
-        if hum then
-            hum.PlatformStand = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-            hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+    -- Цветовые схемы
+    createThemeRow(Color3.fromRGB(0, 150, 255), Color3.fromRGB(0, 70, 200))
+    createThemeRow(Color3.fromRGB(168, 85, 247), Color3.fromRGB(100, 30, 180))
+    createThemeRow(Color3.fromRGB(34, 197, 94), Color3.fromRGB(20, 100, 50))
+    createThemeRow(Color3.fromRGB(236, 72, 153), Color3.fromRGB(150, 20, 80))
+    createThemeRow(Color3.fromRGB(245, 158, 11), Color3.fromRGB(160, 80, 0))
+    createThemeRow(Color3.fromRGB(220, 220, 230), Color3.fromRGB(100, 100, 110))
+
+    -- Обновление размеров скролла
+    ThemeScroll.CanvasSize = UDim2.new(0, 0, 0, ThemeList.AbsoluteContentSize.Y + 40)
+
+    -- Заглушки для других страниц (можно добавить текст или оставить пустыми)
+    local function addPlaceholderText(parent, text)
+        local lbl = Instance.new("TextLabel")
+        lbl.Parent = parent
+        lbl.BackgroundTransparency = 1
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.Font = Enum.Font.GothamSemibold
+        lbl.TextColor3 = Color3.fromRGB(150, 150, 170)
+        lbl.TextSize = 18
+        lbl.Text = text
+        lbl.TextWrapped = true
+        return lbl
+    end
+    addPlaceholderText(AutoFarmPage, "Страница AutoFarm (функции удалены)")
+    addPlaceholderText(MovementPage, "Страница Movement (функции удалены)")
+    addPlaceholderText(AdminPage, "Страница Admin (функции удалены)")
+
+    -- Глобальная функция обновления языка (вызывается после выбора)
+    _G.ApplyLanguage = function()
+        ThemeTitleLabel.Text = L("ThemeTitle")
+        autoFarmTabBtn.Text = L("AutoFarmTab")
+        themeTabBtn.Text = L("ThemeTab")
+        movementTabBtn.Text = L("MovementTab")
+        adminTabBtn.Text = L("AdminTab")
+        for i, rowText in ipairs(ThemeRows) do
+            if L("Themes")[i] then rowText.Text = L("Themes")[i] end
         end
     end
-    savedCollision = {}
-end
 
-local coinCollectedRemote = ReplicatedStorage.Remotes.Gameplay.CoinCollected
-local coinCollected = false
-coinCollectedRemote.OnClientEvent:Connect(function(plr, current, total)
+    -- Применяем язык по умолчанию
+    _G.ApplyLanguage()
+
+    -- Убираем лишние глобальные переменные (чистота)
+    _G.UpdateColors = nil
+    _G.ApplyLanguage = nil -- но она нам нужна для смены языка, оставим, но можно удалить после применения
+
+    print("Меню загружено (только интерфейс).")
+end
