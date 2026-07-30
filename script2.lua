@@ -1,5 +1,5 @@
--- NKNO$ HUB - Ultimate Edition v2.2
--- Языки: Русский, English, Українська, Беларуская
+-- NKNO$ HUB - Ultimate Edition v2.2 (исправленный)
+-- Языки: Русский, English, Українська
 -- Discord: https://discord.gg/HsSSmNf69
 
 local Players = game:GetService("Players")
@@ -17,24 +17,22 @@ local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
 -- =====================================================
--- ЯЗЫКИ (только 4)
+-- ЯЗЫКИ (только 3)
 -- =====================================================
 local Languages = {
     ru = "Русский",
     en = "English (USA)",
-    uk = "Українська",
-    be = "Беларуская"
+    uk = "Українська"
 }
 local lang = "ru"
 
 -- =====================================================
--- ПЕРЕВОДЫ (все тексты UI)
+-- ПЕРЕВОДЫ
 -- =====================================================
 local L = {}
 
 -- Русский
 L.ru = {
-    -- Вкладки
     tab_main = "Основное",
     tab_visuals = "Визуал",
     tab_misc = "Разное",
@@ -42,7 +40,6 @@ L.ru = {
     tab_lang = "Язык",
     tab_changelog = "📢 Обновления",
 
-    -- Разделы
     sec_murder = "Функции убийцы",
     sec_sheriff = "Функции шерифа",
     sec_innocent = "Функции невиновного",
@@ -56,7 +53,6 @@ L.ru = {
     sec_discord = "Discord",
     sec_nkno = "NKNO$",
 
-    -- Кнопки
     btn_killall = "Убить всех",
     btn_killall_desc = "Убивает всех невиновных",
     btn_shoot = "Выстрелить в убийцу (сквозь стены)",
@@ -72,7 +68,6 @@ L.ru = {
     btn_murder_tp = "ТП к убийце",
     btn_sheriff_tp = "ТП к шерифу",
 
-    -- Тогглы
     tog_autoshoot = "Авто-кнопка выстрела",
     tog_autoshoot_desc = "Создаёт перетаскиваемую кнопку для стрельбы",
     tog_magicbullet = "Магическая пуля",
@@ -116,25 +111,19 @@ L.ru = {
     tog_pingfps = "Пинг / FPS",
     tog_pingfps_desc = "Показывает пинг и FPS на экране",
 
-    -- Слайдеры
     slider_mindelay = "Мин. задержка (сек)",
     slider_maxdelay = "Макс. задержка (сек)",
     slider_ws = "Значение скорости",
     slider_jp = "Значение прыжка",
     slider_fov = "Значение FOV",
 
-    -- Выпадающие списки
     dropdown_dance = "Выберите танец",
     dropdown_theme = "Тема",
     dropdown_lang = "Выберите язык",
 
-    -- Поле ввода
     input_player = "Поиск игрока",
-
-    -- Клавиша
     keybind_minimize = "Клавиша сворачивания",
 
-    -- Уведомления
     notify_hello = "Привет! Нажми Left Alt для сворачивания",
     notify_copied = "Ссылка скопирована!",
     notify_error = "Ошибка",
@@ -147,10 +136,9 @@ L.ru = {
     notify_kill = "Все убиты!",
     notify_nomurder = "Убийца не найден",
 
-    -- Changelog
     changelog_title = "Что нового в NKNO$ HUB",
     changelog_text = [[🆕 Версия 2.2 – Убраны лишние языки!
-✅ Оставлены: Русский, English, Українська, Беларуская.
+✅ Оставлены: Русский, English, Українська.
 ✅ Авто-фарм монет в любых играх.
 ✅ Поддержка +1 Speed Keyboard.
 ✅ Wallbang – убийца сквозь стены.
@@ -198,7 +186,7 @@ L.en = {
     notify_kill = "All killed!", notify_nomurder = "Murderer not found",
     changelog_title = "What's new in NKNO$ HUB",
     changelog_text = [[🆕 Version 2.2 – Extra languages removed!
-✅ Left: Russian, English, Ukrainian, Belarusian.
+✅ Left: Russian, English, Ukrainian.
 ✅ Auto coin farming in any game.
 ✅ Support for +1 Speed Keyboard.
 ✅ Wallbang – murderer through walls.
@@ -246,7 +234,7 @@ L.uk = {
     notify_kill = "Всі вбиті!", notify_nomurder = "Вбивцю не знайдено",
     changelog_title = "Що нового в NKNO$ HUB",
     changelog_text = [[🆕 Версія 2.2 – Видалено зайві мови!
-✅ Залишено: Українська, Білоруська, Англійська, Російська.
+✅ Залишено: Українська, Англійська, Російська.
 ✅ Авто-фарм монет у будь-яких іграх.
 ✅ Підтримка +1 Speed Keyboard.
 ✅ Wallbang – вбивця крізь стіни.
@@ -256,64 +244,14 @@ L.uk = {
 🎯 NKNO$ HUB – потужніший з кожним оновленням!]]
 }
 
--- Белорусский
-L.be = {
-    tab_main = "Асноўнае", tab_visuals = "Візуал", tab_misc = "Рознае", tab_settings = "Налады", tab_lang = "Мова", tab_changelog = "📢 Абнаўленні",
-    sec_murder = "Функцыі забойцы", sec_sheriff = "Функцыі шэрыфа", sec_innocent = "Функцыі невінаватага", sec_autofarm = "Аўта-фарм",
-    sec_chams = "Чамы", sec_esp = "ESP", sec_esp_custom = "Налады ESP", sec_char_mod = "Мадыфікатары персанажа", sec_dance = "Танцы",
-    sec_fling = "Флінг гульцоў", sec_discord = "Discord", sec_nkno = "NKNO$",
-    btn_killall = "Забіць усіх", btn_killall_desc = "Забівае ўсіх невінаватых",
-    btn_shoot = "Выстраліць у забойцу (скрозь сцены)", btn_shoot_desc = "Мігам забівае забойцу, ігнаруючы сцены",
-    btn_copydiscord = "📢 Капіраваць Discord", btn_copydiscord_desc = "Капіруе спасылку на наш Discord сервер",
-    btn_fling_murder = "Флінг забойцы", btn_fling_sheriff = "Флінг шэрыфа", btn_fling_sel = "Флінг абранага", btn_stop_fling = "Спыніць флінг",
-    btn_map_tp = "ТП на карту", btn_lobby_tp = "ТП у лобі", btn_murder_tp = "ТП да забойцы", btn_sheriff_tp = "ТП да шэрыфа",
-    tog_autoshoot = "Аўта-кнопка стрэлу", tog_autoshoot_desc = "Стварае перацягвальную кнопку для стральбы",
-    tog_magicbullet = "Магічная куля", tog_magicbullet_desc = "Куля ляціць прама ў забойцу",
-    tog_autogun = "Аўта-падбор пісталета", tog_autogun_desc = "Аўтаматычна падымае пісталет, калі шэрыф загінуў",
-    tog_farm = "Фарм манет", tog_farm_desc = "Аўтаматычны збор манет з нокліпам",
-    tog_random_delays = "Выпадковыя затрымкі", tog_random_delays_desc = "Дадае выпадковыя паўзы паміж зборамі",
-    tog_random_move = "Выпадковы рух", tog_random_move_desc = "Дадае выпадковыя адхіленні пры руху",
-    tog_random_coin = "Выпадковы выбар манеты", tog_random_coin_desc = "Выбірае выпадковую манету, а не бліжэйшую",
-    tog_antiafk = "Анты-AFK", tog_antiafk_desc = "Адпраўляе выпадковыя рухі, каб не выкінула",
-    tog_chams_murder = "Чамы забойцы", tog_chams_sheriff = "Чамы шэрыфа", tog_chams_innocent = "Чамы невінаватага", tog_chams_hero = "Чамы героя",
-    tog_esp_murder = "ESP забойцы", tog_esp_sheriff = "ESP шэрыфа", tog_esp_innocent = "ESP невінаватага", tog_esp_hero = "ESP героя",
-    tog_box2d = "2D рамка", tog_box2d_desc = "Паказвае рамку вакол гульца",
-    tog_displayname = "Адлюстроўваць DisplayName", tog_normalname = "Адлюстроўваць звычайнае імя", tog_avatar = "Аватар над галавой",
-    tog_antifling = "Анты-флінг", tog_customws = "Свая хуткасць", tog_customjp = "Свая сіла скачка", tog_customfov = "Свой FOV",
-    tog_forcefield = "Матэрыял ForceField", tog_forcefield_desc = "Усе часткі цела становяцца як ForceField",
-    tog_autodance = "Аўта-танец", tog_undermap = "Пад картай", tog_undermap_desc = "Тэлепартуе пад карту (неўразлівасць)",
-    tog_tag = "Паказаць тэг NKNO$", tog_tag_desc = "Над вашым персанажам з'явіцца карона з надпісам NKNO$",
-    tog_pingfps = "Пінг / FPS", tog_pingfps_desc = "Паказвае пінг і FPS на экране",
-    slider_mindelay = "Мін. затрымка (с)", slider_maxdelay = "Макс. затрымка (с)", slider_ws = "Значэнне хуткасці", slider_jp = "Значэнне скачка", slider_fov = "Значэнне FOV",
-    dropdown_dance = "Выберыце танец", dropdown_theme = "Тэма", dropdown_lang = "Выберыце мову",
-    input_player = "Пошук гульца", keybind_minimize = "Клавіша згортвання",
-    notify_hello = "Прывітанне! Націсніце Left Alt для згортвання", notify_copied = "Спасылка скапіявана!", notify_error = "Памылка",
-    notify_fling_start = "Флінг запушчаны", notify_fling_stop = "Флінг спынены",
-    notify_undermap_on = "Рэжым пад картай уключаны", notify_undermap_off = "Рэжым пад картай выключаны",
-    notify_tag_on = "Тэг NKNO$ уключаны", notify_tag_off = "Тэг NKNO$ выключаны",
-    notify_kill = "Усе забітыя!", notify_nomurder = "Забойца не знойдзены",
-    changelog_title = "Што новага ў NKNO$ HUB",
-    changelog_text = [[🆕 Версія 2.2 – Выдалены лішнія мовы!
-✅ Пакінуты: Беларуская, Руская, Англійская, Украінская.
-✅ Аўта-фарм манет у любых гульнях.
-✅ Падтрымка +1 Speed Keyboard.
-✅ Wallbang – забойца скрозь сцены.
-✅ Custom Tag з каронай 👑 NKNO$.
-✅ Пінг/FPS на экране.
-✅ Закрыццё Ctrl+Z.
-🎯 NKNO$ HUB – магутнейшы з кожным абнаўленнем!]]
-}
-
--- Функция получения перевода
-local function T(key)
-    return L[lang] and L[lang][key] or key
-end
+local function T(key) return L[lang] and L[lang][key] or key end
 
 -- =====================================================
 -- ЗАКРЫТИЕ ПО CTRL+Z
 -- =====================================================
 local function closeScript()
     if windowGui then windowGui:Destroy() end
+    if miniGui then miniGui:Destroy() end
     if fpsGui then fpsGui:Destroy() end
     if tagGui then tagGui:Destroy() end
     if shootButtonGui then shootButtonGui:Destroy() end
@@ -345,8 +283,90 @@ windowGui = window.Gui
 toggles = {}
 connections = {}
 
+-- Создаём мини-панель для свёрнутого состояния
+local miniGui = Instance.new("ScreenGui")
+miniGui.Name = "NKNO_Mini"
+miniGui.ResetOnSpawn = false
+miniGui.Parent = CoreGui
+miniGui.Enabled = false  -- скрыта по умолчанию
+
+local miniFrame = Instance.new("Frame")
+miniFrame.Size = UDim2.new(0, 120, 0, 30)
+miniFrame.Position = UDim2.new(1, -130, 0, 10)  -- правый верхний угол
+miniFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+miniFrame.BackgroundTransparency = 0.1
+miniFrame.BorderSizePixel = 0
+miniFrame.Parent = miniGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 6)
+corner.Parent = miniFrame
+
+local miniLabel = Instance.new("TextLabel")
+miniLabel.Size = UDim2.new(1, 0, 1, 0)
+miniLabel.BackgroundTransparency = 1
+miniLabel.Text = "NKNO$ HUB"
+miniLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+miniLabel.TextSize = 14
+miniLabel.Font = Enum.Font.GothamBold
+miniLabel.Parent = miniFrame
+
+-- Перетаскивание мини-панели
+local dragging = false
+local dragStart, startPos
+miniFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = miniFrame.Position
+    end
+end)
+miniFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            local delta = input.Position - dragStart
+            miniFrame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+miniFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- Клик по мини-панели разворачивает окно
+miniFrame.MouseButton1Click:Connect(function()
+    windowGui.Visible = true
+    miniGui.Enabled = false
+end)
+
 -- =====================================================
--- ВКЛАДКИ
+-- Переопределяем сворачивание (Left Alt)
+-- =====================================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftAlt then
+        if windowGui.Visible then
+            -- Сворачиваем: прячем основное окно, показываем мини-панель
+            windowGui.Visible = false
+            miniGui.Enabled = true
+        else
+            -- Разворачиваем: прячем мини-панель, показываем окно
+            miniGui.Enabled = false
+            windowGui.Visible = true
+        end
+    end
+end)
+
+-- Также реагируем на событие минимизации от библиотеки (если оно есть)
+-- Но мы уже перехватили клавишу сами.
+
+-- =====================================================
+-- ВКЛАДКИ и всё остальное (без изменений)
 -- =====================================================
 local tabMain = window:AddTab({ Title = T("tab_main") })
 local tabVisuals = window:AddTab({ Title = T("tab_visuals") })
@@ -355,9 +375,7 @@ local tabSettings = window:AddTab({ Title = T("tab_settings") })
 local tabLang = window:AddTab({ Title = T("tab_lang") })
 local tabChangelog = window:AddTab({ Title = T("tab_changelog") })
 
--- =====================================================
--- CHANGELOG
--- =====================================================
+-- Changelog
 window:AddSection({ Name = T("changelog_title"), Tab = tabChangelog })
 local changelogFrame = Instance.new("Frame")
 changelogFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -376,9 +394,7 @@ changelogLabel.TextYAlignment = Enum.TextYAlignment.Top
 changelogLabel.Font = Enum.Font.Gotham
 changelogLabel.Parent = changelogFrame
 
--- =====================================================
--- ЯЗЫК
--- =====================================================
+-- Язык
 window:AddSection({ Name = T("dropdown_lang"), Tab = tabLang })
 window:AddDropdown({
     Title = T("dropdown_lang"),
@@ -387,7 +403,6 @@ window:AddDropdown({
     Tab = tabLang,
     Callback = function(opt)
         lang = opt
-        -- Обновляем заголовки вкладок
         tabMain:SetTitle(T("tab_main"))
         tabVisuals:SetTitle(T("tab_visuals"))
         tabMisc:SetTitle(T("tab_misc"))
@@ -395,21 +410,13 @@ window:AddDropdown({
         tabLang:SetTitle(T("tab_lang"))
         tabChangelog:SetTitle(T("tab_changelog"))
         changelogLabel.Text = T("changelog_text")
-        window:Notify({
-            Title = "Язык / Language",
-            Description = "Выбран: " .. Languages[opt],
-            Duration = 2
-        })
-        window:Notify({
-            Title = "📢 Обновление!",
-            Description = "В этой обнове добавили фарм и весь скрипт NKNO$ HUB есть не только на MM2, но и на +1 Speed Keyboard!",
-            Duration = 5
-        })
+        window:Notify({ Title = "Язык / Language", Description = "Выбран: " .. Languages[opt], Duration = 2 })
+        window:Notify({ Title = "📢 Обновление!", Description = "В этой обнове добавили фарм и весь скрипт NKNO$ HUB есть не только на MM2, но и на +1 Speed Keyboard!", Duration = 5 })
     end
 })
 
 -- =====================================================
--- ПЕРЕМЕННЫЕ ДЛЯ ФУНКЦИЙ
+-- ПЕРЕМЕННЫЕ И ФУНКЦИИ (без изменений)
 -- =====================================================
 local farm = false
 local noclipConnection = nil
@@ -444,14 +451,10 @@ local danceId = "127118661424463"
 local flingActive = false
 local selectedPlayer = nil
 
--- ESP настройки
 local espSettings = { Murderer = false, Sheriff = false, Innocent = false, Hero = false }
 local nameEspSettings = { Murderer = false, Sheriff = false, Innocent = false, Hero = false }
 local espCustom = { Box2D = false, DisplayName = false, NormalName = true, AvatarDisplay = false }
 
--- =====================================================
--- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (из оригинального скрипта)
--- =====================================================
 local function findMap()
     for _, obj in pairs(Workspace:GetChildren()) do
         if obj:GetAttribute("MapID") then return obj end
@@ -509,7 +512,7 @@ local function FindNearestCoin(container, useRandom)
 end
 
 -- =====================================================
--- АВТОФАРМ
+-- АВТОФАРМ (без изменений)
 -- =====================================================
 local function enableNoclip()
     if noclipConnection then return end
@@ -560,7 +563,6 @@ local function stopFarming()
     end
 end
 
--- Обработчики событий монет
 local coinEvent = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Gameplay")
 if coinEvent then
     coinEvent = coinEvent:FindFirstChild("CoinCollected")
@@ -575,7 +577,6 @@ if coinEvent then
     end)
 end
 
--- Основной цикл фарма
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
@@ -634,7 +635,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- ESP И CHAMS
+-- ESP и Chams (без изменений)
 -- =====================================================
 local function CreateESP(plr, color)
     if not plr.Character then return end
@@ -716,7 +717,6 @@ local function CreateNameESP(plr, color)
         avatarFrame.Visible = espCustom.AvatarDisplay
         avatarFrame.BorderColor3 = color
     end
-    -- 2D Box
     local rootPart = plr.Character:FindFirstChild("HumanoidRootPart")
     if rootPart then
         local box = rootPart:FindFirstChild("Box2D")
@@ -807,11 +807,9 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- ВКЛАДКА MAIN – ФУНКЦИИ УБИЙЦЫ
+-- ВКЛАДКА MAIN
 -- =====================================================
 window:AddSection({ Name = T("sec_murder"), Tab = tabMain })
-
--- Kill All
 window:AddButton({
     Title = T("btn_killall"),
     Description = T("btn_killall_desc"),
@@ -840,7 +838,6 @@ window:AddButton({
     end
 })
 
--- Wallbang Shoot
 window:AddButton({
     Title = T("btn_shoot"),
     Description = T("btn_shoot_desc"),
@@ -875,7 +872,6 @@ window:AddButton({
     end
 })
 
--- Другие тогглы
 window:AddToggle({
     Title = T("tog_autoshoot"),
     Description = T("tog_autoshoot_desc"),
@@ -884,7 +880,6 @@ window:AddToggle({
     Callback = function(val)
         autoShootActive = val
         if val then
-            -- создаём кнопку стрельбы (как в оригинале)
             if not shootButtonGui then
                 shootButtonGui = Instance.new("ScreenGui")
                 shootButtonGui.Name = "ShootButtonGui"
@@ -909,7 +904,6 @@ window:AddToggle({
                 label.TextColor3 = Color3.new(1,1,1)
                 label.Font = Enum.Font.GothamBold
                 label.Parent = btn
-                -- обработчики перетаскивания и клика
                 local dragging, dragStart, startPos
                 btn.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -932,7 +926,6 @@ window:AddToggle({
                     end
                 end)
                 btn.MouseButton1Click:Connect(function()
-                    -- стрельба
                     local murderer = findMurderer()
                     if not murderer then return end
                     local gun = player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun")
@@ -959,10 +952,7 @@ window:AddToggle({
     Description = T("tog_magicbullet_desc"),
     Default = false,
     Tab = tabMain,
-    Callback = function(val)
-        magicBullet = val
-        -- в оригинале меняет способ стрельбы
-    end
+    Callback = function(val) magicBullet = val end
 })
 
 window:AddToggle({
@@ -990,7 +980,7 @@ window:AddToggle({
 })
 
 -- =====================================================
--- АВТОФАРМ (уже реализован выше, добавляем тогглы в UI)
+-- АВТОФАРМ (UI)
 -- =====================================================
 window:AddSection({ Name = T("sec_autofarm"), Tab = tabMain })
 window:AddToggle({
@@ -1063,95 +1053,28 @@ window:AddSlider({
 })
 
 -- =====================================================
--- ВКЛАДКА VISUALS
+-- VISUALS
 -- =====================================================
 window:AddSection({ Name = T("sec_chams"), Tab = tabVisuals })
-window:AddToggle({
-    Title = T("tog_chams_murder"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espSettings.Murderer = v end
-})
-window:AddToggle({
-    Title = T("tog_chams_sheriff"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espSettings.Sheriff = v end
-})
-window:AddToggle({
-    Title = T("tog_chams_innocent"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espSettings.Innocent = v end
-})
-window:AddToggle({
-    Title = T("tog_chams_hero"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espSettings.Hero = v end
-})
+window:AddToggle({ Title = T("tog_chams_murder"), Default = false, Tab = tabVisuals, Callback = function(v) espSettings.Murderer = v end })
+window:AddToggle({ Title = T("tog_chams_sheriff"), Default = false, Tab = tabVisuals, Callback = function(v) espSettings.Sheriff = v end })
+window:AddToggle({ Title = T("tog_chams_innocent"), Default = false, Tab = tabVisuals, Callback = function(v) espSettings.Innocent = v end })
+window:AddToggle({ Title = T("tog_chams_hero"), Default = false, Tab = tabVisuals, Callback = function(v) espSettings.Hero = v end })
 
 window:AddSection({ Name = T("sec_esp"), Tab = tabVisuals })
-window:AddToggle({
-    Title = T("tog_esp_murder"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) nameEspSettings.Murderer = v end
-})
-window:AddToggle({
-    Title = T("tog_esp_sheriff"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) nameEspSettings.Sheriff = v end
-})
-window:AddToggle({
-    Title = T("tog_esp_innocent"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) nameEspSettings.Innocent = v end
-})
-window:AddToggle({
-    Title = T("tog_esp_hero"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) nameEspSettings.Hero = v end
-})
+window:AddToggle({ Title = T("tog_esp_murder"), Default = false, Tab = tabVisuals, Callback = function(v) nameEspSettings.Murderer = v end })
+window:AddToggle({ Title = T("tog_esp_sheriff"), Default = false, Tab = tabVisuals, Callback = function(v) nameEspSettings.Sheriff = v end })
+window:AddToggle({ Title = T("tog_esp_innocent"), Default = false, Tab = tabVisuals, Callback = function(v) nameEspSettings.Innocent = v end })
+window:AddToggle({ Title = T("tog_esp_hero"), Default = false, Tab = tabVisuals, Callback = function(v) nameEspSettings.Hero = v end })
 
 window:AddSection({ Name = T("sec_esp_custom"), Tab = tabVisuals })
-window:AddToggle({
-    Title = T("tog_box2d"),
-    Description = T("tog_box2d_desc"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espCustom.Box2D = v end
-})
-window:AddToggle({
-    Title = T("tog_displayname"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v)
-        espCustom.DisplayName = v
-        if v then espCustom.NormalName = false end
-    end
-})
-window:AddToggle({
-    Title = T("tog_normalname"),
-    Default = true,
-    Tab = tabVisuals,
-    Callback = function(v)
-        espCustom.NormalName = v
-        if v then espCustom.DisplayName = false end
-    end
-})
-window:AddToggle({
-    Title = T("tog_avatar"),
-    Default = false,
-    Tab = tabVisuals,
-    Callback = function(v) espCustom.AvatarDisplay = v end
-})
+window:AddToggle({ Title = T("tog_box2d"), Description = T("tog_box2d_desc"), Default = false, Tab = tabVisuals, Callback = function(v) espCustom.Box2D = v end })
+window:AddToggle({ Title = T("tog_displayname"), Default = false, Tab = tabVisuals, Callback = function(v) espCustom.DisplayName = v; if v then espCustom.NormalName = false end end })
+window:AddToggle({ Title = T("tog_normalname"), Default = true, Tab = tabVisuals, Callback = function(v) espCustom.NormalName = v; if v then espCustom.DisplayName = false end end })
+window:AddToggle({ Title = T("tog_avatar"), Default = false, Tab = tabVisuals, Callback = function(v) espCustom.AvatarDisplay = v end })
 
 -- =====================================================
--- ВКЛАДКА MISC
+-- MISC
 -- =====================================================
 window:AddSection({ Name = T("sec_discord"), Tab = tabMisc })
 window:AddButton({
@@ -1256,9 +1179,6 @@ window:AddToggle({
     end
 })
 
--- =====================================================
--- ТЕЛЕПОРТЫ
--- =====================================================
 window:AddButton({
     Title = T("btn_map_tp"),
     Tab = tabMisc,
@@ -1334,21 +1254,16 @@ local function SkidFling(target)
     local tRoot = tChar:FindFirstChild("HumanoidRootPart")
     local tHead = tChar:FindFirstChild("Head")
     if not tRoot then return end
-    -- Сохраняем позицию
-    getgenov().OldPos = root.CFrame
-    -- Отключаем коллизии
+    getgenv().OldPos = root.CFrame
     for _, part in pairs(tChar:GetDescendants()) do
         if part:IsA("BasePart") then part.CanCollide = false end
     end
-    -- Устанавливаем камеру на цель
     Workspace.CurrentCamera.CameraSubject = tRoot
-    -- Создаём BodyVelocity
     local bv = Instance.new("BodyVelocity")
     bv.Parent = root
     bv.Velocity = Vector3.new(0,0,0)
     bv.MaxForce = Vector3.new(9e9,9e9,9e9)
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-    -- Основной цикл флинга
     local startTime = tick()
     while flingActive and (tick() - startTime) < 10 do
         if not root or not tRoot then break end
@@ -1364,7 +1279,6 @@ local function SkidFling(target)
     bv:Destroy()
     humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
     Workspace.CurrentCamera.CameraSubject = humanoid
-    -- Возврат на место
     if getgenv().OldPos then
         root.CFrame = getgenv().OldPos
     end
@@ -1453,9 +1367,7 @@ window:AddInput({
     end
 })
 
--- =====================================================
 -- UNDERMAP
--- =====================================================
 window:AddToggle({
     Title = T("tog_undermap"),
     Description = T("tog_undermap_desc"),
@@ -1688,9 +1600,7 @@ window:AddDropdown({
         ["Dance 4"] = "15609995579"
     },
     Tab = tabMisc,
-    Callback = function(val)
-        if val then danceId = val end
-    end
+    Callback = function(val) if val then danceId = val end end
 })
 window:AddToggle({
     Title = T("tog_autodance"),
@@ -1698,10 +1608,8 @@ window:AddToggle({
     Tab = tabMisc,
     Callback = function(val)
         autoDance = val
-        if val then
-            playDance()
+        if val then playDance()
         else
-            -- stop dance
             local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 local animator = humanoid:FindFirstChildOfClass("Animator")
@@ -1716,7 +1624,7 @@ window:AddToggle({
 })
 
 -- =====================================================
--- НАСТРОЙКИ (Settings)
+-- НАСТРОЙКИ
 -- =====================================================
 window:AddKeybind({
     Title = T("keybind_minimize"),
@@ -1727,42 +1635,27 @@ window:AddKeybind({
 })
 window:AddDropdown({
     Title = T("dropdown_theme"),
-    Options = {
-        ["Light Mode"] = "Light",
-        ["Dark Mode"] = "Dark",
-        ["Extra Dark"] = "Void"
-    },
+    Options = { ["Light Mode"] = "Light", ["Dark Mode"] = "Dark", ["Extra Dark"] = "Void" },
     Tab = tabSettings,
-    Callback = function(val)
-        window:SetTheme(val)
-    end
+    Callback = function(val) window:SetTheme(val) end
 })
 window:AddToggle({
     Title = "UI Blur",
     Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
     Default = true,
     Tab = tabSettings,
-    Callback = function(val)
-        window:SetSetting("Blur", val)
-    end
+    Callback = function(val) window:SetSetting("Blur", val) end
 })
 window:AddSlider({
     Title = "UI Transparency",
     Tab = tabSettings,
     AllowDecimals = true,
     MaxValue = 1,
-    Callback = function(val)
-        window:SetSetting("Transparency", val)
-    end
+    Callback = function(val) window:SetSetting("Transparency", val) end
 })
 
 -- =====================================================
 -- ПРИВЕТСТВИЕ
 -- =====================================================
-window:Notify({
-    Title = "NKNO$ HUB",
-    Description = T("notify_hello"),
-    Duration = 5
-})
-
+window:Notify({ Title = "NKNO$ HUB", Description = T("notify_hello"), Duration = 5 })
 print("NKNO$ HUB загружен! Язык: " .. Languages[lang])
