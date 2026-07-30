@@ -1,7 +1,6 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5
--- Исправлен анти-флинг, новая категория FLING,
--- полупрозрачное меню, выбор темы (фиолетовый, зелёный и др.)
+-- NKNO$ HUB ULTIMATE v6
+-- Финальная версия с автофармом, индикацией и копированием Discord
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -14,17 +13,15 @@ local Workspace = game:GetService("Workspace")
 local Stats = game:GetService("Stats")
 local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
+local Clipboard = (syn and syn.request) and setclipboard or (setclipboard and setclipboard) or function() end
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 -- Версия
-local SCRIPT_VERSION = "5.0"
+local SCRIPT_VERSION = "6.0"
 local UPDATE_MESSAGE = {
-    ru = "Обновление v5.0:\n- Исправлен анти-флинг\n- Отдельная категория FLING\n- Полупрозрачное меню\n- Новые цветовые темы\n- Улучшен дизайн",
-    en = "Update v5.0:\n- Anti-fling fixed\n- New FLING category\n- Semi-transparent menu\n- New color themes\n- Improved design"
+    ru = "Обновление v6.0:\n- Автофарм с выбором Nearest/Random\n- Регулировка скорости фарма\n- Индикация статуса (правый верх)\n- Копирование Discord ссылки",
+    en = "Update v6.0:\n- Auto-farm with Nearest/Random choice\n- Farm speed control\n- Status indicator (top right)\n- Copy Discord link"
 }
 
 -- Настройки языка
@@ -97,73 +94,18 @@ local function showUpdateNotice()
     Notify("NKNO$ HUB " .. SCRIPT_VERSION, msg, 8)
 end
 
--- Discord кнопка
-local function createDiscordButton()
-    if CoreGui:FindFirstChild("DiscordButton") then return end
-    local btnGui = Instance.new("ScreenGui")
-    btnGui.Name = "DiscordButton"
-    btnGui.Parent = CoreGui
-    btnGui.ResetOnSpawn = false
-    btnGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    local btn = Instance.new("ImageButton")
-    btn.Size = UDim2.new(0, 60, 0, 60)
-    btn.Position = UDim2.new(0, 10, 1, -70)
-    btn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-    btn.BackgroundTransparency = 0.2
-    btn.BorderSizePixel = 0
-    btn.Parent = btnGui
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = "DC"
-    label.TextColor3 = Color3.fromRGB(255,255,255)
-    label.TextSize = 24
-    label.Font = Enum.Font.GothamBold
-    label.Parent = btn
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(0, 80, 0, 20)
-    text.Position = UDim2.new(0, 0, 1, 0)
-    text.BackgroundTransparency = 1
-    text.Text = "Discord"
-    text.TextColor3 = Color3.fromRGB(200,200,220)
-    text.TextSize = 12
-    text.Font = Enum.Font.GothamMedium
-    text.Parent = btn
-    btn.MouseButton1Click:Connect(function()
-        GuiService:OpenBrowserWindow("https://discord.gg/vQUM4JapP")
-    end)
-    local drag, startPos, startMouse
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            drag = true
-            startPos = btn.Position
-            startMouse = input.Position
-        end
-    end)
-    btn.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - startMouse
-            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-end
-
 -- ============================================================
--- ОСТАЛЬНЫЕ НАСТРОЙКИ
+-- Глобальные настройки (сохраняются)
 -- ============================================================
-
 if not getgenv().NKNO.Language then getgenv().NKNO.Language = "ru" end
 getgenv().NKNO.AntiFling = getgenv().NKNO.AntiFling or false
 getgenv().NKNO.AutoGrabGun = getgenv().NKNO.AutoGrabGun or false
 getgenv().NKNO.FarmCoins = getgenv().NKNO.FarmCoins or false
 getgenv().NKNO.FarmUnderMap = getgenv().NKNO.FarmUnderMap ~= false
+getgenv().NKNO.FarmMode = getgenv().NKNO.FarmMode or "Nearest"  -- "Nearest" или "Random"
+getgenv().NKNO.FarmSpeedMultiplier = getgenv().NKNO.FarmSpeedMultiplier or 1.0
 getgenv().NKNO.RandomDelays = getgenv().NKNO.RandomDelays or false
 getgenv().NKNO.RandomMovement = getgenv().NKNO.RandomMovement or false
-getgenv().NKNO.RandomCoinSelection = getgenv().NKNO.RandomCoinSelection or false
 getgenv().NKNO.AntiAFK = getgenv().NKNO.AntiAFK or false
 getgenv().NKNO.MinDelay = getgenv().NKNO.MinDelay or 0.1
 getgenv().NKNO.MaxDelay = getgenv().NKNO.MaxDelay or 0.5
@@ -182,7 +124,7 @@ getgenv().NKNO.GodMode = getgenv().NKNO.GodMode or false
 getgenv().NKNO.Theme = getgenv().NKNO.Theme or "Dark"
 getgenv().NKNO.ESP = getgenv().NKNO.ESP or {
     Murderer = false, Sheriff = false, Innocent = false, Hero = false,
-    Box2D = false, DisplayName = false, NormalName = true, AvatarDisplay = false,
+    Box2D = false, DisplayName = false, NormalName = true,
     ColorMurderer = Color3.fromRGB(255,0,0),
     ColorSheriff = Color3.fromRGB(0,0,255),
     ColorHero = Color3.fromRGB(255,255,0),
@@ -195,7 +137,6 @@ getgenv().NKNO.SelectedPlayer = nil
 -- ============================================================
 -- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 -- ============================================================
-
 local function findMap()
     for _, child in pairs(Workspace:GetChildren()) do
         if child:GetAttribute("MapID") then return child end
@@ -252,9 +193,8 @@ local function findPlayerByPartialName(name)
 end
 
 -- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (ФЛИНГ, ПОДКАРТА, ESP, ФАРМ и т.д.)
+-- ОСНОВНЫЕ ФУНКЦИИ (ФЛИНГ, ПОДКАРТА, ESP и др.)
 -- ============================================================
-
 local function applyWalkSpeed()
     if getgenv().NKNO.CustomWalkSpeed and LocalPlayer.Character then
         local h = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -324,7 +264,7 @@ local function stopDance()
     end
 end
 
--- Флинг (для атаки)
+-- Флинг (атака)
 local function SkidFling(plr)
     local char = LocalPlayer.Character
     if not char then return end
@@ -403,7 +343,7 @@ local function SkidFling(plr)
     Workspace.FallenPartsDestroyHeight = getgenv().FPDH or Workspace.FallenPartsDestroyHeight
 end
 
--- Подкарта
+-- Подкарта (ручной режим)
 local underMapConnection = nil
 local oldFallenHeight = Workspace.FallenPartsDestroyHeight
 local function goUnderMap()
@@ -595,9 +535,7 @@ local function autoGrabGun()
     end)
 end
 
--- ============================================================
--- АНТИ-ФЛИНГ (исправленная версия)
--- ============================================================
+-- Анти-флинг (защита)
 local antiFlingConnection = nil
 local lastPosition = nil
 local function startAntiFling()
@@ -609,15 +547,12 @@ local function startAntiFling()
         if not root then return end
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         if not hum then return end
-        
-        -- Защита от резких перемещений (флинг)
         if lastPosition then
             local dist = (root.Position - lastPosition).Magnitude
             if dist > 10 then
                 root.Velocity = Vector3.new(0,0,0)
                 root.RotVelocity = Vector3.new(0,0,0)
                 root.CFrame = CFrame.new(lastPosition) * root.CFrame.Rotation
-                -- также фиксируем позицию через BodyPosition
                 local bp = root:FindFirstChildOfClass("BodyPosition")
                 if not bp then
                     bp = Instance.new("BodyPosition")
@@ -632,22 +567,15 @@ local function startAntiFling()
             end
         end
         lastPosition = root.Position
-        
-        -- Отключаем коллизию с другими игроками (чтобы не застревать)
         for _, plr in pairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer and plr.Character then
                 for _, part in pairs(plr.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
-                    end
+                    if part:IsA("BasePart") then part.CanCollide = false end
                 end
             end
         end
-        -- Также отключаем коллизию у себя с другими (но не со всеми, чтобы не падать)
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end)
 end
@@ -658,20 +586,16 @@ local function stopAntiFling()
         antiFlingConnection = nil
     end
     lastPosition = nil
-    -- Восстанавливаем коллизию, но только для себя (аккуратно)
     if LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+            if part:IsA("BasePart") then part.CanCollide = true end
         end
     end
 end
 
 -- ============================================================
--- АВТОФАРМ
+-- АВТОФАРМ (с выбором Nearest/Random и скоростью)
 -- ============================================================
-
 local function getCoinContainer()
     for _, child in pairs(Workspace:GetChildren()) do
         if child:FindFirstChild("CoinContainer") and child:IsA("Model") then
@@ -681,7 +605,7 @@ local function getCoinContainer()
     return nil
 end
 
-local function findNearestCoin(container, useRandom)
+local function findTargetCoin(container, mode)
     if not container then return nil, math.huge end
     local candidates = {}
     for _, coin in pairs(container:GetChildren()) do
@@ -694,10 +618,10 @@ local function findNearestCoin(container, useRandom)
     end
     if #candidates == 0 then return nil, math.huge end
     table.sort(candidates, function(a,b) return a.dist < b.dist end)
-    if useRandom and #candidates > 2 then
-        local idx = math.random(1, math.min(3, #candidates))
+    if mode == "Random" and #candidates > 1 then
+        local idx = math.random(1, math.min(5, #candidates)) -- берём из первых 5
         return candidates[idx].coin, candidates[idx].dist
-    else
+    else -- Nearest
         return candidates[1].coin, candidates[1].dist
     end
 end
@@ -754,6 +678,7 @@ local function startFarming()
         hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
     end
     farming = true
+    updateStatusLabel()
 end
 
 local function stopFarming()
@@ -797,6 +722,7 @@ local function stopFarming()
         end
     end
     savedCollision = {}
+    updateStatusLabel()
 end
 
 local coinCollectedRemote = ReplicatedStorage.Remotes.Gameplay.CoinCollected
@@ -820,13 +746,60 @@ roundEndRemote.OnClientEvent:Connect(function()
     if farming then stopFarming() end
 end)
 
+-- Статусная метка (правый верх)
+local statusLabel = nil
+local function createStatusLabel()
+    if statusLabel then return end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FarmStatus"
+    gui.Parent = CoreGui
+    gui.ResetOnSpawn = false
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 220, 0, 60)
+    frame.Position = UDim2.new(1, -240, 0, 10)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(60,60,80)
+    stroke.Thickness = 1
+    stroke.Parent = frame
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1,0,1,0)
+    text.BackgroundTransparency = 1
+    text.Text = "FARM: OFF"
+    text.TextColor3 = Color3.fromRGB(200,200,220)
+    text.TextSize = 16
+    text.Font = Enum.Font.GothamBold
+    text.Parent = frame
+    statusLabel = text
+end
+
+local function updateStatusLabel()
+    if not statusLabel then createStatusLabel() end
+    if farming then
+        local speed = getgenv().NKNO.FarmSpeedMultiplier or 1.0
+        local warn = (speed > 2.5) and " ⚠️ HIGH SPEED!" or ""
+        statusLabel.Text = string.format("FARM: ON  (x%.1f)%s", speed, warn)
+        statusLabel.TextColor3 = speed > 2.5 and Color3.fromRGB(255,200,0) or Color3.fromRGB(100,255,100)
+    else
+        statusLabel.Text = "FARM: OFF"
+        statusLabel.TextColor3 = Color3.fromRGB(200,200,220)
+    end
+end
+
+-- Главный цикл фарма
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
         if getgenv().NKNO.FarmCoins and not coinCollected and LocalPlayer:GetAttribute("Alive") == true and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local container = getCoinContainer()
             if container then
-                local coin, dist = findNearestCoin(container, getgenv().NKNO.RandomCoinSelection)
+                local mode = getgenv().NKNO.FarmMode or "Nearest"
+                local coin, dist = findTargetCoin(container, mode)
                 if coin and coin.Transparency == 1 and not coinCollected then
                     if not farming then startFarming() end
                     local root = LocalPlayer.Character.HumanoidRootPart
@@ -855,7 +828,11 @@ task.spawn(function()
                         end)
                     end
 
-                    local duration = (dist / 23) * (getgenv().NKNO.RandomMovement and (0.8 + math.random() * 0.4) or 1)
+                    -- Скорость фарма с множителем
+                    local baseSpeed = 23 -- стандартная скорость
+                    local speedMult = getgenv().NKNO.FarmSpeedMultiplier or 1.0
+                    local duration = (dist / (baseSpeed * speedMult)) * (getgenv().NKNO.RandomMovement and (0.8 + math.random() * 0.4) or 1)
+                    duration = math.max(duration, 0.1)
                     farmTween = TweenService:Create(root, TweenInfo.new(duration, Enum.EasingStyle.Linear), { CFrame = targetCF })
                     farmTween:Play()
 
@@ -883,6 +860,7 @@ task.spawn(function()
                     if getgenv().NKNO.RandomDelays then
                         task.wait(getgenv().NKNO.MinDelay + math.random() * (getgenv().NKNO.MaxDelay - getgenv().NKNO.MinDelay))
                     end
+                    updateStatusLabel()
                 else
                     if farming then stopFarming() end
                 end
@@ -896,9 +874,8 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- ПОСТРОЕНИЕ GUI (НОВАЯ СТРУКТУРА С КАТЕГОРИЯМИ)
+-- ПОСТРОЕНИЕ GUI (КАТЕГОРИИ СЛЕВА)
 -- ============================================================
-
 if CoreGui:FindFirstChild("NKNO_HUB") then CoreGui["NKNO_HUB"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -929,7 +906,7 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(11,11,16)
-MainFrame.BackgroundTransparency = 0.25   -- полупрозрачный
+MainFrame.BackgroundTransparency = 0.25
 MainFrame.AnchorPoint = Vector2.new(0.5,0.5)
 MainFrame.Position = UDim2.new(0.5,0,0.5,0)
 MainFrame.Size = UDim2.new(0,640,0,420)
@@ -945,7 +922,7 @@ MainStroke.Color = Color3.fromRGB(60,60,80)
 MainStroke.Thickness = 1.2
 MainStroke.Transparency = 0.5
 
--- Фон с градиентом (для красоты)
+-- Фон с градиентом
 local BgGradient = Instance.new("ImageLabel")
 BgGradient.Name = "BgGradient"
 BgGradient.Parent = MainFrame
@@ -1046,7 +1023,6 @@ CategoryLayout.Padding = UDim.new(0,4)
 CategoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
 CategoryLayout.Parent = CategoryList
 
--- Список категорий (добавлена FLING)
 local categories = {"MAIN", "COMBAT", "FARM", "VISUALS", "MOVEMENT", "TELEPORTS", "FLING", "MISC"}
 local currentCategory = "MAIN"
 
@@ -1117,7 +1093,7 @@ local function updateRightCanvas()
     RightContainer.CanvasSize = UDim2.new(0,0,0,total + 20)
 end
 
--- Функции создания элементов (используют RightContainer)
+-- Функции создания элементов
 local lang = getgenv().NKNO.Language or "ru"
 local function T(ru, en)
     return lang == "ru" and ru or en
@@ -1458,9 +1434,8 @@ local function createInput(parent, titleRu, titleEn, descRu, descEn, callback)
 end
 
 -- ============================================================
--- ФУНКЦИИ ЗАПОЛНЕНИЯ КАТЕГОРИЙ
+-- ФУНКЦИИ ЗАПОЛНЕНИЯ КАТЕГОРИЙ (с изменениями в FARM)
 -- ============================================================
-
 local function clearRightContainer()
     for _, child in ipairs(RightContainer:GetChildren()) do
         if child ~= RightLayout then child:Destroy() end
@@ -1596,21 +1571,29 @@ function populateCategory(cat)
 
     elseif cat == "FARM" then
         createSection(RightContainer, "Фарм", "Farm")
-        createToggle(RightContainer, "Фарм монет", "Farm Coins", "Автосбор монет", "Auto-collect coins", getgenv().NKNO.FarmCoins, function(val)
+        -- Надпись Auto Farm (уже есть заголовок)
+        createToggle(RightContainer, "Включить фарм", "Enable Farm", "Автосбор монет", "Auto-collect coins", getgenv().NKNO.FarmCoins, function(val)
             getgenv().NKNO.FarmCoins = val
             if not val and farming then stopFarming() end
+            updateStatusLabel()
         end)
         createToggle(RightContainer, "Фарм под картой", "Farm UnderMap", "Сбор под картой (недосягаем)", "Farm under map (unreachable)", getgenv().NKNO.FarmUnderMap, function(val)
             getgenv().NKNO.FarmUnderMap = val
+        end)
+        -- Выбор режима
+        createDropdown(RightContainer, "Режим выбора монет", "Coin selection", "Nearest или Random", "Nearest or Random", {"Nearest", "Random"}, getgenv().NKNO.FarmMode or "Nearest", function(val)
+            getgenv().NKNO.FarmMode = val
+        end)
+        -- Регулировка скорости
+        createSlider(RightContainer, "Множитель скорости", "Speed Multiplier", "Влияет на скорость перемещения (1.0 = норма)", "Affects movement speed (1.0 = normal)", 0.5, 3.0, getgenv().NKNO.FarmSpeedMultiplier or 1.0, true, function(val)
+            getgenv().NKNO.FarmSpeedMultiplier = val
+            updateStatusLabel()
         end)
         createToggle(RightContainer, "Случайные задержки", "Random Delays", "Случайные задержки между монетами", "Random delays between coins", getgenv().NKNO.RandomDelays, function(val)
             getgenv().NKNO.RandomDelays = val
         end)
         createToggle(RightContainer, "Случайное движение", "Random Movement", "Случайное смещение пути", "Random path offset", getgenv().NKNO.RandomMovement, function(val)
             getgenv().NKNO.RandomMovement = val
-        end)
-        createToggle(RightContainer, "Случайный выбор монеты", "Random Coin Selection", "Выбирать случайную из 3 ближайших", "Pick random from nearest 3", getgenv().NKNO.RandomCoinSelection, function(val)
-            getgenv().NKNO.RandomCoinSelection = val
         end)
         createSlider(RightContainer, "Мин. задержка (с)", "Min Delay (s)", "Минимальная задержка", "Minimum delay", 0, 1, getgenv().NKNO.MinDelay, true, function(val)
             getgenv().NKNO.MinDelay = val
@@ -1814,7 +1797,6 @@ function populateCategory(cat)
                 MainFrame.BackgroundColor3 = theme.bg
                 Title.TextColor3 = theme.accent
                 LeftPanel.BackgroundColor3 = theme.panel
-                -- также можно обновить кнопки категорий, но они перерисуются при смене
                 for _, b in pairs(CategoryList:GetChildren()) do
                     if b:IsA("TextButton") then
                         b.BackgroundColor3 = (b.Text == currentCategory) and theme.accent or Color3.fromRGB(40,40,55)
@@ -1832,9 +1814,8 @@ function populateCategory(cat)
 end
 
 -- ============================================================
--- УВЕДОМЛЕНИЯ И ОСТАЛЬНОЕ
+-- УВЕДОМЛЕНИЯ И ПЛАВАЮЩАЯ КНОПКА
 -- ============================================================
-
 local function Notify(title, desc, duration)
     duration = duration or 3
     local frame = Instance.new("Frame")
@@ -1872,75 +1853,148 @@ local function Notify(title, desc, duration)
     frame:Destroy()
 end
 
--- Плавающая кнопка
-local ToggleWidget = Instance.new("Frame")
-ToggleWidget.Name = "ToggleWidget"
-ToggleWidget.Parent = ScreenGui
-ToggleWidget.BackgroundColor3 = Color3.fromRGB(15,15,22)
-ToggleWidget.BackgroundTransparency = 0.15
-ToggleWidget.Position = UDim2.new(0.5,-80,0.08,0)
-ToggleWidget.Size = UDim2.new(0,160,0,44)
-ToggleWidget.Visible = true
-Instance.new("UICorner", ToggleWidget).CornerRadius = UDim.new(0,10)
-local ToggleScale = Instance.new("UIScale", ToggleWidget)
-ToggleScale.Scale = 0.85
-local ToggleStroke = Instance.new("UIStroke")
-ToggleStroke.Parent = ToggleWidget
-ToggleStroke.Color = Color3.fromRGB(45,45,65)
-ToggleStroke.Thickness = 1.5
-local ToggleLabelText = Instance.new("TextLabel")
-ToggleLabelText.Parent = ToggleWidget
-ToggleLabelText.BackgroundTransparency = 1
-ToggleLabelText.Size = UDim2.new(1,0,1,0)
-ToggleLabelText.Font = Enum.Font.GothamBold
-ToggleLabelText.Text = "☰ NKNO$ HUB"
-ToggleLabelText.TextColor3 = Color3.fromRGB(255,215,0)
-ToggleLabelText.TextSize = 17
+-- Кнопка Discord (слева снизу) – копирование ссылки
+local function createDiscordCopyButton()
+    if CoreGui:FindFirstChild("DiscordCopy") then return end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "DiscordCopy"
+    gui.Parent = CoreGui
+    gui.ResetOnSpawn = false
+    local btn = Instance.new("ImageButton")
+    btn.Size = UDim2.new(0, 60, 0, 60)
+    btn.Position = UDim2.new(0, 10, 1, -70)
+    btn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 0
+    btn.Parent = gui
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1,0)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = "DC"
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.TextSize = 24
+    label.Font = Enum.Font.GothamBold
+    label.Parent = btn
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(0, 80, 0, 20)
+    text.Position = UDim2.new(0, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = "Discord"
+    text.TextColor3 = Color3.fromRGB(200,200,220)
+    text.TextSize = 12
+    text.Font = Enum.Font.GothamMedium
+    text.Parent = btn
 
-ToggleWidget.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        TweenService:Create(ToggleScale, TweenInfo.new(0.15), {Scale = 0.78}):Play()
+    btn.MouseButton1Click:Connect(function()
+        local link = "https://discord.gg/vQUM4JapP"
+        if Clipboard then
+            Clipboard(link)
+            Notify("Discord", "Ссылка скопирована в буфер обмена!", 3)
+        else
+            GuiService:OpenBrowserWindow(link)
+        end
+    end)
+
+    -- Перетаскивание
+    local drag, startPos, startMouse
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            drag = true
+            startPos = btn.Position
+            startMouse = input.Position
+        end
+    end)
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then drag = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if drag and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - startMouse
+            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- ============================================================
+-- ЗАПУСК
+-- ============================================================
+-- Создаём статусную метку (правый верх)
+createStatusLabel()
+updateStatusLabel()
+
+-- Discord кнопка (копирование)
+createDiscordCopyButton()
+
+-- Выбор языка
+selectLanguage()
+
+-- Уведомление об обновлении
+if getgenv().NKNO.Language then
+    showUpdateNotice()
+end
+
+-- Стартовое уведомление
+local startMsg = {
+    ru = "Нажми Left Alt для открытия меню",
+    en = "Press Left Alt to open menu"
+}
+Notify("NKNO$ HUB", T(startMsg.ru, startMsg.en), 4)
+
+-- Инициализация категории
+populateCategory("MAIN")
+for _, b in pairs(CategoryList:GetChildren()) do
+    if b:IsA("TextButton") and b.Text == "MAIN" then
+        b.BackgroundColor3 = Color3.fromRGB(60,60,80)
+        b.TextColor3 = Color3.fromRGB(255,215,0)
     end
-end)
-ToggleWidget.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        TweenService:Create(ToggleScale, TweenInfo.new(0.15), {Scale = 0.85}):Play()
+end
+
+-- Фоновые процессы
+task.spawn(function()
+    while true do
+        RunService.Heartbeat:Wait()
+        updateESP()
+        autoGrabGun()
     end
 end)
 
-local dragToggle, dragInputT, dragStartT, startPosT
-local dragStartTime = 0
-ToggleWidget.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragToggle = true
-        dragStartT = input.Position
-        startPosT = ToggleWidget.Position
-        dragStartTime = tick()
-    end
-end)
-ToggleWidget.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInputT = input
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInputT and dragToggle then
-        local delta = input.Position - dragStartT
-        ToggleWidget.Position = UDim2.new(
-            startPosT.X.Scale, startPosT.X.Offset + delta.X,
-            startPosT.Y.Scale, startPosT.Y.Offset + delta.Y
-        )
-    end
-end)
-ToggleWidget.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragToggle = false
-        if tick() - dragStartTime < 0.25 then
-            toggleMenu()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    applyWalkSpeed()
+    applyJumpPower()
+    if getgenv().NKNO.ForceFieldMaterial then applyForceField() end
+    if getgenv().NKNO.GodMode then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
+    if getgenv().NKNO.AutoDance then playDance() end
+    if getgenv().NKNO.AntiFling then
+        stopAntiFling()
+        startAntiFling()
+    end
 end)
 
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftAlt then
+        toggleMenu()
+    end
+end)
+
+if getgenv().NKNO.AntiFling then startAntiFling() end
+
+-- Функция перестроения GUI (при смене языка)
+function rebuildGUI()
+    -- Просто перезагружаем скрипт или обновляем тексты
+    -- В данном случае пользователь может перезапустить скрипт вручную,
+    -- но мы можем обновить текущие элементы, но проще перезапустить.
+    -- Для простоты предлагаем перезапустить скрипт.
+    Notify("Перезагрузка", "Для применения языка перезапустите скрипт", 3)
+end
+
+-- Настройка toggleMenu для видимости
 function toggleMenu(forceState)
     if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
     if isMenuOpen then
@@ -1998,75 +2052,3 @@ MainFrame.InputEnded:Connect(function(input)
         dragging = false
     end
 end)
-
--- ============================================================
--- ЗАПУСК
--- ============================================================
-
--- Показываем выбор языка, если ещё не выбран
-selectLanguage()
-
--- Создаём Discord кнопку
-createDiscordButton()
-
--- Если язык уже был выбран, показываем уведомление об обновлении
-if getgenv().NKNO.Language then
-    showUpdateNotice()
-end
-
--- Стартовое уведомление
-local startMsg = {
-    ru = "Нажми Left Alt для открытия меню",
-    en = "Press Left Alt to open menu"
-}
-Notify("NKNO$ HUB", T(startMsg.ru, startMsg.en), 4)
-
--- Инициализация: показываем первую категорию
-populateCategory("MAIN")
--- Подсветим кнопку MAIN
-for _, b in pairs(CategoryList:GetChildren()) do
-    if b:IsA("TextButton") and b.Text == "MAIN" then
-        b.BackgroundColor3 = Color3.fromRGB(60,60,80)
-        b.TextColor3 = Color3.fromRGB(255,215,0)
-    end
-end
-
--- Фоновые процессы
-task.spawn(function()
-    while true do
-        RunService.Heartbeat:Wait()
-        updateESP()
-        autoGrabGun()
-        -- анти-флинг уже запущен через старт/стоп при переключении
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
-    applyWalkSpeed()
-    applyJumpPower()
-    if getgenv().NKNO.ForceFieldMaterial then applyForceField() end
-    if getgenv().NKNO.GodMode then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-    if getgenv().NKNO.AutoDance then playDance() end
-    if getgenv().NKNO.AntiFling then
-        -- перезапускаем анти-флинг, если включён
-        stopAntiFling()
-        startAntiFling()
-    end
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.LeftAlt then
-        toggleMenu()
-    end
-end)
-
--- В случае, если анти-флинг был включён до загрузки, запускаем
-if getgenv().NKNO.AntiFling then
-    startAntiFling()
-end
