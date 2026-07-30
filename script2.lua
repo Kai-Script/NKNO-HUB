@@ -1,5 +1,5 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.8 (ИСПРАВЛЕННЫЙ)
+-- NKNO$ HUB ULTIMATE v5.9 (полный функционал + ваш интерфейс)
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -19,15 +19,16 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-local SCRIPT_VERSION = "5.8"
+local SCRIPT_VERSION = "5.9"
 
+-- Настройки языка и глобальные переменные
 if not getgenv().NKNO then getgenv().NKNO = {} end
 local lang = getgenv().NKNO.Language or "ru"
 
 local function T(ru, en) return lang == "ru" and ru or en end
 
 -- ============================================================
--- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (игровые)
 -- ============================================================
 
 local function findMap()
@@ -73,7 +74,7 @@ local function findSheriff()
 end
 
 -- ============================================================
--- ОСНОВНЫЕ ФУНКЦИИ (все сохранены)
+-- ОСНОВНЫЕ ФУНКЦИИ (флинг, фарм, ESP, настройки и т.д.)
 -- ============================================================
 
 local function applyWalkSpeed()
@@ -616,7 +617,6 @@ local function startFarming()
                 underY = center.Y - 100
             end
         end
-        -- Лежим горизонтально лицом вниз
         root.CFrame = CFrame.new(root.Position.X, underY, root.Position.Z) * CFrame.Angles(math.rad(90), 0, 0)
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = false end
@@ -769,7 +769,7 @@ task.spawn(function()
 end)
 
 -- ============================================================
--- ГУИ (ПОЛНЫЙ ИНТЕРФЕЙС)
+-- ИНТЕРФЕЙС (на основе вашего упрощённого меню)
 -- ============================================================
 
 if CoreGui:FindFirstChild("nkno$ hub") then CoreGui["nkno$ hub"]:Destroy() end
@@ -784,7 +784,7 @@ local accentColor = Color3.fromRGB(0, 150, 255)
 local isMinimized = false
 local isMenuOpen = false
 
--- ======== ФУНКЦИЯ УВЕДОМЛЕНИЙ (должна быть объявлена раньше) ========
+-- ======== Уведомления ========
 local function Notify(title, desc, duration)
     duration = duration or 3
     local frame = Instance.new("Frame")
@@ -874,7 +874,7 @@ DiscordBtn.InputEnded:Connect(function(input)
     end
 end)
 
--- ======== ОСНОВНОЕ МЕНЮ ========
+-- ======== ОСНОВНОЕ МЕНЮ (ваш дизайн) ========
 local ShadowFrame = Instance.new("Frame")
 ShadowFrame.Name = "ShadowFrame"
 ShadowFrame.Parent = ScreenGui
@@ -923,7 +923,7 @@ MainStroke.Parent = MainFrame
 MainStroke.Color = Color3.fromRGB(35,35,50)
 MainStroke.Thickness = 1.5
 
--- ToggleWidget (свёрнутая кнопка)
+-- Кнопка-переключатель (свёрнутое меню)
 local ToggleWidget = Instance.new("Frame")
 ToggleWidget.Name = "ToggleWidget"
 ToggleWidget.Parent = ScreenGui
@@ -950,24 +950,6 @@ ToggleLabelText.TextSize = 17
 local ToggleGradient = Instance.new("UIGradient")
 ToggleGradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))})
 ToggleGradient.Parent = ToggleLabelText
-
--- Функция открытия/закрытия меню (объявлена до вызова)
-function toggleMenu(forceState)
-    if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
-    if isMenuOpen then
-        MainFrame.Visible = true
-        if not isMinimized then ShadowFrame.Visible = true end
-        TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
-        TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
-    else
-        local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
-        TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
-        closeTween:Play()
-        closeTween.Completed:Connect(function()
-            if not isMenuOpen then MainFrame.Visible = false ShadowFrame.Visible = false end
-        end)
-    end
-end
 
 -- Drag для ToggleWidget
 local dragToggle, dragInputT, dragStartT, startPosT, dragStartTime
@@ -999,6 +981,24 @@ ToggleWidget.InputEnded:Connect(function(input)
     end
 end)
 
+-- Функция открытия/закрытия меню (объявлена до использования)
+function toggleMenu(forceState)
+    if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
+    if isMenuOpen then
+        MainFrame.Visible = true
+        if not isMinimized then ShadowFrame.Visible = true end
+        TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
+        TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 0.8}):Play()
+    else
+        local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2})
+        TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        closeTween:Play()
+        closeTween.Completed:Connect(function()
+            if not isMenuOpen then MainFrame.Visible = false ShadowFrame.Visible = false end
+        end)
+    end
+end
+
 -- Drag для MainFrame
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
@@ -1027,7 +1027,7 @@ MainFrame.InputEnded:Connect(function(input)
     end
 end)
 
--- Верхние кнопки
+-- Верхние кнопки (закрыть, свернуть)
 local TopControls = Instance.new("Frame")
 TopControls.Parent = MainFrame
 TopControls.BackgroundTransparency = 1
@@ -1137,7 +1137,7 @@ ContentArea.ClipsDescendants = false
 ContentArea.Position = UDim2.new(0,185,0,15)
 ContentArea.Size = UDim2.new(1,-200,1,-45)
 
--- Нижняя панель
+-- Нижняя панель с информацией о пользователе
 local BottomBar = Instance.new("Frame")
 BottomBar.Parent = MainFrame
 BottomBar.BackgroundColor3 = Color3.fromRGB(15,15,22)
@@ -1217,12 +1217,11 @@ local function createPage(name)
 end
 
 local AutoFarmPage = createPage("AutoFarm")
-local VisualsPage = createPage("Visuals")
-local TargetPage = createPage("Target")
-local FlingPage = createPage("Fling")
-local SettingsPage = createPage("Settings")
+local ThemesPage = createPage("Themes")
+local MovementPage = createPage("Movement")
+local AdminPage = createPage("Admin")
 
--- Вспомогательные функции для элементов
+-- Вспомогательные функции для элементов (кнопки, переключатели, слайдеры, выпадающие списки)
 local function createSection(parent, title)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1,0,0,24)
@@ -1511,7 +1510,7 @@ local function setupPage(page)
     return scroll, layout
 end
 
--- Auto Farm
+-- === Auto Farm ===
 local afScroll, afLayout = setupPage(AutoFarmPage)
 createSection(afScroll, T("Авто Фарм", "Auto Farm"))
 createToggle(afScroll, T("Фарм монет", "Farm Coins"), T("Автосбор монет", "Auto-collect coins"), getgenv().NKNO.FarmCoins or false, function(val)
@@ -1529,47 +1528,9 @@ createToggle(afScroll, T("Авто-граб пистолета", "Auto Grab Gun"
     getgenv().NKNO.AutoGrabGun = val
 end)
 
--- Visuals
-local visScroll, visLayout = setupPage(VisualsPage)
-createSection(visScroll, T("Визуал", "Visuals"))
-createToggle(visScroll, T("ESP убийцы", "Murderer ESP"), "", getgenv().NKNO.ESP.Murderer or false, function(val)
-    getgenv().NKNO.ESP.Murderer = val
-end)
-createToggle(visScroll, T("ESP шерифа", "Sheriff ESP"), "", getgenv().NKNO.ESP.Sheriff or false, function(val)
-    getgenv().NKNO.ESP.Sheriff = val
-end)
-createToggle(visScroll, T("ESP мирных", "Innocent ESP"), "", getgenv().NKNO.ESP.Innocent or false, function(val)
-    getgenv().NKNO.ESP.Innocent = val
-end)
-createToggle(visScroll, T("ESP героя", "Hero ESP"), "", getgenv().NKNO.ESP.Hero or false, function(val)
-    getgenv().NKNO.ESP.Hero = val
-end)
-createToggle(visScroll, T("2D рамка", "2D Box"), T("Рамка вокруг игрока", "Box around player"), getgenv().NKNO.ESP.Box2D or false, function(val)
-    getgenv().NKNO.ESP.Box2D = val
-end)
-createToggle(visScroll, T("Показывать DisplayName", "Display Name"), "", getgenv().NKNO.ESP.DisplayName or false, function(val)
-    getgenv().NKNO.ESP.DisplayName = val
-    if val then getgenv().NKNO.ESP.NormalName = false end
-end)
-createToggle(visScroll, T("Показывать ник", "Normal Name"), "", getgenv().NKNO.ESP.NormalName or true, function(val)
-    getgenv().NKNO.ESP.NormalName = val
-    if val then getgenv().NKNO.ESP.DisplayName = false end
-end)
-createToggle(visScroll, T("ForceField материал", "ForceField Material"), T("Материал ForceField на себе", "ForceField material on self"), getgenv().NKNO.ForceFieldMaterial or false, function(val)
-    getgenv().NKNO.ForceFieldMaterial = val
-    if val then applyForceField() else restoreMaterial() end
-end)
-createToggle(visScroll, T("Кастомный FOV", "Custom FOV"), "", getgenv().NKNO.CustomFOV or false, function(val)
-    getgenv().NKNO.CustomFOV = val
-    applyFOV()
-end)
-createSlider(visScroll, T("FOV", "FOV"), "", 70, 120, getgenv().NKNO.FOVValue or 70, false, function(val)
-    getgenv().NKNO.FOVValue = val
-    if getgenv().NKNO.CustomFOV then applyFOV() end
-end)
-
--- Темы в Visuals
-createSection(visScroll, T("Цветовая палитра интерфейса", "Interface Color Palette"))
+-- === Themes ===
+local thScroll, thLayout = setupPage(ThemesPage)
+createSection(thScroll, T("Цветовая палитра интерфейса", "Interface Color Palette"))
 local themeColors = {
     {Color3.fromRGB(0,150,255), Color3.fromRGB(0,70,200), T("Синий Космос", "Blue Space")},
     {Color3.fromRGB(168,85,247), Color3.fromRGB(100,30,180), T("Фиолетовый Кибер", "Purple Cyber")},
@@ -1579,12 +1540,11 @@ local themeColors = {
     {Color3.fromRGB(220,220,230), Color3.fromRGB(100,100,110), T("Белый Фантом", "White Phantom")},
 }
 
--- Объявляем tabButtons до использования в обработчиках тем
-local tabButtons = {}
+local tabButtons = {} -- для обновления цвета активной вкладки
 
 for _, t in ipairs(themeColors) do
     local row = Instance.new("TextButton")
-    row.Parent = visScroll
+    row.Parent = thScroll
     row.BackgroundColor3 = Color3.fromRGB(16,16,23)
     row.BackgroundTransparency = 0.15
     row.Size = UDim2.new(1,-10,0,40)
@@ -1626,117 +1586,26 @@ for _, t in ipairs(themeColors) do
     end)
 end
 
--- Target
-local targetScroll, targetLayout = setupPage(TargetPage)
-createSection(targetScroll, T("Выбор цели", "Target Selection"))
-local function getPlayerNames()
-    local names = {}
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then table.insert(names, plr.Name) end
-    end
-    if #names == 0 then names = {"Нет игроков"} end
-    return names
-end
-local playerOptions = getPlayerNames()
-createDropdown(targetScroll, T("Выбрать игрока", "Select Player"), playerOptions, getgenv().NKNO.SelectedPlayerName or playerOptions[1], function(val)
-    local plr = Players:FindFirstChild(val)
-    if plr then
-        getgenv().NKNO.SelectedPlayer = plr
-        getgenv().NKNO.SelectedPlayerName = val
-    else
-        getgenv().NKNO.SelectedPlayer = nil
-        getgenv().NKNO.SelectedPlayerName = nil
-    end
-end)
-createToggle(targetScroll, T("Включить таргет", "Enable Target"), T("Подсветить выбранного игрока", "Highlight selected player"), getgenv().NKNO.TargetEnabled or false, function(val)
-    getgenv().NKNO.TargetEnabled = val
-end)
-
--- Fling
-local flingScroll, flingLayout = setupPage(FlingPage)
-createSection(flingScroll, T("Флинг", "Fling"))
-createButton(flingScroll, T("Флинг убийцы", "Fling Murderer"), T("Зафлингует убийцу", "Fling the murderer"), function()
-    if getgenv().NKNO.Flinging then return end
-    local m = findMurderer()
-    if m then
-        getgenv().NKNO.Flinging = true
-        task.spawn(function()
-            SkidFling(m)
-            getgenv().NKNO.Flinging = false
-        end)
-    end
-end)
-createButton(flingScroll, T("Флинг шерифа", "Fling Sheriff"), T("Зафлингует шерифа", "Fling the sheriff"), function()
-    if getgenv().NKNO.Flinging then return end
-    local s = findSheriff()
-    if s then
-        getgenv().NKNO.Flinging = true
-        task.spawn(function()
-            SkidFling(s)
-            getgenv().NKNO.Flinging = false
-        end)
-    end
-end)
-createButton(flingScroll, T("Флинг выбранного", "Fling Selected"), T("Флинг выбранного игрока", "Fling selected player"), function()
-    if getgenv().NKNO.Flinging then return end
-    local sel = getgenv().NKNO.SelectedPlayer
-    if not sel or not sel.Parent then return end
-    getgenv().NKNO.Flinging = true
-    task.spawn(function()
-        SkidFling(sel)
-        getgenv().NKNO.Flinging = false
-    end)
-end)
-createButton(flingScroll, T("Остановить флинг", "Stop Fling"), T("Остановить флинг", "Stop fling"), function()
-    getgenv().NKNO.Flinging = false
-end)
-
--- Settings
-local setScroll, setLayout = setupPage(SettingsPage)
-createSection(setScroll, T("Настройки", "Settings"))
-createToggle(setScroll, T("Режим Бога", "God Mode"), T("Отключить коллизии", "Disable collisions"), getgenv().NKNO.GodMode or false, function(val)
-    getgenv().NKNO.GodMode = val
-    if val then
-        if LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
-        end
-    end
-end)
-createToggle(setScroll, T("Анти-флинг (защита)", "Anti-Fling"), T("Защита от флинга", "Anti-fling"), getgenv().NKNO.AntiFling or false, function(val)
-    getgenv().NKNO.AntiFling = val
-    if val then startAntiFling() else stopAntiFling() end
-end)
-createToggle(setScroll, T("Anti Sheriff", "Anti Sheriff"), T("Защита от шерифа", "Protection from sheriff"), getgenv().NKNO.AntiSheriff or false, function(val)
-    getgenv().NKNO.AntiSheriff = val
-    if val then antiSheriff() end
-end)
-createToggle(setScroll, T("Под картой (ручной)", "UnderMap Mode"), T("Уйти под карту", "Go under map"), getgenv().NKNO.UnderMap or false, function(val)
-    getgenv().NKNO.UnderMap = val
-    if val then goUnderMap() else returnFromUnderMap() end
-end)
-createToggle(setScroll, T("Авто-респавн", "Auto Respawn"), T("Респавниться при смерти", "Respawn when dead"), getgenv().NKNO.AutoRespawn or false, function(val)
-    getgenv().NKNO.AutoRespawn = val
-end)
-createSection(setScroll, T("Движение", "Movement"))
-createToggle(setScroll, T("Кастомная скорость", "Custom WalkSpeed"), "", getgenv().NKNO.CustomWalkSpeed or false, function(val)
+-- === Movement ===
+local mvScroll, mvLayout = setupPage(MovementPage)
+createSection(mvScroll, T("Движение", "Movement"))
+createToggle(mvScroll, T("Кастомная скорость", "Custom WalkSpeed"), "", getgenv().NKNO.CustomWalkSpeed or false, function(val)
     getgenv().NKNO.CustomWalkSpeed = val
     applyWalkSpeed()
 end)
-createSlider(setScroll, T("WalkSpeed", "WalkSpeed"), "", 16, 200, getgenv().NKNO.WalkSpeedValue or 16, false, function(val)
+createSlider(mvScroll, T("WalkSpeed", "WalkSpeed"), "", 16, 200, getgenv().NKNO.WalkSpeedValue or 16, false, function(val)
     getgenv().NKNO.WalkSpeedValue = val
     if getgenv().NKNO.CustomWalkSpeed then applyWalkSpeed() end
 end)
-createToggle(setScroll, T("Кастомный прыжок", "Custom JumpPower"), "", getgenv().NKNO.CustomJumpPower or false, function(val)
+createToggle(mvScroll, T("Кастомный прыжок", "Custom JumpPower"), "", getgenv().NKNO.CustomJumpPower or false, function(val)
     getgenv().NKNO.CustomJumpPower = val
     applyJumpPower()
 end)
-createSlider(setScroll, T("JumpPower", "JumpPower"), "", 50, 200, getgenv().NKNO.JumpPowerValue or 50, false, function(val)
+createSlider(mvScroll, T("JumpPower", "JumpPower"), "", 50, 200, getgenv().NKNO.JumpPowerValue or 50, false, function(val)
     getgenv().NKNO.JumpPowerValue = val
     if getgenv().NKNO.CustomJumpPower then applyJumpPower() end
 end)
-createToggle(setScroll, T("Анти-AFK", "Anti-AFK"), T("Движение для избегания кика", "Movement to avoid kick"), getgenv().NKNO.AntiAFK or false, function(val)
+createToggle(mvScroll, T("Анти-AFK", "Anti-AFK"), T("Движение для избегания кика", "Movement to avoid kick"), getgenv().NKNO.AntiAFK or false, function(val)
     getgenv().NKNO.AntiAFK = val
     if val then
         task.spawn(function()
@@ -1751,20 +1620,109 @@ createToggle(setScroll, T("Анти-AFK", "Anti-AFK"), T("Движение дл�
     end
 end)
 
-createSection(setScroll, T("Scam Trade", "Scam Trade"))
+-- === Admin ===
+local adScroll, adLayout = setupPage(AdminPage)
+createSection(adScroll, T("Админка", "Admin"))
+createToggle(adScroll, T("Режим Бога", "God Mode"), T("Отключить коллизии", "Disable collisions"), getgenv().NKNO.GodMode or false, function(val)
+    getgenv().NKNO.GodMode = val
+    if val then
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+    end
+end)
+createToggle(adScroll, T("Анти-флинг (защита)", "Anti-Fling"), T("Защита от флинга", "Anti-fling"), getgenv().NKNO.AntiFling or false, function(val)
+    getgenv().NKNO.AntiFling = val
+    if val then startAntiFling() else stopAntiFling() end
+end)
+createToggle(adScroll, T("Anti Sheriff", "Anti Sheriff"), T("Защита от шерифа", "Protection from sheriff"), getgenv().NKNO.AntiSheriff or false, function(val)
+    getgenv().NKNO.AntiSheriff = val
+    if val then antiSheriff() end
+end)
+createToggle(adScroll, T("Под картой (ручной)", "UnderMap Mode"), T("Уйти под карту", "Go under map"), getgenv().NKNO.UnderMap or false, function(val)
+    getgenv().NKNO.UnderMap = val
+    if val then goUnderMap() else returnFromUnderMap() end
+end)
+createToggle(adScroll, T("Авто-респавн", "Auto Respawn"), T("Респавниться при смерти", "Respawn when dead"), getgenv().NKNO.AutoRespawn or false, function(val)
+    getgenv().NKNO.AutoRespawn = val
+end)
+
+createSection(adScroll, T("Флинг", "Fling"))
+createButton(adScroll, T("Флинг убийцы", "Fling Murderer"), T("Зафлингует убийцу", "Fling the murderer"), function()
+    if getgenv().NKNO.Flinging then return end
+    local m = findMurderer()
+    if m then
+        getgenv().NKNO.Flinging = true
+        task.spawn(function()
+            SkidFling(m)
+            getgenv().NKNO.Flinging = false
+        end)
+    end
+end)
+createButton(adScroll, T("Флинг шерифа", "Fling Sheriff"), T("Зафлингует шерифа", "Fling the sheriff"), function()
+    if getgenv().NKNO.Flinging then return end
+    local s = findSheriff()
+    if s then
+        getgenv().NKNO.Flinging = true
+        task.spawn(function()
+            SkidFling(s)
+            getgenv().NKNO.Flinging = false
+        end)
+    end
+end)
+
+local function getPlayerNames()
+    local names = {}
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then table.insert(names, plr.Name) end
+    end
+    if #names == 0 then names = {"Нет игроков"} end
+    return names
+end
+local playerOptions = getPlayerNames()
+createDropdown(adScroll, T("Выбрать игрока", "Select Player"), playerOptions, getgenv().NKNO.SelectedPlayerName or playerOptions[1], function(val)
+    local plr = Players:FindFirstChild(val)
+    if plr then
+        getgenv().NKNO.SelectedPlayer = plr
+        getgenv().NKNO.SelectedPlayerName = val
+    else
+        getgenv().NKNO.SelectedPlayer = nil
+        getgenv().NKNO.SelectedPlayerName = nil
+    end
+end)
+createToggle(adScroll, T("Включить таргет", "Enable Target"), T("Подсветить выбранного игрока", "Highlight selected player"), getgenv().NKNO.TargetEnabled or false, function(val)
+    getgenv().NKNO.TargetEnabled = val
+end)
+createButton(adScroll, T("Флинг выбранного", "Fling Selected"), T("Флинг выбранного игрока", "Fling selected player"), function()
+    if getgenv().NKNO.Flinging then return end
+    local sel = getgenv().NKNO.SelectedPlayer
+    if not sel or not sel.Parent then return end
+    getgenv().NKNO.Flinging = true
+    task.spawn(function()
+        SkidFling(sel)
+        getgenv().NKNO.Flinging = false
+    end)
+end)
+createButton(adScroll, T("Остановить флинг", "Stop Fling"), T("Остановить флинг", "Stop fling"), function()
+    getgenv().NKNO.Flinging = false
+end)
+
+createSection(adScroll, T("Scam Trade", "Scam Trade"))
 local scamPlayers = getPlayerNames()
-createDropdown(setScroll, T("Цель", "Target"), scamPlayers, getgenv().NKNO.ScamTarget and getgenv().NKNO.ScamTarget.Name or scamPlayers[1], function(val)
+createDropdown(adScroll, T("Цель", "Target"), scamPlayers, getgenv().NKNO.ScamTarget and getgenv().NKNO.ScamTarget.Name or scamPlayers[1], function(val)
     local plr = Players:FindFirstChild(val)
     if plr then getgenv().NKNO.ScamTarget = plr end
 end)
-createButton(setScroll, T("Включить заморозку", "Enable Freeze"), T("При броске оружия копируется цели", "Weapon copies to target"), function()
+createButton(adScroll, T("Включить заморозку", "Enable Freeze"), T("При броске оружия копируется цели", "Weapon copies to target"), function()
     if not getgenv().NKNO.ScamTarget then return end
     startScamTrade(getgenv().NKNO.ScamTarget)
 end)
-createButton(setScroll, T("Выключить заморозку", "Disable Freeze"), "", function()
+createButton(adScroll, T("Выключить заморозку", "Disable Freeze"), "", function()
     stopScamTrade()
 end)
-createToggle(setScroll, T("Активна", "Active"), "", getgenv().NKNO.ScamTrade or false, function(val)
+createToggle(adScroll, T("Активна", "Active"), "", getgenv().NKNO.ScamTrade or false, function(val)
     getgenv().NKNO.ScamTrade = val
     if val then
         if not getgenv().NKNO.ScamTarget then return end
@@ -1774,16 +1732,16 @@ createToggle(setScroll, T("Активна", "Active"), "", getgenv().NKNO.ScamTr
     end
 end)
 
-createSection(setScroll, T("Add Weapons", "Add Weapons"))
+createSection(adScroll, T("Add Weapons", "Add Weapons"))
 local presetWeapons = {"Knife", "Gun", "Golden Knife", "Sword", "Axe", "Candy Cane", "Laser Gun"}
 local selectedWeapon = presetWeapons[1]
-createDropdown(setScroll, T("Выберите оружие", "Select Weapon"), presetWeapons, selectedWeapon, function(val)
+createDropdown(adScroll, T("Выберите оружие", "Select Weapon"), presetWeapons, selectedWeapon, function(val)
     selectedWeapon = val
 end)
-createButton(setScroll, T("Спавн выбранного", "Spawn Selected"), T("Создать оружие в руках", "Spawn in hands"), function()
+createButton(adScroll, T("Спавн выбранного", "Spawn Selected"), T("Создать оружие в руках", "Spawn in hands"), function()
     spawnWeapon(selectedWeapon)
 end)
-createButton(setScroll, T("Убить всех", "Kill All"), T("Убить всех мирных (только убийца)", "Kill all innocents (murderer only)"), function()
+createButton(adScroll, T("Убить всех", "Kill All"), T("Убить всех мирных (только убийца)", "Kill all innocents (murderer only)"), function()
     if not LocalPlayer.Character then return end
     local knife = LocalPlayer.Character:FindFirstChild("Knife")
     if not knife then
@@ -1811,7 +1769,7 @@ createButton(setScroll, T("Убить всех", "Kill All"), T("Убить вс
 end)
 
 -- ============================================================
--- ВКЛАДКИ (табы) - создаём после объявления tabButtons
+-- ВКЛАДКИ (табы)
 -- ============================================================
 
 local function createTabButton(text, page)
@@ -1838,11 +1796,10 @@ local function createTabButton(text, page)
     return btn
 end
 
-local tabAutoFarm = createTabButton(T("Auto Farm", "Auto Farm"), AutoFarmPage)
-local tabVisuals = createTabButton(T("Visuals", "Visuals"), VisualsPage)
-local tabTarget = createTabButton(T("Target", "Target"), TargetPage)
-local tabFling = createTabButton(T("Fling", "Fling"), FlingPage)
-local tabSettings = createTabButton(T("Settings", "Settings"), SettingsPage)
+local tabAutoFarm = createTabButton(T("Авто Фарм", "Auto Farm"), AutoFarmPage)
+local tabThemes = createTabButton(T("Темы", "Themes"), ThemesPage)
+local tabMovement = createTabButton(T("Движение", "Movement"), MovementPage)
+local tabAdmin = createTabButton(T("Админка", "Admin"), AdminPage)
 
 tabAutoFarm.BackgroundColor3 = accentColor
 tabAutoFarm.TextColor3 = Color3.fromRGB(255,255,255)
@@ -1890,4 +1847,4 @@ end)
 
 if getgenv().NKNO.AntiFling then startAntiFling() end
 
-print("NKNO$ HUB v5.8 loaded successfully.")
+print("NKNO$ HUB v5.9 loaded successfully.")
