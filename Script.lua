@@ -449,7 +449,8 @@ do
     BgImage.Parent=MainFrame;
     BgImage.BackgroundTransparency=1;
     BgImage.Size=UDim2.new(1,0,1,0);
-    BgImage.Image="rbxassetid://121149051147413";
+    -- НОВЫЙ ФОН: ваш Decal 138913032331139
+    BgImage.Image = "rbxassetid://138913032331139"
     BgImage.ScaleType=Enum.ScaleType.Crop;
     BgImage.ImageTransparency=0.35;
     BgImage.ZIndex=0;
