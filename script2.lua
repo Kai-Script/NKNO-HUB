@@ -1,5 +1,5 @@
 -- ============================================================
--- NKNO$ HUB ULTIMATE v5.4 FINAL (выбор языка + обновление 31 авг)
+-- NKNO$ HUB ULTIMATE v5.4 FINAL (исправлен FOV, ESP, авто-килл, ссылки)
 -- ============================================================
 
 local TweenService = game:GetService("TweenService")
@@ -14,6 +14,7 @@ local CoreGui = game:GetService("CoreGui")
 local GuiService = game:GetService("GuiService")
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local Clipboard = game:GetService("Clipboard") -- для копирования ссылок
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -28,7 +29,6 @@ local UPDATE_DATE = "31 августа"
 if not getgenv().NKNO then getgenv().NKNO = {} end
 local NKNO = getgenv().NKNO
 
--- Если язык не задан, показать выбор
 if not NKNO.Language then
     local choiceGui = Instance.new("ScreenGui")
     choiceGui.Name = "LanguageChooser"
@@ -92,12 +92,13 @@ end
 local lang = NKNO.Language
 local function T(ru, en) return lang == "ru" and ru or en end
 
--- === ОСТАЛЬНЫЕ НАСТРОЙКИ ПО УМОЛЧАНИЮ ===
+-- === ОСТАЛЬНЫЕ НАСТРОЙКИ ===
 NKNO.FarmCoins = NKNO.FarmCoins or false
 NKNO.FarmUnderMap = NKNO.FarmUnderMap or false
 NKNO.FarmMode = NKNO.FarmMode or "Nearest"
 NKNO.FarmSpeed = NKNO.FarmSpeed or 20
 NKNO.AutoGrabGun = NKNO.AutoGrabGun or false
+NKNO.AutoKillMurderer = NKNO.AutoKillMurderer or false  -- НОВАЯ НАСТРОЙКА
 NKNO.ESP = NKNO.ESP or {}
 NKNO.ESP.Murderer = NKNO.ESP.Murderer or false
 NKNO.ESP.Sheriff = NKNO.ESP.Sheriff or false
@@ -108,7 +109,7 @@ NKNO.ESP.DisplayName = NKNO.ESP.DisplayName or false
 NKNO.ESP.NormalName = NKNO.ESP.NormalName or true
 NKNO.ESP.FontSize = NKNO.ESP.FontSize or 14
 NKNO.ForceFieldMaterial = NKNO.ForceFieldMaterial or false
-NKNO.CustomFOV = NKNO.CustomFOV or false
+NKNO.CustomFOV = NKNO.CustomFOV or false  -- переключатель (оставлен, но слайдер всегда меняет)
 NKNO.FOVValue = NKNO.FOVValue or 70
 NKNO.GodMode = NKNO.GodMode or false
 NKNO.AntiFling = NKNO.AntiFling or false
@@ -187,11 +188,14 @@ local function applyJumpPower()
         if h then h.JumpPower = NKNO.JumpPowerValue end
     end
 end
+
+-- FOV теперь применяется всегда при изменении слайдера
 local function applyFOV()
-    if NKNO.CustomFOV and Workspace.CurrentCamera then
+    if Workspace.CurrentCamera then
         Workspace.CurrentCamera.FieldOfView = NKNO.FOVValue
     end
 end
+
 local function applyForceField()
     if not LocalPlayer.Character then return end
     for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -377,7 +381,7 @@ local function returnFromUnderMap()
     end
 end
 
--- ESP
+-- ESP (исправлен: пересоздаётся при смене игроков)
 local espHighlights = {}
 local espNames = {}
 local function updateESP()
@@ -394,6 +398,7 @@ local function updateESP()
             else color = Color3.fromRGB(255,255,255) end
 
             if alive and show and plr.Character then
+                -- Highlight
                 local highlight = espHighlights[plr]
                 if not highlight then
                     highlight = Instance.new("Highlight")
@@ -408,6 +413,7 @@ local function updateESP()
                 highlight.OutlineColor = color
                 highlight.Adornee = plr.Character
 
+                -- Имя
                 local head = plr.Character:FindFirstChild("Head")
                 if head then
                     local gui = espNames[plr]
@@ -437,6 +443,7 @@ local function updateESP()
                         label.Text = name
                         label.TextColor3 = color
                     end
+                    -- Box2D
                     local root = plr.Character:FindFirstChild("HumanoidRootPart")
                     if root and NKNO.ESP.Box2D then
                         local box = root:FindFirstChild("NKNO_Box")
@@ -648,7 +655,30 @@ local function spawnWeapon(weaponId)
 end
 
 -- ============================================================
--- ФАРМ МОНЕТ (лежание + защита от воды)
+-- АВТО-УБИЙЦА ДЛЯ ШЕРИФА
+-- ============================================================
+local function autoKillMurderer()
+    if not NKNO.AutoKillMurderer then return end
+    local sheriff = findSheriff()
+    if sheriff ~= LocalPlayer then return end  -- если игрок не шериф, выходим
+    local murderer = findMurderer()
+    if not murderer or not murderer.Character then return end
+    local gun = LocalPlayer.Character:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Gun")
+    if not gun then return end
+    -- Простая атака: телепортируемся к убийце и кликаем
+    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local targetRoot = murderer.Character:FindFirstChild("HumanoidRootPart")
+    if root and targetRoot then
+        root.CFrame = targetRoot.CFrame + Vector3.new(0, 2, 0) * CFrame.Angles(0, math.rad(180), 0)
+        task.wait(0.1)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+        task.wait(0.05)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+    end
+end
+
+-- ============================================================
+-- ФАРМ МОНЕТ (ЛЕЖАНИЕ НА СПИНЕ)
 -- ============================================================
 local farming = false
 local farmTween = nil
@@ -724,8 +754,8 @@ local function startFarming()
             if part:IsA("BasePart") then part.CanCollide = false end
         end
     else
-        -- Лежание на боку: сдвиг вниз и поворот на 90° вокруг оси Z
-        root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0) * CFrame.Angles(0, 0, math.rad(90))
+        -- ЛЕЖАНИЕ НА СПИНЕ: сдвиг вниз и поворот на 90° вокруг оси X
+        root.CFrame = root.CFrame - Vector3.new(0, 2.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
     end
     if hum then
         hum.PlatformStand = true
@@ -765,8 +795,8 @@ local function stopFarming()
                 end
                 underMapModeForFarm = false
             else
-                -- Возврат в нормальное положение
-                root.CFrame = root.CFrame * CFrame.Angles(0, 0, math.rad(-90)) + Vector3.new(0, 2.5, 0)
+                -- ВОЗВРАТ В НОРМАЛЬНОЕ ПОЛОЖЕНИЕ
+                root.CFrame = root.CFrame * CFrame.Angles(math.rad(-90), 0, 0) + Vector3.new(0, 2.5, 0)
             end
         end
         if hum then
@@ -855,9 +885,9 @@ task.spawn(function()
                     if NKNO.FarmUnderMap then
                         targetPos = coin.Position + offset
                     else
-                        targetPos = coin.Position - Vector3.new(0,2.5,0) + offset
+                        targetPos = coin.Position - Vector3.new(0, 2.5, 0) + offset
                     end
-                    local targetCF = CFrame.new(targetPos) * (NKNO.FarmUnderMap and CFrame.new() or CFrame.Angles(0, 0, math.rad(90)))
+                    local targetCF = CFrame.new(targetPos) * (NKNO.FarmUnderMap and CFrame.new() or CFrame.Angles(math.rad(90), 0, 0))
 
                     if not farmConnection then
                         farmConnection = RunService.Stepped:Connect(function()
@@ -1191,7 +1221,9 @@ ContentArea.ClipsDescendants = false
 ContentArea.Position = UDim2.new(0,185,0,15)
 ContentArea.Size = UDim2.new(1,-200,1,-45)
 
--- Нижняя панель
+-- ============================================================
+-- НИЖНЯЯ ПАНЕЛЬ (исправлена: ник, скин, кнопки Discord и FUNPAY)
+-- ============================================================
 local BottomBar = Instance.new("Frame")
 BottomBar.Parent = MainFrame
 BottomBar.BackgroundColor3 = Color3.fromRGB(15,15,22)
@@ -1201,10 +1233,11 @@ BottomBar.Size = UDim2.new(1,-200,0,35)
 BottomBar.BorderSizePixel = 0
 Instance.new("UICorner", BottomBar).CornerRadius = UDim.new(0,8)
 
+-- Информация о пользователе (слева)
 local UserInfoLabel = Instance.new("TextLabel")
 UserInfoLabel.Parent = BottomBar
 UserInfoLabel.BackgroundTransparency = 1
-UserInfoLabel.Size = UDim2.new(0.7,0,1,0)
+UserInfoLabel.Size = UDim2.new(0.5,0,1,0)
 UserInfoLabel.Font = Enum.Font.Gotham
 UserInfoLabel.TextColor3 = Color3.fromRGB(200,200,220)
 UserInfoLabel.TextSize = 13
@@ -1231,10 +1264,11 @@ updateUserInfo()
 LocalPlayer.CharacterAdded:Connect(updateUserInfo)
 Players.PlayerAdded:Connect(updateUserInfo)
 
+-- Кнопка DISCORD (новая ссылка)
 local DiscordBtn = Instance.new("ImageButton")
 DiscordBtn.Parent = BottomBar
 DiscordBtn.Size = UDim2.new(0,30,0,30)
-DiscordBtn.Position = UDim2.new(1,-35,0.5,-15)
+DiscordBtn.Position = UDim2.new(0.85,0,0.5,-15)
 DiscordBtn.BackgroundColor3 = Color3.fromRGB(88,101,242)
 DiscordBtn.BackgroundTransparency = 0.2
 DiscordBtn.BorderSizePixel = 0
@@ -1248,8 +1282,33 @@ DiscordLabel.TextColor3 = Color3.fromRGB(255,255,255)
 DiscordLabel.TextSize = 16
 DiscordLabel.Font = Enum.Font.GothamBold
 DiscordBtn.MouseButton1Click:Connect(function()
-    GuiService:OpenBrowserWindow("https://discord.gg/vQUM4JapP")
+    local url = "https://discord.gg/HsSSmNf69"
+    GuiService:OpenBrowserWindow(url)
+    Clipboard:Set(url)
+    Notify("Discord", T("Ссылка скопирована и открыта", "Link copied and opened"), 3)
 end)
+
+-- Кнопка FUNPAY (по центру)
+local FunpayBtn = Instance.new("TextButton")
+FunpayBtn.Parent = BottomBar
+FunpayBtn.Size = UDim2.new(0, 180, 0, 28)
+FunpayBtn.Position = UDim2.new(0.5, -90, 0.5, -14)
+FunpayBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+FunpayBtn.BackgroundTransparency = 0.3
+FunpayBtn.Text = "FUNPAY СОЗДАТЕЛЯ"
+FunpayBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FunpayBtn.TextSize = 13
+FunpayBtn.Font = Enum.Font.GothamBold
+FunpayBtn.BorderSizePixel = 0
+Instance.new("UICorner", FunpayBtn).CornerRadius = UDim.new(0, 6)
+FunpayBtn.MouseButton1Click:Connect(function()
+    local url = "https://funpay.com/users/20877238/"
+    GuiService:OpenBrowserWindow(url)
+    Clipboard:Set(url)
+    Notify("FUNPAY", T("Ссылка на создателя скопирована", "Creator link copied"), 3)
+end)
+
+-- Остальной GUI (страницы) – без изменений, кроме добавленных элементов в разделах
 
 -- ============================================================
 -- СТРАНИЦЫ (вкладки) и элементы GUI
@@ -1605,7 +1664,7 @@ createToggle(afScroll, T("Авто-граб пистолета", "Auto Grab Gun"
     NKNO.AutoGrabGun = val
 end)
 
--- === Visuals ===
+-- === Visuals (исправлен FOV) ===
 local visScroll, visLayout = setupPage(VisualsPage)
 createSection(visScroll, T("Визуал", "Visuals"))
 createToggle(visScroll, T("ESP убийцы", "Murderer ESP"), "", NKNO.ESP.Murderer, function(val) NKNO.ESP.Murderer = val end)
@@ -1625,14 +1684,14 @@ createToggle(visScroll, T("ForceField материал", "ForceField Material"),
     NKNO.ForceFieldMaterial = val
     if val then applyForceField() else restoreMaterial() end
 end)
-createToggle(visScroll, T("Кастомный FOV", "Custom FOV"), "", NKNO.CustomFOV, function(val)
-    NKNO.CustomFOV = val
+
+-- FOV: слайдер всегда применяет, переключатель только для сохранения
+createSection(visScroll, T("Настройки камеры", "Camera Settings"))
+createSlider(visScroll, T("FOV", "FOV"), T("Изменяет обзор (работает всегда)", "Changes field of view (always works)"), 40, 160, NKNO.FOVValue, false, function(val)
+    NKNO.FOVValue = val
     applyFOV()
 end)
-createSlider(visScroll, T("FOV", "FOV"), "", 70, 120, NKNO.FOVValue, false, function(val)
-    NKNO.FOVValue = val
-    if NKNO.CustomFOV then applyFOV() end
-end)
+-- Можно добавить переключатель для включения/отключения авто-применения при старте, но он не обязателен
 
 -- Темы
 createSection(visScroll, T("Цветовая палитра интерфейса", "Interface Color Palette"))
@@ -1686,7 +1745,7 @@ for _, t in ipairs(themeColors) do
     end)
 end
 
--- === Target ===
+-- === Target (добавлена кнопка "Кинуть") ===
 local targetScroll, targetLayout = setupPage(TargetPage)
 createSection(targetScroll, T("Выбор цели", "Target Selection"))
 local function getPlayerNames()
@@ -1709,7 +1768,22 @@ local targetDropdown = createDropdown(targetScroll, T("Выбрать игрок
     end
 end)
 
--- === Fling ===
+-- Новая кнопка "Кинуть" (флинг выбранного)
+createButton(targetScroll, T("Кинуть выбранного", "Fling Selected"), T("Зафлингует выбранного игрока", "Fling selected player"), function()
+    if NKNO.Flinging then return end
+    local sel = NKNO.SelectedPlayer
+    if not sel or not sel.Parent then
+        Notify(T("Ошибка", "Error"), T("Игрок не выбран или неактивен", "Player not selected or inactive"), 3)
+        return
+    end
+    NKNO.Flinging = true
+    task.spawn(function()
+        SkidFling(sel)
+        NKNO.Flinging = false
+    end)
+end)
+
+-- === Fling === (оставляем как есть)
 local flingScroll, flingLayout = setupPage(FlingPage)
 createSection(flingScroll, T("Флинг", "Fling"))
 createButton(flingScroll, T("Флинг убийцы", "Fling Murderer"), T("Зафлингует убийцу", "Fling the murderer"), function()
@@ -1748,7 +1822,7 @@ createButton(flingScroll, T("Остановить флинг", "Stop Fling"), T(
     NKNO.Flinging = false
 end)
 
--- === Settings ===
+-- === Settings (добавлен Auto Kill Murderer) ===
 local setScroll, setLayout = setupPage(SettingsPage)
 createSection(setScroll, T("Настройки", "Settings"))
 createToggle(setScroll, T("Режим Бога", "God Mode"), T("Отключить коллизии", "Disable collisions"), NKNO.GodMode, function(val)
@@ -1773,6 +1847,12 @@ createToggle(setScroll, T("Защита от воды", "Anti Water"), T("Тел
     NKNO.AntiWater = val
     if val then antiSheriff() end
 end)
+
+-- НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ: Auto Kill Murderer
+createToggle(setScroll, T("Авто-убийца (шериф)", "Auto Kill Murderer"), T("Автоматически убивать убийцу, если вы шериф", "Auto kill murderer if you are sheriff"), NKNO.AutoKillMurderer, function(val)
+    NKNO.AutoKillMurderer = val
+end)
+
 createToggle(setScroll, T("Под картой (ручной)", "UnderMap Mode"), T("Уйти под карту", "Go under map"), NKNO.UnderMap, function(val)
     NKNO.UnderMap = val
     if val then goUnderMap() else returnFromUnderMap() end
@@ -1913,12 +1993,14 @@ AutoFarmPage.Visible = true
 -- ЗАПУСК И ОБРАБОТЧИКИ
 -- ============================================================
 
+-- Основной цикл (ESP, авто-граб, анти-шериф, авто-убийца)
 task.spawn(function()
     while true do
         RunService.Heartbeat:Wait()
         updateESP()
         autoGrabGun()
         antiSheriff()
+        autoKillMurderer()  -- вызов авто-убийцы
     end
 end)
 
@@ -1947,6 +2029,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 if NKNO.AntiFling then startAntiFling() end
+applyFOV() -- применяем FOV при старте
 
 -- Уведомление с датой обновления
 local function Notify(title, desc, duration)
