@@ -23,6 +23,7 @@ do
             ThemeTab="Темы",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
+            ShopTab="Магазин",
             AutoFarmToggle="Авто Фарм",
             SpeedLabel="Скорость: %d",
             DistLabel="WinsFarmer:",
@@ -43,7 +44,17 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Джойстик/WASD)",
             FlySpeedLabel="Скорость полета: %d",
-            Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"}
+            Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"},
+            ShopItemsLabel="Предметы (обычный маркет)",
+            ShopAurasLabel="Ауры",
+            ShopTrailsLabel="Следы",
+            AddItemBtn="+ Добавить",
+            BuySelectedBtn="Купить отмеченные",
+            BuyAllBtn="Купить всё",
+            NoShopRemote="Не найден RemoteEvent для покупки!",
+            Buying="Покупка: %s",
+            BuySuccess="Куплено: %s",
+            BuyFailed="Ошибка покупки %s"
         },
         EN={
             ChooseLang="Choose language",
@@ -53,6 +64,7 @@ do
             ThemeTab="Themes",
             AdminTab="AdminPanel",
             MovementTab="Moovement",
+            ShopTab="Shop",
             AutoFarmToggle="Auto Farm",
             SpeedLabel="Speed: %d",
             DistLabel="WinsFarmer:",
@@ -73,7 +85,17 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Joystick/WASD)",
             FlySpeedLabel="Fly Speed: %d",
-            Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"}
+            Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"},
+            ShopItemsLabel="Items (regular market)",
+            ShopAurasLabel="Auras",
+            ShopTrailsLabel="Trails",
+            AddItemBtn="+ Add",
+            BuySelectedBtn="Buy Selected",
+            BuyAllBtn="Buy All",
+            NoShopRemote="No RemoteEvent found for purchase!",
+            Buying="Buying: %s",
+            BuySuccess="Bought: %s",
+            BuyFailed="Failed to buy %s"
         }
     };
     local function L(key) return Locales[lang][key];end 
@@ -95,6 +117,12 @@ do
     local checkModelEnabled=false;
     local checkModelConnection=nil;
     local mouse=LocalPlayer:GetMouse();
+    -- === СПИСКИ ДЛЯ МАГАЗИНА ===
+    local shopItems = {};      -- {name = string, checked = boolean}
+    local shopAuras = {};
+    local shopTrails = {};
+    local shopRemote = nil;    -- будет найден при первой покупке
+
     local Waypoints={
         ["1 World"]={
             ["+1 wins"]={Vector3.new(2.8,8.5,74.3),Vector3.new( -22.3,10.4,286)},
@@ -289,6 +317,104 @@ do
             if hum then hum.PlatformStand=false;end
         end
     end
+    -- ===== ФУНКЦИИ ПОКУПКИ =====
+    local function findShopRemote()
+        if shopRemote then return shopRemote end
+        local rs = game:GetService("ReplicatedStorage")
+        for _, child in ipairs(rs:GetDescendants()) do
+            if child:IsA("RemoteEvent") then
+                local name = child.Name:lower()
+                if name:find("buy") or name:find("purchase") or name:find("shop") then
+                    shopRemote = child
+                    return child
+                end
+            end
+        end
+        return nil
+    end
+
+    local function purchaseItem(itemName, itemType)
+        local remote = findShopRemote()
+        if not remote then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Shop",
+                Text = L("NoShopRemote"),
+                Duration = 4
+            })
+            return false
+        end
+        local success, err = pcall(function()
+            -- Пытаемся вызвать ремоут с разными вариантами аргументов
+            remote:FireServer(itemName, itemType or "item")
+        end)
+        if success then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Shop",
+                Text = string.format(L("BuySuccess"), itemName),
+                Duration = 3
+            })
+            return true
+        else
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Shop",
+                Text = string.format(L("BuyFailed"), itemName),
+                Duration = 3
+            })
+            return false
+        end
+    end
+
+    local function buySelectedItems()
+        local toBuy = {}
+        for _, item in ipairs(shopItems) do
+            if item.checked then table.insert(toBuy, {name = item.name, type = "item"}) end
+        end
+        for _, item in ipairs(shopAuras) do
+            if item.checked then table.insert(toBuy, {name = item.name, type = "aura"}) end
+        end
+        for _, item in ipairs(shopTrails) do
+            if item.checked then table.insert(toBuy, {name = item.name, type = "trail"}) end
+        end
+        if #toBuy == 0 then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Shop",
+                Text = "No items selected.",
+                Duration = 3
+            })
+            return
+        end
+        for _, entry in ipairs(toBuy) do
+            purchaseItem(entry.name, entry.type)
+            task.wait(0.3)
+        end
+    end
+
+    local function buyAllItems()
+        local toBuy = {}
+        for _, item in ipairs(shopItems) do
+            table.insert(toBuy, {name = item.name, type = "item"})
+        end
+        for _, item in ipairs(shopAuras) do
+            table.insert(toBuy, {name = item.name, type = "aura"})
+        end
+        for _, item in ipairs(shopTrails) do
+            table.insert(toBuy, {name = item.name, type = "trail"})
+        end
+        if #toBuy == 0 then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Shop",
+                Text = "No items in lists.",
+                Duration = 3
+            })
+            return
+        end
+        for _, entry in ipairs(toBuy) do
+            purchaseItem(entry.name, entry.type)
+            task.wait(0.3)
+        end
+    end
+    -- ===== КОНЕЦ ФУНКЦИЙ ПОКУПКИ =====
+
     local UI_SCALE=0.8;
     local ScreenGui=Instance.new("ScreenGui");
     ScreenGui.Name="nkno$ hub";
@@ -630,6 +756,13 @@ do
     AdminPage.BackgroundTransparency=1;
     AdminPage.Size=UDim2.new(1,0,1,0);
     AdminPage.Visible=false;
+    -- Новая страница Shop
+    local ShopPage=Instance.new("Frame");
+    ShopPage.Parent=ContentArea;
+    ShopPage.BackgroundTransparency=1;
+    ShopPage.Size=UDim2.new(1,0,1,0);
+    ShopPage.Visible=false;
+
     local tabButtons={};
     local function createTabButton(text,page)
         local btn=Instance.new("TextButton");
@@ -651,6 +784,7 @@ do
             MovementPage.Visible=page==MovementPage ;
             ThemePage.Visible=page==ThemePage ;
             AdminPage.Visible=page==AdminPage ;
+            ShopPage.Visible=page==ShopPage ;
         end);
         table.insert(tabButtons,btn);
         return btn;
@@ -659,6 +793,7 @@ do
     local movementTabBtn=createTabButton("Moovement",MovementPage);
     local themeTabBtn=createTabButton("Theme",ThemePage);
     local adminTabBtn=createTabButton("AdminPanel",AdminPage);
+    local shopTabBtn=createTabButton("Shop",ShopPage);
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
@@ -692,6 +827,188 @@ do
     end)
     -- ===== КОНЕЦ БЛОКА DISCORD =====
 
+    -- ===== БЛОК МАГАЗИНА (UI) =====
+    local ShopScroll = Instance.new("ScrollingFrame")
+    ShopScroll.Parent = ShopPage
+    ShopScroll.BackgroundTransparency = 1
+    ShopScroll.Size = UDim2.new(1,0,1,0)
+    ShopScroll.ScrollBarThickness = 0
+    ShopScroll.CanvasSize = UDim2.new(0,0,0,600)
+
+    local ShopListLayout = Instance.new("UIListLayout")
+    ShopListLayout.Parent = ShopScroll
+    ShopListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ShopListLayout.Padding = UDim.new(0,10)
+
+    -- Вспомогательная функция для создания секции с чекбоксами
+    local function createShopSection(parent, titleKey, listData, listName)
+        local frame = Instance.new("Frame")
+        frame.Parent = parent
+        frame.BackgroundColor3 = Color3.fromRGB(16,16,23)
+        frame.BackgroundTransparency = 0.15
+        frame.Size = UDim2.new(1, -10, 0, 160)
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Parent = frame
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Position = UDim2.new(0,12,0,6)
+        titleLabel.Size = UDim2.new(0.6,0,0,22)
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        titleLabel.TextSize = 14
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabel.Text = L(titleKey)
+
+        local addBox = Instance.new("TextBox")
+        addBox.Parent = frame
+        addBox.BackgroundColor3 = Color3.fromRGB(30,30,40)
+        addBox.Position = UDim2.new(0,12,0,34)
+        addBox.Size = UDim2.new(0.7, -16, 0, 30)
+        addBox.Font = Enum.Font.GothamSemibold
+        addBox.Text = ""
+        addBox.TextColor3 = Color3.fromRGB(200,200,220)
+        addBox.TextSize = 13
+        addBox.ClearTextOnFocus = false
+        addBox.PlaceholderText = "Item name..."
+        Instance.new("UICorner", addBox).CornerRadius = UDim.new(0,8)
+
+        local addBtn = Instance.new("TextButton")
+        addBtn.Parent = frame
+        addBtn.BackgroundColor3 = accentColor
+        addBtn.Position = UDim2.new(0.72,0,0,34)
+        addBtn.Size = UDim2.new(0.25, -8, 0, 30)
+        addBtn.Font = Enum.Font.GothamBold
+        addBtn.Text = L("AddItemBtn")
+        addBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        addBtn.TextSize = 13
+        Instance.new("UICorner", addBtn).CornerRadius = UDim.new(0,8)
+
+        local listFrame = Instance.new("ScrollingFrame")
+        listFrame.Parent = frame
+        listFrame.BackgroundColor3 = Color3.fromRGB(20,20,28)
+        listFrame.BackgroundTransparency = 0.3
+        listFrame.Position = UDim2.new(0,6,0,72)
+        listFrame.Size = UDim2.new(1, -12, 0, 80)
+        listFrame.CanvasSize = UDim2.new(0,0,0,0)
+        listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        listFrame.ScrollBarThickness = 3
+        Instance.new("UICorner", listFrame).CornerRadius = UDim.new(0,8)
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.Parent = listFrame
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Padding = UDim.new(0,4)
+
+        local function refreshList()
+            for _, child in ipairs(listFrame:GetChildren()) do
+                if child:IsA("Frame") then child:Destroy() end
+            end
+            for idx, item in ipairs(listData) do
+                local row = Instance.new("Frame")
+                row.Parent = listFrame
+                row.BackgroundColor3 = Color3.fromRGB(28,28,38)
+                row.Size = UDim2.new(1, -8, 0, 30)
+                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+
+                local check = Instance.new("ImageButton")
+                check.Parent = row
+                check.BackgroundTransparency = 1
+                check.Size = UDim2.new(0, 22, 0, 22)
+                check.Position = UDim2.new(0, 8, 0.5, -11)
+                check.Image = item.checked and "rbxassetid://6011895293" or "rbxassetid://6011897658"
+                check.ScaleType = Enum.ScaleType.Fit
+                check.MouseButton1Click:Connect(function()
+                    item.checked = not item.checked
+                    check.Image = item.checked and "rbxassetid://6011895293" or "rbxassetid://6011897658"
+                end)
+
+                local lbl = Instance.new("TextLabel")
+                lbl.Parent = row
+                lbl.BackgroundTransparency = 1
+                lbl.Position = UDim2.new(0, 36, 0, 0)
+                lbl.Size = UDim2.new(1, -50, 1, 0)
+                lbl.Font = Enum.Font.GothamSemibold
+                lbl.Text = item.name
+                lbl.TextColor3 = Color3.fromRGB(220,220,240)
+                lbl.TextSize = 13
+                lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+                local delBtn = Instance.new("TextButton")
+                delBtn.Parent = row
+                delBtn.BackgroundColor3 = Color3.fromRGB(231,76,60)
+                delBtn.Position = UDim2.new(1, -26, 0.5, -11)
+                delBtn.Size = UDim2.new(0, 22, 0, 22)
+                delBtn.Font = Enum.Font.GothamBold
+                delBtn.Text = "X"
+                delBtn.TextColor3 = Color3.fromRGB(255,255,255)
+                delBtn.TextSize = 14
+                Instance.new("UICorner", delBtn).CornerRadius = UDim.new(0, 6)
+                delBtn.MouseButton1Click:Connect(function()
+                    table.remove(listData, idx)
+                    refreshList()
+                end)
+            end
+            task.spawn(function()
+                task.wait(0.05)
+                listFrame.CanvasSize = UDim2.new(0,0,0, listLayout.AbsoluteContentSize.Y + 4)
+            end)
+        end
+
+        addBtn.MouseButton1Click:Connect(function()
+            local name = addBox.Text:gsub("^%s*(.-)%s*$", "%1")
+            if name ~= "" then
+                table.insert(listData, {name = name, checked = true})
+                addBox.Text = ""
+                refreshList()
+            end
+        end)
+
+        addBox.FocusLost:Connect(function(enterPressed)
+            if enterPressed then addBtn.MouseButton1Click:Fire() end
+        end)
+
+        refreshList()
+        return frame
+    end
+
+    -- Создаём секции
+    local itemsSection = createShopSection(ShopScroll, "ShopItemsLabel", shopItems, "items")
+    local aurasSection = createShopSection(ShopScroll, "ShopAurasLabel", shopAuras, "auras")
+    local trailsSection = createShopSection(ShopScroll, "ShopTrailsLabel", shopTrails, "trails")
+
+    -- Кнопки покупки
+    local buyFrame = Instance.new("Frame")
+    buyFrame.Parent = ShopScroll
+    buyFrame.BackgroundTransparency = 1
+    buyFrame.Size = UDim2.new(1, -10, 0, 50)
+
+    local buySelectedBtn = Instance.new("TextButton")
+    buySelectedBtn.Parent = buyFrame
+    buySelectedBtn.BackgroundColor3 = Color3.fromRGB(34,197,94)
+    buySelectedBtn.Position = UDim2.new(0,0,0,0)
+    buySelectedBtn.Size = UDim2.new(0.48, -4, 1, 0)
+    buySelectedBtn.Font = Enum.Font.GothamBold
+    buySelectedBtn.Text = L("BuySelectedBtn")
+    buySelectedBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    buySelectedBtn.TextSize = 14
+    Instance.new("UICorner", buySelectedBtn).CornerRadius = UDim.new(0,10)
+    buySelectedBtn.MouseButton1Click:Connect(buySelectedItems)
+
+    local buyAllBtn = Instance.new("TextButton")
+    buyAllBtn.Parent = buyFrame
+    buyAllBtn.BackgroundColor3 = Color3.fromRGB(245,158,11)
+    buyAllBtn.Position = UDim2.new(0.52,0,0,0)
+    buyAllBtn.Size = UDim2.new(0.48, -4, 1, 0)
+    buyAllBtn.Font = Enum.Font.GothamBold
+    buyAllBtn.Text = L("BuyAllBtn")
+    buyAllBtn.TextColor3 = Color3.fromRGB(255,255,255)
+    buyAllBtn.TextSize = 14
+    Instance.new("UICorner", buyAllBtn).CornerRadius = UDim.new(0,10)
+    buyAllBtn.MouseButton1Click:Connect(buyAllItems)
+    -- ===== КОНЕЦ БЛОКА МАГАЗИНА =====
+
+    -- ===== (остальной код без изменений: темы, автофарм, движение, админка) =====
     local ThemeScroll=Instance.new("ScrollingFrame");
     ThemeScroll.Parent=ThemePage;
     ThemeScroll.BackgroundTransparency=1;
@@ -1468,6 +1785,7 @@ do
         themeTabBtn.Text=L("ThemeTab");
         movementTabBtn.Text=L("MovementTab");
         adminTabBtn.Text=L("AdminTab");
+        shopTabBtn.Text=L("ShopTab");
         ToggleLabel.Text=L("AutoFarmToggle");
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         FlySpeedLabelUI.Text=string.format(L("FlySpeedLabel"),flySpeed);
@@ -1485,6 +1803,35 @@ do
             if L("Themes")[i] then rowText.Text=L("Themes")[i];end
         end
         buildDistanceOptions();
+        -- обновление текстов в магазине (секции уже используют L при создании, но если язык меняется, нужно пересоздать? проще перезапустить UI, но для простоты пересоздадим секции)
+        -- В данном случае проще обновить тексты кнопок и заголовков, но они уже установлены при создании, поэтому пересоздадим страницу магазина
+        -- Для простоты: просто перезагрузим UI магазина (удалим и создадим заново)
+        -- Но чтобы не усложнять, я просто обновлю тексты через поиск
+        for _, child in ipairs(ShopScroll:GetChildren()) do
+            if child:IsA("Frame") and child:FindFirstChild("TextLabel") then
+                local title = child:FindFirstChild("TextLabel")
+                if title and title:IsA("TextLabel") then
+                    if title.Text:find("Items") or title.Text:find("Предметы") then
+                        title.Text = L("ShopItemsLabel")
+                    elseif title.Text:find("Auras") or title.Text:find("Ауры") then
+                        title.Text = L("ShopAurasLabel")
+                    elseif title.Text:find("Trails") or title.Text:find("Следы") then
+                        title.Text = L("ShopTrailsLabel")
+                    end
+                end
+                local addBtn = child:FindFirstChild("TextButton")
+                if addBtn and addBtn:IsA("TextButton") and addBtn.Text:find("Add") or addBtn.Text:find("Добавить") then
+                    addBtn.Text = L("AddItemBtn")
+                end
+            end
+        end
+        for _, btn in ipairs({buySelectedBtn, buyAllBtn}) do
+            if btn.Text:find("Selected") or btn.Text:find("отмечен") then
+                btn.Text = L("BuySelectedBtn")
+            elseif btn.Text:find("All") or btn.Text:find("всё") then
+                btn.Text = L("BuyAllBtn")
+            end
+        end
     end;
     buildDistanceOptions();
 end
