@@ -125,6 +125,13 @@ do
     local checkModelEnabled=false;
     local checkModelConnection=nil;
     local mouse=LocalPlayer:GetMouse();
+
+    -- ===== ДОБАВЛЕНО ДЛЯ GOD MODE =====
+    local godModeEnabled = false;
+    local healthConnection = nil;
+    local humanoidRef = nil;
+    -- ===================================
+
     local Waypoints={
         ["1 World"]={
             ["+1 wins"]={Vector3.new(2.8,8.5,74.3),Vector3.new( -22.3,10.4,286)},
@@ -150,6 +157,35 @@ do
             ["+800m wins"]={Vector3.new( -1434.9, -159.7, -875.9),Vector3.new( -1430.2, -158.8, -837.1),Vector3.new( -1427.6, -125.2, -730.4),Vector3.new( -1427, -69.9, -538.6),Vector3.new( -1455.2, -69.9, -493.3),Vector3.new( -1455.9, -70.4, -444.3),Vector3.new( -1456.7, -58.5, -393),Vector3.new( -1458.4, -57.4, -266.1),Vector3.new( -1456.8, -57.4, -186.8),Vector3.new( -1452.9, -57.6,7.6),Vector3.new( -1451.4, -48.6,84.7),Vector3.new( -1451.4,83,84.7),Vector3.new( -1475.2,92.3,95.5),Vector3.new( -1475.2,212.8,95.6),Vector3.new( -1472.1,214.6,143.2),Vector3.new( -1469.4,222.8,178.5),Vector3.new( -1464.9,223,229.5),Vector3.new( -1463.9,215,260),Vector3.new( -1480.8,212.6,332.1)},
             ["+1.25b wins"]={Vector3.new( -1434.1, -159.6, -879),Vector3.new( -1431.8, -157.7, -834.2),Vector3.new( -1430.5, -125.6, -732.2),Vector3.new( -1427.6, -69.8, -540.1),Vector3.new( -1454.8, -69.8, -495.1),Vector3.new( -1454.8, -70.3, -444.5),Vector3.new( -1455.3, -58.9, -395),Vector3.new( -1454.4, -57.5,4.5),Vector3.new( -1454.5, -55.8,84.8),Vector3.new( -1454.5,84.8,84.8),Vector3.new( -1475,102.7,96),Vector3.new( -1475,212,96),Vector3.new( -1473.6,214.7,141.2),Vector3.new( -1457.4,222.5,176.7),Vector3.new( -1455.8,223.3,228.9),Vector3.new( -1455.8,214.7,270.6),Vector3.new( -1455.8,214.5,627.8),Vector3.new( -1455.8,365.5,627.8),Vector3.new( -1434.2,359.7,490.7),Vector3.new( -1336,360.8,494.3),Vector3.new( -1246.3,328.8,517.1),Vector3.new( -1236,323.2,600.3),Vector3.new( -1220.6,342.9,810.9),Vector3.new( -1361.8,363,834.8),Vector3.new( -1403.6,373.5,724.7),Vector3.new( -1403.6,545.5,724.7),Vector3.new( -1431.3,530.6,759.6)},
             ["+2b wins"]={Vector3.new( -1434.0, -159.5, -878.0),Vector3.new( -1432.0, -157.0, -832.0),Vector3.new( -1430.0, -125.0, -731.0)},
+            ["+3.5b wins"]={
+                Vector3.new(-1434.5, -159.8, -880.0),
+                Vector3.new(-1432.0, -157.3, -835.0),
+                Vector3.new(-1429.0, -126.0, -735.0),
+                Vector3.new(-1427.5, -69.8, -540.0),
+                Vector3.new(-1455.0, -69.8, -495.0),
+                Vector3.new(-1455.0, -70.0, -445.0),
+                Vector3.new(-1456.0, -58.5, -395.0),
+                Vector3.new(-1455.0, -57.5, 5.0),
+                Vector3.new(-1455.0, -56.0, 85.0),
+                Vector3.new(-1455.0, 85.0, 85.0),
+                Vector3.new(-1475.0, 103.0, 96.0),
+                Vector3.new(-1475.0, 212.0, 96.0),
+                Vector3.new(-1474.0, 215.0, 141.0),
+                Vector3.new(-1458.0, 222.5, 177.0),
+                Vector3.new(-1456.0, 223.3, 229.0),
+                Vector3.new(-1456.0, 215.0, 270.0),
+                Vector3.new(-1456.0, 215.0, 628.0),
+                Vector3.new(-1456.0, 365.5, 628.0),
+                Vector3.new(-1434.0, 360.0, 490.0),
+                Vector3.new(-1336.0, 361.0, 494.0),
+                Vector3.new(-1246.0, 329.0, 517.0),
+                Vector3.new(-1236.0, 323.0, 600.0),
+                Vector3.new(-1220.0, 343.0, 811.0),
+                Vector3.new(-1362.0, 363.0, 835.0),
+                Vector3.new(-1404.0, 373.5, 725.0),
+                Vector3.new(-1404.0, 545.5, 725.0),
+                Vector3.new(-1431.0, 530.6, 759.6)
+            },
             ["+5b wins"]={Vector3.new( -1434.5, -159.8, -880.0),Vector3.new( -1431.5, -157.3, -835.0),Vector3.new( -1428.0, -126.0, -735.0)},
             ["+10b wins"]={Vector3.new( -1435.0, -160.0, -882.0),Vector3.new( -1432.5, -158.0, -838.0),Vector3.new( -1429.0, -127.0, -738.0)}
         },
@@ -158,23 +194,37 @@ do
             ["+50k cash"]={Vector3.new(759.5,810.4,948.4),Vector3.new(716.1,810.4,946.7),Vector3.new(719.7,810.4,572.4),Vector3.new(584.8,810.4,566.2),Vector3.new(587.7,810.4,464.5),Vector3.new(390.5,810.4,465),Vector3.new(394.7,810.4,729.3),Vector3.new(510.2,810.4,732.8),Vector3.new(506.6,810.4,848),Vector3.new(309.8,810.4,845.7),Vector3.new(308.6,810.4,939.3),Vector3.new(120.7,810.4,947.6),Vector3.new(103.5,812.5,946.4)}
         }
     };
+
+    -- ===== ОБНОВЛЁННЫЙ ПОРЯДОК СОРТИРОВКИ =====
     local distSortOrder={
         ["+1 wins"]=1,["+3 wins"]=2,["+10 wins"]=3,
         ["+250k wins"]=4,["+400k wins"]=5,["+1,5m wins"]=6,["+2,5m wins"]=7,
         ["+4m wins"]=8,["+6m wins"]=9,["+10m wins"]=10,["+15m wins"]=11,
         ["+25m wins"]=12,["+40m wins"]=13,["+60m wins"]=14,
         ["+300m wins"]=15,["+500m wins"]=16,["+800m wins"]=17,
-        ["+1.25b wins"]=18,["+2b wins"]=19,["+5b wins"]=20,["+10b wins"]=21,
-        ["+25k cash"]=22,["+50k cash"]=23
+        ["+1.25b wins"]=18,["+2b wins"]=19,["+3.5b wins"]=20,
+        ["+5b wins"]=21,["+10b wins"]=22,
+        ["+25k cash"]=23,["+50k cash"]=24
     };
+
+    -- ===== РАСШИРЕННАЯ ФУНКЦИЯ УДАЛЕНИЯ УБИВАЮЩИХ ОБЪЕКТОВ =====
     local function isObstacleName(name)
         if ((name=="LavaPart") or (name=="Lava_Stage3") or (name=="MovingWall")) then return true;end
         if ((name=="DoorWall1") or (name=="GreenDoorKillPart") or (name=="RedDoorKillPart") or (name=="YellowDoorKillPart") or (name=="DoorWall2") or (name=="DoorWall3")) then return true;end
         if ((name=="Stage2LocalNPC_Local") or (name=="Tumbleweed") or (name=="vanilla") or (name=="EyesLaser") or (name=="Stage11LocalNPC_Local") or (name=="Stage14LocalNPC_Local")) then return true;end
         local num=name:match("^MovingWall(%d+)$");
         if num then local n=tonumber(num);if (n and (n>=1) and (n<=15)) then return true;end end
+
+        -- ДОБАВЛЕННЫЕ КЛЮЧЕВЫЕ СЛОВА
+        if name:lower():find("kill") or name:lower():find("death") or name:lower():find("damage") or name:lower():find("lava") or name:lower():find("fire") or name:lower():find("acid") or name:lower():find("spike") or name:lower():find("saw") then
+            return true;
+        end
+        if name == "LavaPart" or name == "Lava" or name == "FirePart" or name == "KillBrick" or name == "DamagePart" or name == "DeathPart" then
+            return true;
+        end
         return false;
     end
+
     local function initGlobalObstacleRemover()
         task.spawn(function()
             local count=0;
@@ -199,6 +249,7 @@ do
         end
     end
     initGlobalObstacleRemover();
+
     local function setNoClip(state)
         if state then
             if  not noClipConnection then
@@ -217,6 +268,54 @@ do
             if (char and char:FindFirstChild("HumanoidRootPart")) then char.HumanoidRootPart.CanCollide=true;end
         end
     end
+
+    -- ===== ДОБАВЛЕННАЯ ФУНКЦИЯ GOD MODE =====
+    local function toggleGodMode(state)
+        godModeEnabled = state;
+        local char = LocalPlayer.Character;
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid");
+        if not hum then return end
+
+        if godModeEnabled then
+            hum.MaxHealth = 9e9;
+            hum.Health = 9e9;
+            hum.BreakJointsOnDeath = false;
+
+            if healthConnection then healthConnection:Disconnect(); end
+            healthConnection = hum.HealthChanged:Connect(function(newHealth)
+                if godModeEnabled and newHealth < 9e8 then
+                    hum.Health = 9e9;
+                end
+            end);
+
+            local oldTakeDamage = hum.TakeDamage;
+            hum.TakeDamage = function(self, amount)
+                if godModeEnabled then return end
+                return oldTakeDamage(self, amount);
+            end;
+
+            humanoidRef = hum;
+        else
+            if healthConnection then healthConnection:Disconnect(); healthConnection = nil; end
+            if humanoidRef then
+                humanoidRef.MaxHealth = 100;
+                humanoidRef.Health = 100;
+                humanoidRef.BreakJointsOnDeath = true;
+                humanoidRef.TakeDamage = nil;
+            end
+        end
+    end
+
+    -- Обработка смены персонажа для поддержки God Mode
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        if godModeEnabled then
+            task.wait(0.5);
+            toggleGodMode(true);
+        end
+    end);
+    -- ========================================
+
     local function flyTo(targetPos)
         local char=LocalPlayer.Character;
         if ( not char or  not char:FindFirstChild("HumanoidRootPart")) then return false;end
@@ -239,6 +338,7 @@ do
         if bv then bv:Destroy();end
         return reached;
     end
+
     local function startAutoFarmLoop()
         task.spawn(function()
             while autoFarmActive do
@@ -272,6 +372,7 @@ do
             if (char and char:FindFirstChild("Humanoid")) then char.Humanoid.WalkSpeed=16;end
         end);
     end
+
     UserInputService.JumpRequest:Connect(function()
         if infJumpEnabled then
             local char=LocalPlayer.Character;
@@ -281,6 +382,7 @@ do
             end
         end
     end);
+
     local function toggleManualFly(state)
         flyEnabled=state;
         local char=LocalPlayer.Character;
@@ -319,11 +421,13 @@ do
             if hum then hum.PlatformStand=false;end
         end
     end
+
     local UI_SCALE=0.8;
     local ScreenGui=Instance.new("ScreenGui");
     ScreenGui.Name="nkno$ hub";
     ScreenGui.Parent=game:GetService("CoreGui");
     ScreenGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling;
+
     local ShadowFrame=Instance.new("Frame");
     ShadowFrame.Name="ShadowFrame";
     ShadowFrame.Parent=ScreenGui;
@@ -336,6 +440,7 @@ do
     Instance.new("UICorner",ShadowFrame).CornerRadius=UDim.new(0,16);
     local ShadowScale=Instance.new("UIScale",ShadowFrame);
     ShadowScale.Scale=0.3;
+
     local MainFrame=Instance.new("Frame");
     MainFrame.Name="MainFrame";
     MainFrame.Parent=ScreenGui;
@@ -348,27 +453,31 @@ do
     MainFrame.ClipsDescendants=false;
     MainFrame.Visible=false;
     Instance.new("UICorner",MainFrame).CornerRadius=UDim.new(0,14);
+
     local BgImage=Instance.new("ImageLabel");
     BgImage.Name="BackgroundImage";
     BgImage.Parent=MainFrame;
     BgImage.BackgroundTransparency=1;
     BgImage.Size=UDim2.new(1,0,1,0);
-    -- ИЗМЕНЕНИЕ: заменён старый ID на новый
     BgImage.Image="rbxassetid://138913032331139";
     BgImage.ScaleType=Enum.ScaleType.Crop;
     BgImage.ImageTransparency=0.35;
     BgImage.ZIndex=0;
     Instance.new("UICorner",BgImage).CornerRadius=UDim.new(0,14);
+
     local MainScale=Instance.new("UIScale",MainFrame);
     MainScale.Scale=0.3;
+
     local MainGradient=Instance.new("UIGradient");
     MainGradient.Rotation=90;
     MainGradient.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.1),NumberSequenceKeypoint.new(1,0.5)});
     MainGradient.Parent=MainFrame;
+
     local MainStroke=Instance.new("UIStroke");
     MainStroke.Parent=MainFrame;
     MainStroke.Color=Color3.fromRGB(35,35,50);
     MainStroke.Thickness=1.5;
+
     local function toggleMenu(forceState)
         if (forceState~=nil) then isMenuOpen=forceState;
         else isMenuOpen= not isMenuOpen;end
@@ -386,6 +495,7 @@ do
             end);
         end
     end
+
     local ToggleWidget=Instance.new("Frame");
     ToggleWidget.Name="ToggleWidget";
     ToggleWidget.Parent=ScreenGui;
@@ -395,12 +505,15 @@ do
     ToggleWidget.Size=UDim2.new(0,160,0,44);
     ToggleWidget.Visible=false;
     Instance.new("UICorner",ToggleWidget).CornerRadius=UDim.new(0,10);
+
     local ToggleScale=Instance.new("UIScale",ToggleWidget);
     ToggleScale.Scale=0.85;
+
     local ToggleStroke=Instance.new("UIStroke");
     ToggleStroke.Parent=ToggleWidget;
     ToggleStroke.Color=Color3.fromRGB(45,45,65);
     ToggleStroke.Thickness=1.5;
+
     local ToggleLabelText=Instance.new("TextLabel");
     ToggleLabelText.Parent=ToggleWidget;
     ToggleLabelText.BackgroundTransparency=1;
@@ -409,9 +522,11 @@ do
     ToggleLabelText.Text="nkno$ hub";
     ToggleLabelText.TextColor3=Color3.fromRGB(255,255,255);
     ToggleLabelText.TextSize=17;
+
     local ToggleGradient=Instance.new("UIGradient");
     ToggleGradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,accentColor),ColorSequenceKeypoint.new(1,Color3.fromRGB(255,255,255))});
     ToggleGradient.Parent=ToggleLabelText;
+
     ToggleWidget.InputBegan:Connect(function(input)
         if ((input.UserInputType==Enum.UserInputType.MouseButton1) or (input.UserInputType==Enum.UserInputType.Touch)) then
             TweenService:Create(ToggleScale,TweenInfo.new(0.15),{Scale=0.78}):Play();
@@ -422,6 +537,7 @@ do
             TweenService:Create(ToggleScale,TweenInfo.new(0.15),{Scale=0.85}):Play();
         end
     end);
+
     local dragToggle,dragInputT,dragStartT,startPosT;
     local dragStartTime=0;
     ToggleWidget.InputBegan:Connect(function(input)
@@ -449,6 +565,7 @@ do
             if ((tick() -dragStartTime)<0.25) then toggleMenu();end
         end
     end);
+
     local LangFrame=Instance.new("Frame");
     LangFrame.Name="LangFrame";
     LangFrame.Parent=ScreenGui;
@@ -462,6 +579,7 @@ do
     Instance.new("UIStroke",LangFrame).Color=Color3.fromRGB(45,45,60);
     local LangScale=Instance.new("UIScale",LangFrame);
     LangScale.Scale=0.8;
+
     local LangTitle=Instance.new("TextLabel");
     LangTitle.Parent=LangFrame;
     LangTitle.BackgroundTransparency=1;
@@ -471,6 +589,7 @@ do
     LangTitle.Text="Choose language / Выберите язык";
     LangTitle.TextColor3=Color3.fromRGB(255,255,255);
     LangTitle.TextSize=17;
+
     local function buildLangButton(emoji,text,posX,langCode)
         local Btn=Instance.new("TextButton");
         Btn.Parent=LangFrame;
@@ -504,12 +623,12 @@ do
             LangFrame.Visible=false;
             ToggleWidget.Visible=true;
             toggleMenu(true);
-            -- Вызов уведомлений о скором удалении
             scheduleUpdateNotices();
         end);
     end
     buildLangButton("RU","Русский",65,"RU");
     buildLangButton("EN","English",205,"EN");
+
     local dragging,dragInput,dragStart,startPos;
     MainFrame.InputBegan:Connect(function(input)
         if ((input.UserInputType==Enum.UserInputType.MouseButton1) or (input.UserInputType==Enum.UserInputType.Touch)) then
@@ -536,12 +655,14 @@ do
             dragging=false;
         end
     end);
+
     local TopControls=Instance.new("Frame");
     TopControls.Parent=MainFrame;
     TopControls.BackgroundTransparency=1;
     TopControls.Position=UDim2.new(1, -75,0,14);
     TopControls.Size=UDim2.new(0,65,0,26);
     TopControls.ZIndex=20;
+
     local CloseBtn=Instance.new("TextButton");
     CloseBtn.Parent=TopControls;
     CloseBtn.BackgroundColor3=Color3.fromRGB(25,18,22);
@@ -563,6 +684,7 @@ do
         task.wait(0.3);
         ScreenGui:Destroy();
     end);
+
     local MinBtn=Instance.new("TextButton");
     MinBtn.Parent=TopControls;
     MinBtn.BackgroundColor3=Color3.fromRGB(18,18,26);
@@ -585,6 +707,7 @@ do
             MinBtn.Text="-";
         end
     end);
+
     local Sidebar=Instance.new("Frame");
     Sidebar.Parent=MainFrame;
     Sidebar.BackgroundColor3=Color3.fromRGB(15,15,22);
@@ -596,6 +719,7 @@ do
     SidebarGradient.Rotation=90;
     SidebarGradient.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,0.4)});
     SidebarGradient.Parent=Sidebar;
+
     local SidebarFix=Instance.new("Frame");
     SidebarFix.Parent=Sidebar;
     SidebarFix.BackgroundColor3=Color3.fromRGB(15,15,22);
@@ -607,6 +731,7 @@ do
     SidebarFixGradient.Rotation=90;
     SidebarFixGradient.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,0.4)});
     SidebarFixGradient.Parent=SidebarFix;
+
     local Title=Instance.new("TextLabel");
     Title.Parent=Sidebar;
     Title.BackgroundTransparency=1;
@@ -619,6 +744,7 @@ do
     local TitleGradient=Instance.new("UIGradient");
     TitleGradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,accentColor),ColorSequenceKeypoint.new(1,Color3.fromRGB(255,255,255))});
     TitleGradient.Parent=Title;
+
     local SepLine=Instance.new("Frame");
     SepLine.Parent=Sidebar;
     SepLine.BackgroundColor3=Color3.fromRGB(255,255,255);
@@ -627,6 +753,7 @@ do
     local SepGradient=Instance.new("UIGradient");
     SepGradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(25,25,35)),ColorSequenceKeypoint.new(0.5,accentColor),ColorSequenceKeypoint.new(1,Color3.fromRGB(25,25,35))});
     SepGradient.Parent=SepLine;
+
     local TabContainer=Instance.new("Frame");
     TabContainer.Parent=Sidebar;
     TabContainer.BackgroundTransparency=1;
@@ -636,33 +763,44 @@ do
     TabListLayout.Parent=TabContainer;
     TabListLayout.SortOrder=Enum.SortOrder.LayoutOrder;
     TabListLayout.Padding=UDim.new(0,10);
+
     local ContentArea=Instance.new("Frame");
     ContentArea.Parent=MainFrame;
     ContentArea.BackgroundTransparency=1;
     ContentArea.ClipsDescendants=false;
     ContentArea.Position=UDim2.new(0,185,0,15);
     ContentArea.Size=UDim2.new(1, -200,1, -30);
+
     local AutoFarmPage=Instance.new("Frame");
     AutoFarmPage.Parent=ContentArea;
     AutoFarmPage.BackgroundTransparency=1;
     AutoFarmPage.ClipsDescendants=false;
     AutoFarmPage.Size=UDim2.new(1,0,1,0);
     AutoFarmPage.Visible=true;
+
     local MovementPage=Instance.new("Frame");
     MovementPage.Parent=ContentArea;
     MovementPage.BackgroundTransparency=1;
     MovementPage.Size=UDim2.new(1,0,1,0);
     MovementPage.Visible=false;
+
     local ThemePage=Instance.new("Frame");
     ThemePage.Parent=ContentArea;
     ThemePage.BackgroundTransparency=1;
     ThemePage.Size=UDim2.new(1,0,1,0);
     ThemePage.Visible=false;
-    local AdminPage=Instance.new("Frame");
+
+    -- ===== ИЗМЕНЕНИЕ: AdminPage теперь ScrollingFrame =====
+    local AdminPage=Instance.new("ScrollingFrame");
     AdminPage.Parent=ContentArea;
     AdminPage.BackgroundTransparency=1;
     AdminPage.Size=UDim2.new(1,0,1,0);
     AdminPage.Visible=false;
+    AdminPage.ScrollBarThickness=8;
+    AdminPage.CanvasSize=UDim2.new(0,0,0,0);
+    AdminPage.AutomaticCanvasSize=Enum.AutomaticSize.Y;
+    -- ====================================================
+
     local tabButtons={};
     local function createTabButton(text,page)
         local btn=Instance.new("TextButton");
@@ -695,7 +833,7 @@ do
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
-    -- ===== ДОБАВЛЕН БЛОК DISCORD =====
+    -- ===== БЛОК DISCORD =====
     local DiscordFrame = Instance.new("Frame")
     DiscordFrame.Parent = Sidebar
     DiscordFrame.BackgroundColor3 = Color3.fromRGB(20,20,28)
@@ -723,7 +861,6 @@ do
             Duration = 4
         })
     end)
-    -- ===== КОНЕЦ БЛОКА DISCORD =====
 
     local ThemeScroll=Instance.new("ScrollingFrame");
     ThemeScroll.Parent=ThemePage;
@@ -789,12 +926,14 @@ do
     createThemeRow(Color3.fromRGB(245,158,11),Color3.fromRGB(160,80,0));
     createThemeRow(Color3.fromRGB(220,220,230),Color3.fromRGB(100,100,110));
     ThemeScroll.CanvasSize=UDim2.new(0,0,0,ThemeList.AbsoluteContentSize.Y + 40 );
+
     local MoveLeftPanel=Instance.new("ScrollingFrame");
     MoveLeftPanel.Parent=MovementPage;
     MoveLeftPanel.BackgroundTransparency=1;
     MoveLeftPanel.Size=UDim2.new(1,0,1,0);
     MoveLeftPanel.ScrollBarThickness=0;
     MoveLeftPanel.CanvasSize=UDim2.new(0,0,0,230);
+
     local InfJumpFrame=Instance.new("Frame");
     InfJumpFrame.Parent=MoveLeftPanel;
     InfJumpFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -834,6 +973,7 @@ do
             TweenService:Create(InfJumpSwitchDot,TweenInfo.new(0.2),{Position=UDim2.new(0,3,0.5, -11)}):Play();
         end
     end);
+
     local FlyFrame=Instance.new("Frame");
     FlyFrame.Parent=MoveLeftPanel;
     FlyFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -875,6 +1015,7 @@ do
             toggleManualFly(false);
         end
     end);
+
     local FlySpeedSliderFrame=Instance.new("Frame");
     FlySpeedSliderFrame.Parent=MoveLeftPanel;
     FlySpeedSliderFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -926,10 +1067,12 @@ do
             draggingFlySlider=false;
         end
     end);
+
     local LeftPanel=Instance.new("Frame");
     LeftPanel.Parent=AutoFarmPage;
     LeftPanel.BackgroundTransparency=1;
     LeftPanel.Size=UDim2.new(0.96,0,1,0);
+
     local WorldLabel=Instance.new("TextLabel");
     WorldLabel.Parent=LeftPanel;
     WorldLabel.BackgroundTransparency=1;
@@ -938,6 +1081,7 @@ do
     WorldLabel.TextColor3=Color3.fromRGB(200,200,220);
     WorldLabel.TextSize=14;
     WorldLabel.TextXAlignment=Enum.TextXAlignment.Left;
+
     local WorldsFrame=Instance.new("Frame");
     WorldsFrame.Parent=LeftPanel;
     WorldsFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -945,6 +1089,7 @@ do
     WorldsFrame.Position=UDim2.new(0,0,0,26);
     WorldsFrame.Size=UDim2.new(1,0,0,44);
     Instance.new("UICorner",WorldsFrame).CornerRadius=UDim.new(0,10);
+
     local BbnosInfoLabel=Instance.new("TextLabel");
     BbnosInfoLabel.Parent=LeftPanel;
     BbnosInfoLabel.BackgroundTransparency=1;
@@ -956,11 +1101,13 @@ do
     BbnosInfoLabel.TextSize=11;
     BbnosInfoLabel.TextWrapped=true;
     BbnosInfoLabel.Visible=false;
+
     local worldButtons={};
     local DropdownList=Instance.new("ScrollingFrame");
     local DropdownBtn=Instance.new("TextButton");
     local SliderLabel=Instance.new("TextLabel");
     local SliderFillAuto=Instance.new("Frame");
+
     local function buildDistanceOptions()
         for _,c in ipairs(DropdownList:GetChildren()) do if c:IsA("TextButton") then c:Destroy();end end
         local options={};
@@ -1003,6 +1150,7 @@ do
         currentDistance=options[1];
         DropdownBtn.Text="   "   .. currentDistance   .. " v" ;
     end
+
     local function createWorldBtn(text,posXScale,widthScale,index)
         local btn=Instance.new("TextButton");
         btn.Parent=WorldsFrame;
@@ -1031,9 +1179,11 @@ do
             btn.BackgroundColor3=Color3.fromRGB(30,30,42);
             btn.TextColor3=Color3.fromRGB(255,255,255);
             buildDistanceOptions();
-            local maxSpd=110;
-            if (currentWorld=="2 World") then maxSpd=190;
-            elseif (currentWorld=="Bbnos World") then maxSpd=300;end
+            -- ===== ИЗМЕНЕНИЕ: установка maxSpd для 3 мира =====
+            local maxSpd = 110;
+            if (currentWorld=="2 World") then maxSpd = 190;
+            elseif (currentWorld=="Bbnos World") then maxSpd = 300;
+            elseif (currentWorld=="3 World") then maxSpd = 200; end
             if (currentSpeed>maxSpd) then currentSpeed=maxSpd;end
             SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
             TweenService:Create(SliderFillAuto,TweenInfo.new(0.2),{Size=UDim2.new(currentSpeed/maxSpd ,0,1,0)}):Play();
@@ -1044,6 +1194,7 @@ do
     createWorldBtn("2 World",0.25,0.25,2);
     createWorldBtn("3 World",0.5,0.25,3);
     createWorldBtn("Bbnos World",0.75,0.25,4);
+
     local ToggleFrame=Instance.new("Frame");
     ToggleFrame.Parent=LeftPanel;
     ToggleFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -1086,6 +1237,7 @@ do
             setNoClip(false);
         end
     end);
+
     local SliderFrame=Instance.new("Frame");
     SliderFrame.Parent=LeftPanel;
     SliderFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -1117,7 +1269,8 @@ do
         local fraction=math.clamp((input.Position.X-SliderTrack.AbsolutePosition.X)/SliderTrack.AbsoluteSize.X ,0,1);
         local maxSpd=110;
         if (currentWorld=="2 World") then maxSpd=190;
-        elseif (currentWorld=="Bbnos World") then maxSpd=300;end
+        elseif (currentWorld=="Bbnos World") then maxSpd=300;
+        elseif (currentWorld=="3 World") then maxSpd=200; end
         currentSpeed=math.floor(fraction * maxSpd );
         SliderLabel.Text=string.format(L("SpeedLabel"),currentSpeed);
         TweenService:Create(SliderFillAuto,TweenInfo.new(0.05),{Size=UDim2.new(fraction,0,1,0)}):Play();
@@ -1138,6 +1291,7 @@ do
             draggingSliderAuto=false;
         end
     end);
+
     local DistLabel=Instance.new("TextLabel");
     DistLabel.Parent=LeftPanel;
     DistLabel.BackgroundTransparency=1;
@@ -1147,6 +1301,7 @@ do
     DistLabel.TextColor3=Color3.fromRGB(200,200,220);
     DistLabel.TextSize=14;
     DistLabel.TextXAlignment=Enum.TextXAlignment.Left;
+
     DropdownBtn.Parent=LeftPanel;
     DropdownBtn.BackgroundColor3=Color3.fromRGB(16,16,23);
     DropdownBtn.BackgroundTransparency=0.15;
@@ -1158,6 +1313,7 @@ do
     DropdownBtn.TextXAlignment=Enum.TextXAlignment.Left;
     DropdownBtn.ZIndex=10;
     Instance.new("UICorner",DropdownBtn).CornerRadius=UDim.new(0,10);
+
     DropdownList.Parent=LeftPanel;
     DropdownList.BackgroundColor3=Color3.fromRGB(14,14,20);
     DropdownList.BackgroundTransparency=0.1;
@@ -1184,6 +1340,8 @@ do
     DropdownBtn.MouseButton1Click:Connect(function()
         DropdownList.Visible= not DropdownList.Visible;
     end);
+
+    -- ===== АДМИН ПАНЕЛЬ =====
     local LockFrame=Instance.new("Frame");
     LockFrame.Parent=AdminPage;
     LockFrame.BackgroundTransparency=1;
@@ -1227,23 +1385,31 @@ do
     StatusLabel.Text="";
     StatusLabel.TextColor3=Color3.fromRGB(255,80,80);
     StatusLabel.TextSize=15;
-    local UnlockedAdmin=Instance.new("Frame");
+
+    -- ===== ИЗМЕНЕНИЕ: UnlockedAdmin теперь ScrollingFrame =====
+    local UnlockedAdmin=Instance.new("ScrollingFrame");
     UnlockedAdmin.Parent=AdminPage;
     UnlockedAdmin.BackgroundTransparency=1;
     UnlockedAdmin.Size=UDim2.new(1,0,1,0);
     UnlockedAdmin.Visible=false;
+    UnlockedAdmin.ScrollBarThickness=8;
+    UnlockedAdmin.CanvasSize=UDim2.new(0,0,0,700); -- запас
+    -- ========================================================
+
     local AdminTitleLabel=Instance.new("TextLabel");
     AdminTitleLabel.Parent=UnlockedAdmin;
     AdminTitleLabel.BackgroundTransparency=1;
+    AdminTitleLabel.Position=UDim2.new(0,20,0,10);
     AdminTitleLabel.Size=UDim2.new(1,0,0,28);
     AdminTitleLabel.Font=Enum.Font.GothamBold;
     AdminTitleLabel.TextColor3=Color3.fromRGB(245,158,11);
     AdminTitleLabel.TextSize=17;
+
     local CheckPosToggleFrame=Instance.new("Frame");
     CheckPosToggleFrame.Parent=UnlockedAdmin;
     CheckPosToggleFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
     CheckPosToggleFrame.BackgroundTransparency=0.15;
-    CheckPosToggleFrame.Position=UDim2.new(0,0,0,38);
+    CheckPosToggleFrame.Position=UDim2.new(0,10,0,48);
     CheckPosToggleFrame.Size=UDim2.new(0.96,0,0,54);
     Instance.new("UICorner",CheckPosToggleFrame).CornerRadius=UDim.new(0,10);
     local CheckPosToggleLabel=Instance.new("TextLabel");
@@ -1268,11 +1434,12 @@ do
     AdminSwitchDot.Position=UDim2.new(0,3,0.5, -11);
     AdminSwitchDot.Size=UDim2.new(0,22,0,22);
     Instance.new("UICorner",AdminSwitchDot).CornerRadius=UDim.new(0,11);
+
     local CheckModelToggleFrame=Instance.new("Frame");
     CheckModelToggleFrame.Parent=UnlockedAdmin;
     CheckModelToggleFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
     CheckModelToggleFrame.BackgroundTransparency=0.15;
-    CheckModelToggleFrame.Position=UDim2.new(0,0,0,98);
+    CheckModelToggleFrame.Position=UDim2.new(0,10,0,108);
     CheckModelToggleFrame.Size=UDim2.new(0.96,0,0,54);
     Instance.new("UICorner",CheckModelToggleFrame).CornerRadius=UDim.new(0,10);
     local CheckModelToggleLabel=Instance.new("TextLabel");
@@ -1297,12 +1464,139 @@ do
     CheckModelSwitchDot.Position=UDim2.new(0,3,0.5, -11);
     CheckModelSwitchDot.Size=UDim2.new(0,22,0,22);
     Instance.new("UICorner",CheckModelSwitchDot).CornerRadius=UDim.new(0,11);
+
+    -- ===== ПЕРЕКЛЮЧАТЕЛЬ GOD MODE =====
+    local GodModeToggleFrame=Instance.new("Frame");
+    GodModeToggleFrame.Parent=UnlockedAdmin;
+    GodModeToggleFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
+    GodModeToggleFrame.BackgroundTransparency=0.15;
+    GodModeToggleFrame.Position=UDim2.new(0,10,0,168);
+    GodModeToggleFrame.Size=UDim2.new(0.96,0,0,54);
+    Instance.new("UICorner", GodModeToggleFrame).CornerRadius = UDim.new(0,10);
+
+    local GodModeToggleLabel=Instance.new("TextLabel");
+    GodModeToggleLabel.Parent=GodModeToggleFrame;
+    GodModeToggleLabel.BackgroundTransparency=1;
+    GodModeToggleLabel.Position=UDim2.new(0,16,0,0);
+    GodModeToggleLabel.Size=UDim2.new(0.7,0,1,0);
+    GodModeToggleLabel.Font=Enum.Font.GothamBold;
+    GodModeToggleLabel.TextColor3=Color3.fromRGB(255,255,255);
+    GodModeToggleLabel.TextSize=15;
+    GodModeToggleLabel.TextXAlignment=Enum.TextXAlignment.Left;
+    GodModeToggleLabel.Text = "God Mode (неуязвимость)";
+
+    local GodModeSwitchBG=Instance.new("TextButton");
+    GodModeSwitchBG.Parent=GodModeToggleFrame;
+    GodModeSwitchBG.BackgroundColor3=Color3.fromRGB(40,40,55);
+    GodModeSwitchBG.Position=UDim2.new(1, -65,0.5, -14);
+    GodModeSwitchBG.Size=UDim2.new(0,50,0,28);
+    GodModeSwitchBG.Text="";
+    Instance.new("UICorner", GodModeSwitchBG).CornerRadius = UDim.new(0,14);
+
+    local GodModeSwitchDot=Instance.new("Frame");
+    GodModeSwitchDot.Parent=GodModeSwitchBG;
+    GodModeSwitchDot.BackgroundColor3=Color3.fromRGB(255,255,255);
+    GodModeSwitchDot.Position=UDim2.new(0,3,0.5, -11);
+    GodModeSwitchDot.Size=UDim2.new(0,22,0,22);
+    Instance.new("UICorner", GodModeSwitchDot).CornerRadius = UDim.new(0,11);
+
+    GodModeSwitchBG.MouseButton1Click:Connect(function()
+        godModeEnabled = not godModeEnabled;
+        if godModeEnabled then
+            TweenService:Create(GodModeSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,197,94)}):Play();
+            TweenService:Create(GodModeSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,25,0.5,-11)}):Play();
+            toggleGodMode(true);
+        else
+            TweenService:Create(GodModeSwitchBG, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40,40,55)}):Play();
+            TweenService:Create(GodModeSwitchDot, TweenInfo.new(0.2), {Position = UDim2.new(0,3,0.5,-11)}):Play();
+            toggleGodMode(false);
+        end
+    end);
+    -- =====================================
+
+    -- ===== ДОБАВЛЕННЫЙ БЛОК EXTRA COMMANDS =====
+    local ExtraCommands = Instance.new("Frame");
+    ExtraCommands.Parent = UnlockedAdmin;
+    ExtraCommands.BackgroundTransparency = 1;
+    ExtraCommands.Position = UDim2.new(0,10,0,228);
+    ExtraCommands.Size = UDim2.new(0.96,0,0,100);
+
+    local function createExtraBtn(text, callback, posX, posY, width)
+        local btn = Instance.new("TextButton");
+        btn.Parent = ExtraCommands;
+        btn.BackgroundColor3 = Color3.fromRGB(30,30,45);
+        btn.BackgroundTransparency = 0.15;
+        btn.Position = UDim2.new(posX, 5, posY, 5);
+        btn.Size = UDim2.new(width, -10, 0, 38);
+        btn.Font = Enum.Font.GothamSemibold;
+        btn.Text = text;
+        btn.TextColor3 = Color3.fromRGB(255,255,255);
+        btn.TextSize = 12;
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8);
+        btn.MouseButton1Click:Connect(callback);
+        return btn;
+    end
+
+    -- Первая строка (y=0)
+    createExtraBtn("Teleport #1", function()
+        if #savedPositions > 0 then
+            local posStr = savedPositions[1];
+            local coords = string.split(posStr, ", ");
+            local x,y,z = tonumber(coords[1]), tonumber(coords[2]), tonumber(coords[3]);
+            if x and y and z then
+                local char = LocalPlayer.Character;
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(x,y,z));
+                end
+            end
+        else
+            game:GetService("StarterGui"):SetCore("SendNotification", {Title="Info", Text="No saved positions", Duration=2});
+        end
+    end, 0, 0, 0.33);
+
+    createExtraBtn("Clear Kill Parts", function()
+        initGlobalObstacleRemover();
+        game:GetService("StarterGui"):SetCore("SendNotification", {Title="Info", Text="Kill parts removal triggered", Duration=2});
+    end, 0.33, 0, 0.33);
+
+    createExtraBtn("Reset WalkSpeed", function()
+        local char = LocalPlayer.Character;
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = 16;
+        end
+    end, 0.66, 0, 0.33);
+
+    -- Вторая строка (y=0.5)
+    createExtraBtn("Set WalkSpeed 80", function()
+        local char = LocalPlayer.Character;
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = 80;
+        end
+    end, 0, 0.5, 0.33);
+
+    createExtraBtn("Set JumpPower 100", function()
+        local char = LocalPlayer.Character;
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = 100;
+        end
+    end, 0.33, 0.5, 0.33);
+
+    createExtraBtn("Reset JumpPower", function()
+        local char = LocalPlayer.Character;
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.JumpPower = 50;
+        end
+    end, 0.66, 0.5, 0.33);
+    -- ============================================
+
+    -- ===== PosContainer (сохранённые позиции) сдвинут вниз =====
     local PosContainer=Instance.new("Frame");
     PosContainer.Parent=UnlockedAdmin;
     PosContainer.BackgroundTransparency=1;
-    PosContainer.Position=UDim2.new(0,0,0,158);
-    PosContainer.Size=UDim2.new(0.96,0,1, -166);
+    PosContainer.Position=UDim2.new(0,10,0,334); -- 228+100+6
+    PosContainer.Size=UDim2.new(0.96,0,0,220);
     PosContainer.Visible=false;
+
     local CheckPosBtn=Instance.new("TextButton");
     CheckPosBtn.Parent=PosContainer;
     CheckPosBtn.BackgroundColor3=accentColor;
@@ -1311,12 +1605,13 @@ do
     CheckPosBtn.TextColor3=Color3.fromRGB(255,255,255);
     CheckPosBtn.TextSize=15;
     Instance.new("UICorner",CheckPosBtn).CornerRadius=UDim.new(0,10);
+
     local PosListFrame=Instance.new("ScrollingFrame");
     PosListFrame.Parent=PosContainer;
     PosListFrame.BackgroundColor3=Color3.fromRGB(14,14,20);
     PosListFrame.BackgroundTransparency=0.15;
     PosListFrame.Position=UDim2.new(0,0,0,52);
-    PosListFrame.Size=UDim2.new(1,0,1, -104);
+    PosListFrame.Size=UDim2.new(1,0,0, 220 - 52 - 44 - 10); -- оставшееся место
     PosListFrame.CanvasSize=UDim2.new(0,0,0,0);
     PosListFrame.AutomaticCanvasSize=Enum.AutomaticSize.Y;
     PosListFrame.ScrollBarThickness=4;
@@ -1330,6 +1625,7 @@ do
     PosListPadding.Parent=PosListFrame;
     PosListPadding.PaddingTop=UDim.new(0,6);
     PosListPadding.PaddingLeft=UDim.new(0,6);
+
     local CopyBtn=Instance.new("TextButton");
     CopyBtn.Parent=PosContainer;
     CopyBtn.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -1339,8 +1635,10 @@ do
     CopyBtn.TextColor3=Color3.fromRGB(200,200,220);
     CopyBtn.TextSize=14;
     Instance.new("UICorner",CopyBtn).CornerRadius=UDim.new(0,10);
+
+    -- ===== ИЗМЕНЕНИЕ: ключ доступа =====
     UnlockBtn.MouseButton1Click:Connect(function()
-        if (KeyInput.Text=="Panelka") then
+        if (KeyInput.Text=="NKNO$") then
             StatusLabel.Text=L("SuccessKey");
             StatusLabel.TextColor3=Color3.fromRGB(34,197,94);
             task.wait(0.5);
@@ -1352,6 +1650,8 @@ do
             KeyInput.Text="";
         end
     end);
+    -- ===================================
+
     local checkPositionEnabled = false;
     AdminSwitchBG.MouseButton1Click:Connect(function()
         checkPositionEnabled= not checkPositionEnabled;
@@ -1365,6 +1665,7 @@ do
             PosContainer.Visible=false;
         end
     end);
+
     CheckModelSwitchBG.MouseButton1Click:Connect(function()
         checkModelEnabled= not checkModelEnabled;
         if checkModelEnabled then
@@ -1391,6 +1692,7 @@ do
             if checkModelConnection then checkModelConnection:Disconnect();checkModelConnection=nil;end
         end
     end);
+
     local function render3DWaypoints(pos,index)
         if visualParts[index] then visualParts[index]:Destroy();end
         local part=Instance.new("Part");
@@ -1424,6 +1726,7 @@ do
         label.TextSize=11;
         visualParts[index]=part;
     end
+
     local function refreshPositionUI()
         for _,child in pairs(PosListFrame:GetChildren()) do if child:IsA("Frame") then child:Destroy();end end
         for _,part in pairs(visualParts) do if part then part:Destroy();end end
@@ -1468,6 +1771,7 @@ do
             PosListFrame.CanvasSize=UDim2.new(0,0,0,PosListLayout.AbsoluteContentSize.Y + 12 );
         end);
     end
+
     CheckPosBtn.MouseButton1Click:Connect(function()
         local char=LocalPlayer.Character;
         if (char and char:FindFirstChild("HumanoidRootPart")) then
@@ -1476,6 +1780,7 @@ do
             refreshPositionUI();
         end
     end);
+
     CopyBtn.MouseButton1Click:Connect(function()
         if ( #savedPositions>0) then
             local copyStr=table.concat(savedPositions,"\n");
@@ -1487,6 +1792,7 @@ do
             task.delay(1.5,function() CopyBtn.Text=L("CopyPosBtn");end);
         end
     end);
+
     _G.UpdateColors=function(col)
         accentColor=col;
         SliderFillAuto.BackgroundColor3=col;
@@ -1495,6 +1801,7 @@ do
         UnlockBtn.BackgroundColor3=col;
         refreshPositionUI();
     end;
+
     _G.ApplyLanguage=function()
         ThemeTitle.Text=L("ThemeTitle");
         WorldLabel.Text=string.format(L("WorldLabel"),currentWorld);
