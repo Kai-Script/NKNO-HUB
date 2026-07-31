@@ -43,6 +43,7 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Джойстик/WASD)",
             FlySpeedLabel="Скорость полета: %d",
+            ConcertMusicToggle="Музыка концерта bbno$",
             Themes={"Синий Космос","Фиолетовый Кибер","Кислотный Лайм","Пылкая Роза","Янтарный Неон","Белый Фантом"}
         },
         EN={
@@ -73,6 +74,7 @@ do
             InfJumpToggle="Infinity Jump",
             FlyToggle="Fly (Joystick/WASD)",
             FlySpeedLabel="Fly Speed: %d",
+            ConcertMusicToggle="bbno$ Concert Music",
             Themes={"Blue Space","Purple Cyber","Acid Lime","Fiery Rose","Amber Neon","White Phantom"}
         }
     };
@@ -95,6 +97,44 @@ do
     local checkModelEnabled=false;
     local checkModelConnection=nil;
     local mouse=LocalPlayer:GetMouse();
+    
+    -- === НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ МУЗЫКИ ===
+    local concertMusicEnabled = false;
+    local concertSounds = {};
+    local function findConcertSounds()
+        concertSounds = {};
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Sound") then
+                local name = obj.Name:lower();
+                local parentName = obj.Parent and obj.Parent.Name:lower() or "";
+                if name:find("bbno") or name:find("concert") or parentName:find("bbno") or parentName:find("concert") then
+                    table.insert(concertSounds, obj);
+                end
+            end
+        end
+        return #concertSounds > 0;
+    end
+    local function toggleConcertMusic(state)
+        concertMusicEnabled = state;
+        if state then
+            if #concertSounds == 0 then
+                if not findConcertSounds() then
+                    game:GetService("StarterGui"):SetCore("SendNotification", {Title="Music", Text="No concert sounds found!", Duration=3});
+                    concertMusicEnabled = false;
+                    return;
+                end
+            end
+            for _, sound in ipairs(concertSounds) do
+                sound:Play();
+            end
+        else
+            for _, sound in ipairs(concertSounds) do
+                sound:Stop();
+            end
+        end
+    end
+    -- === КОНЕЦ НОВОГО БЛОКА ===
+    
     local Waypoints={
         ["1 World"]={
             ["+1 wins"]={Vector3.new(2.8,8.5,74.3),Vector3.new( -22.3,10.4,286)},
@@ -318,16 +358,6 @@ do
     MainFrame.ClipsDescendants=false;
     MainFrame.Visible=false;
     Instance.new("UICorner",MainFrame).CornerRadius=UDim.new(0,14);
-    local BgImage=Instance.new("ImageLabel");
-    BgImage.Name="BackgroundImage";
-    BgImage.Parent=MainFrame;
-    BgImage.BackgroundTransparency=1;
-    BgImage.Size=UDim2.new(1,0,1,0);
-    BgImage.Image="rbxassetid://121149051147413";
-    BgImage.ScaleType=Enum.ScaleType.Crop;
-    BgImage.ImageTransparency=0.35;
-    BgImage.ZIndex=0;
-    Instance.new("UICorner",BgImage).CornerRadius=UDim.new(0,14);
     local MainScale=Instance.new("UIScale",MainFrame);
     MainScale.Scale=0.3;
     local MainGradient=Instance.new("UIGradient");
@@ -662,7 +692,7 @@ do
     autoFarmTabBtn.BackgroundColor3=accentColor;
     autoFarmTabBtn.TextColor3=Color3.fromRGB(255,255,255);
 
-    -- ===== ДОБАВЛЕН БЛОК DISCORD =====
+    -- ===== БЛОК DISCORD =====
     local DiscordFrame = Instance.new("Frame")
     DiscordFrame.Parent = Sidebar
     DiscordFrame.BackgroundColor3 = Color3.fromRGB(20,20,28)
@@ -761,7 +791,9 @@ do
     MoveLeftPanel.BackgroundTransparency=1;
     MoveLeftPanel.Size=UDim2.new(1,0,1,0);
     MoveLeftPanel.ScrollBarThickness=0;
-    MoveLeftPanel.CanvasSize=UDim2.new(0,0,0,230);
+    MoveLeftPanel.CanvasSize=UDim2.new(0,0,0,310); -- увеличил высоту для нового элемента
+
+    -- Infinity Jump
     local InfJumpFrame=Instance.new("Frame");
     InfJumpFrame.Parent=MoveLeftPanel;
     InfJumpFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -801,6 +833,8 @@ do
             TweenService:Create(InfJumpSwitchDot,TweenInfo.new(0.2),{Position=UDim2.new(0,3,0.5, -11)}):Play();
         end
     end);
+
+    -- Fly
     local FlyFrame=Instance.new("Frame");
     FlyFrame.Parent=MoveLeftPanel;
     FlyFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -842,6 +876,8 @@ do
             toggleManualFly(false);
         end
     end);
+
+    -- Fly Speed Slider
     local FlySpeedSliderFrame=Instance.new("Frame");
     FlySpeedSliderFrame.Parent=MoveLeftPanel;
     FlySpeedSliderFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
@@ -893,6 +929,50 @@ do
             draggingFlySlider=false;
         end
     end);
+
+    -- === НОВЫЙ ПЕРЕКЛЮЧАТЕЛЬ ДЛЯ МУЗЫКИ КОНЦЕРТА ===
+    local ConcertFrame=Instance.new("Frame");
+    ConcertFrame.Parent=MoveLeftPanel;
+    ConcertFrame.BackgroundColor3=Color3.fromRGB(16,16,23);
+    ConcertFrame.BackgroundTransparency=0.15;
+    ConcertFrame.Position=UDim2.new(0,0,0,228);
+    ConcertFrame.Size=UDim2.new(0.96,0,0,56);
+    Instance.new("UICorner",ConcertFrame).CornerRadius=UDim.new(0,10);
+    local ConcertLabel=Instance.new("TextLabel");
+    ConcertLabel.Parent=ConcertFrame;
+    ConcertLabel.BackgroundTransparency=1;
+    ConcertLabel.Position=UDim2.new(0,16,0,0);
+    ConcertLabel.Size=UDim2.new(0.7,0,1,0);
+    ConcertLabel.Font=Enum.Font.GothamBold;
+    ConcertLabel.TextColor3=Color3.fromRGB(255,255,255);
+    ConcertLabel.TextSize=15;
+    ConcertLabel.TextXAlignment=Enum.TextXAlignment.Left;
+    local ConcertSwitchBG=Instance.new("TextButton");
+    ConcertSwitchBG.Parent=ConcertFrame;
+    ConcertSwitchBG.BackgroundColor3=Color3.fromRGB(40,40,55);
+    ConcertSwitchBG.Position=UDim2.new(1, -65,0.5, -14);
+    ConcertSwitchBG.Size=UDim2.new(0,50,0,28);
+    ConcertSwitchBG.Text="";
+    Instance.new("UICorner",ConcertSwitchBG).CornerRadius=UDim.new(0,14);
+    local ConcertSwitchDot=Instance.new("Frame");
+    ConcertSwitchDot.Parent=ConcertSwitchBG;
+    ConcertSwitchDot.BackgroundColor3=Color3.fromRGB(255,255,255);
+    ConcertSwitchDot.Position=UDim2.new(0,3,0.5, -11);
+    ConcertSwitchDot.Size=UDim2.new(0,22,0,22);
+    Instance.new("UICorner",ConcertSwitchDot).CornerRadius=UDim.new(0,11);
+    ConcertSwitchBG.MouseButton1Click:Connect(function()
+        toggleConcertMusic(not concertMusicEnabled);
+        if concertMusicEnabled then
+            TweenService:Create(ConcertSwitchBG,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(34,197,94)}):Play();
+            TweenService:Create(ConcertSwitchDot,TweenInfo.new(0.2),{Position=UDim2.new(0,25,0.5, -11)}):Play();
+        else
+            TweenService:Create(ConcertSwitchBG,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(40,40,55)}):Play();
+            TweenService:Create(ConcertSwitchDot,TweenInfo.new(0.2),{Position=UDim2.new(0,3,0.5, -11)}):Play();
+        end
+    end);
+    -- ===== КОНЕЦ НОВОГО БЛОКА =====
+
+    -- LeftPanel (AutoFarm)
     local LeftPanel=Instance.new("Frame");
     LeftPanel.Parent=AutoFarmPage;
     LeftPanel.BackgroundTransparency=1;
@@ -953,14 +1033,6 @@ do
             btn.TextXAlignment=Enum.TextXAlignment.Left;
             btn.ZIndex=51;
             Instance.new("UICorner",btn).CornerRadius=UDim.new(0,8);
-            local TrophyIcon=Instance.new("ImageLabel");
-            TrophyIcon.Parent=btn;
-            TrophyIcon.BackgroundTransparency=1;
-            TrophyIcon.Position=UDim2.new(0,10,0.5, -12);
-            TrophyIcon.Size=UDim2.new(0,24,0,24);
-            TrophyIcon.Image="rbxassetid://85025550755267";
-            TrophyIcon.ScaleType=Enum.ScaleType.Fit;
-            TrophyIcon.ZIndex=52;
             btn.MouseButton1Click:Connect(function()
                 currentDistance=opt;
                 DropdownBtn.Text="   "   .. opt   .. " v" ;
@@ -1481,6 +1553,7 @@ do
         CheckModelToggleLabel.Text=L("CheckModelToggle");
         InfJumpLabel.Text=L("InfJumpToggle");
         FlyLabel.Text=L("FlyToggle");
+        ConcertLabel.Text=L("ConcertMusicToggle"); -- новая строка
         for i,rowText in ipairs(ThemeRows) do
             if L("Themes")[i] then rowText.Text=L("Themes")[i];end
         end
