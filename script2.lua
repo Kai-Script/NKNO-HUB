@@ -313,113 +313,117 @@ local function returnFromUnderMap()
     end
 end
 
--- ESP (исправлен)
+-- ============================================================
+-- ИСПРАВЛЕННАЯ ФУНКЦИЯ ESP (убрана ошибка continue)
+-- ============================================================
 local espHighlights = {}
 local espNames = {}
 local function updateESP()
     pcall(function()
         for _, plr in pairs(Players:GetPlayers()) do
-            if plr == LocalPlayer then continue end
-            local alive = plr:GetAttribute("Alive") == true
-            local role = plr:GetAttribute("Role") or "Innocent"
-            local show = NKNO.ESP[role] or false
-            local color = Color3.fromRGB(255,255,255)
-            if role == "Murderer" then color = Color3.fromRGB(255,0,0)
-            elseif role == "Sheriff" then color = Color3.fromRGB(0,0,255)
-            elseif role == "Hero" then color = Color3.fromRGB(0,255,0)
-            else color = Color3.fromRGB(255,255,255) end
+            -- Пропускаем самого себя через if
+            if plr ~= LocalPlayer then
+                local alive = plr:GetAttribute("Alive") == true
+                local role = plr:GetAttribute("Role") or "Innocent"
+                local show = NKNO.ESP[role] or false
+                local color = Color3.fromRGB(255,255,255)
+                if role == "Murderer" then color = Color3.fromRGB(255,0,0)
+                elseif role == "Sheriff" then color = Color3.fromRGB(0,0,255)
+                elseif role == "Hero" then color = Color3.fromRGB(0,255,0)
+                else color = Color3.fromRGB(255,255,255) end
 
-            if alive and show and plr.Character then
-                -- Highlight
-                local highlight = espHighlights[plr]
-                if not highlight then
-                    highlight = Instance.new("Highlight")
-                    highlight.Name = "NKNO_ESP"
-                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    highlight.FillTransparency = 0.4
-                    highlight.OutlineTransparency = 0
-                    highlight.Parent = plr.Character
-                    espHighlights[plr] = highlight
-                end
-                highlight.FillColor = color
-                highlight.OutlineColor = color
-                highlight.Adornee = plr.Character
+                if alive and show and plr.Character then
+                    -- Highlight
+                    local highlight = espHighlights[plr]
+                    if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "NKNO_ESP"
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.FillTransparency = 0.4
+                        highlight.OutlineTransparency = 0
+                        highlight.Parent = plr.Character
+                        espHighlights[plr] = highlight
+                    end
+                    highlight.FillColor = color
+                    highlight.OutlineColor = color
+                    highlight.Adornee = plr.Character
 
-                -- Имя
-                local head = plr.Character:FindFirstChild("Head")
-                if head then
-                    local gui = espNames[plr]
-                    if not gui then
-                        gui = Instance.new("BillboardGui")
-                        gui.Name = "NKNO_Name"
-                        gui.AlwaysOnTop = true
-                        gui.Size = UDim2.new(0,200,0,50)
-                        gui.StudsOffset = Vector3.new(0,2.5,0)
-                        gui.Parent = head
-                        local label = Instance.new("TextLabel")
-                        label.Name = "Label"
-                        label.Size = UDim2.new(1,0,1,0)
-                        label.BackgroundTransparency = 1
-                        label.Text = ""
-                        label.TextColor3 = color
-                        label.TextSize = NKNO.ESP.FontSize or 14
-                        label.Font = Enum.Font.GothamBold
-                        label.TextStrokeTransparency = 0.3
-                        label.TextStrokeColor3 = Color3.new(0,0,0)
-                        label.Parent = gui
-                        espNames[plr] = gui
-                    end
-                    local label = gui:FindFirstChild("Label")
-                    if label then
-                        local name = NKNO.ESP.DisplayName and plr.DisplayName or (NKNO.ESP.NormalName and plr.Name or "")
-                        label.Text = name
-                        label.TextColor3 = color
-                    end
-                    -- Box2D
-                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if root and NKNO.ESP.Box2D then
-                        local box = root:FindFirstChild("NKNO_Box")
-                        if not box then
-                            box = Instance.new("BillboardGui")
-                            box.Name = "NKNO_Box"
-                            box.AlwaysOnTop = true
-                            box.Size = UDim2.new(4,0,5,0)
-                            box.StudsOffset = Vector3.new(0,0,0)
-                            box.Parent = root
-                            local frame = Instance.new("Frame")
-                            frame.Name = "BoxFrame"
-                            frame.BackgroundTransparency = 1
-                            frame.Size = UDim2.new(1,0,1,0)
-                            frame.BorderSizePixel = 2
-                            frame.BorderColor3 = color
-                            frame.Parent = box
-                            local stroke = Instance.new("UIStroke")
-                            stroke.Thickness = 2
-                            stroke.Color = color
-                            stroke.Parent = frame
+                    -- Имя
+                    local head = plr.Character:FindFirstChild("Head")
+                    if head then
+                        local gui = espNames[plr]
+                        if not gui then
+                            gui = Instance.new("BillboardGui")
+                            gui.Name = "NKNO_Name"
+                            gui.AlwaysOnTop = true
+                            gui.Size = UDim2.new(0,200,0,50)
+                            gui.StudsOffset = Vector3.new(0,2.5,0)
+                            gui.Parent = head
+                            local label = Instance.new("TextLabel")
+                            label.Name = "Label"
+                            label.Size = UDim2.new(1,0,1,0)
+                            label.BackgroundTransparency = 1
+                            label.Text = ""
+                            label.TextColor3 = color
+                            label.TextSize = NKNO.ESP.FontSize or 14
+                            label.Font = Enum.Font.GothamBold
+                            label.TextStrokeTransparency = 0.3
+                            label.TextStrokeColor3 = Color3.new(0,0,0)
+                            label.Parent = gui
+                            espNames[plr] = gui
                         end
-                    else
-                        local box = root and root:FindFirstChild("NKNO_Box")
-                        if box then box:Destroy() end
+                        local label = gui:FindFirstChild("Label")
+                        if label then
+                            local name = NKNO.ESP.DisplayName and plr.DisplayName or (NKNO.ESP.NormalName and plr.Name or "")
+                            label.Text = name
+                            label.TextColor3 = color
+                        end
+                        -- Box2D
+                        local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if root and NKNO.ESP.Box2D then
+                            local box = root:FindFirstChild("NKNO_Box")
+                            if not box then
+                                box = Instance.new("BillboardGui")
+                                box.Name = "NKNO_Box"
+                                box.AlwaysOnTop = true
+                                box.Size = UDim2.new(4,0,5,0)
+                                box.StudsOffset = Vector3.new(0,0,0)
+                                box.Parent = root
+                                local frame = Instance.new("Frame")
+                                frame.Name = "BoxFrame"
+                                frame.BackgroundTransparency = 1
+                                frame.Size = UDim2.new(1,0,1,0)
+                                frame.BorderSizePixel = 2
+                                frame.BorderColor3 = color
+                                frame.Parent = box
+                                local stroke = Instance.new("UIStroke")
+                                stroke.Thickness = 2
+                                stroke.Color = color
+                                stroke.Parent = frame
+                            end
+                        else
+                            local box = root and root:FindFirstChild("NKNO_Box")
+                            if box then box:Destroy() end
+                        end
+                    end
+                else
+                    if espHighlights[plr] then
+                        espHighlights[plr]:Destroy()
+                        espHighlights[plr] = nil
+                    end
+                    if espNames[plr] then
+                        espNames[plr]:Destroy()
+                        espNames[plr] = nil
+                    end
+                    if plr.Character then
+                        local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            local box = root:FindFirstChild("NKNO_Box")
+                            if box then box:Destroy() end
+                        end
                     end
                 end
-            else
-                if espHighlights[plr] then
-                    espHighlights[plr]:Destroy()
-                    espHighlights[plr] = nil
-                end
-                if espNames[plr] then
-                    espNames[plr]:Destroy()
-                    espNames[plr] = nil
-                end
-                if plr.Character then
-                    local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        local box = root:FindFirstChild("NKNO_Box")
-                        if box then box:Destroy() end
-                    end
-                end
-            end
+            end -- конец if plr ~= LocalPlayer
         end
     end)
 end
