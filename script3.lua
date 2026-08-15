@@ -1,10 +1,3 @@
---[[
-    Improved Summer Coins collector with anti-kick measures
-    - Uses TweenService for smooth movement
-    - Random delays between teleports
-    - Speed limits and gradual acceleration
-]]
-
 do
     local Players = game:GetService("Players")
     local TweenService = game:GetService("TweenService")
@@ -13,9 +6,14 @@ do
     local VirtualUser = game:GetService("VirtualUser")
     local LocalPlayer = Players.LocalPlayer
 
-    if game.CoreGui:FindFirstChild("NknoHub") then game.CoreGui.NknoHub:Destroy() end
+    -- Удаляем старую версию, если есть
+    if game.CoreGui:FindFirstChild("ZentxHub") then
+        game.CoreGui.ZentxHub:Destroy()
+    end
     for _, obj in pairs(workspace:GetChildren()) do
-        if obj.Name:find("Kitagawa_WayPoint_") then obj:Destroy() end
+        if obj.Name:find("Kitagawa_WayPoint_") then
+            obj:Destroy()
+        end
     end
 
     local afkConnection = LocalPlayer.Idled:Connect(function()
@@ -34,7 +32,6 @@ do
             AdminTab = "AdminPanel",
             MovementTab = "Moovement",
             AutoFarmToggle = "Авто Фарм",
-            CollectCoinsToggle = "Собирать Summer Coins",
             SpeedLabel = "Скорость: %d",
             DistLabel = "WinsFarmer:",
             SavePosBtn = "+ Сохранить позицию",
@@ -54,7 +51,14 @@ do
             InfJumpToggle = "Infinity Jump",
             FlyToggle = "Fly (Джойстик/WASD)",
             FlySpeedLabel = "Скорость полета: %d",
-            Themes = {"Синий Космос", "Фиолетовый Кибер", "Кислотный Лайм", "Пылкая Роза", "Янтарный Неон", "Белый Фантом"}
+            Themes = {
+                "Синий Космос",
+                "Фиолетовый Кибер",
+                "Кислотный Лайм",
+                "Пылкая Роза",
+                "Янтарный Неон",
+                "Белый Фантом"
+            }
         },
         EN = {
             ChooseLang = "Choose language",
@@ -65,7 +69,6 @@ do
             AdminTab = "AdminPanel",
             MovementTab = "Moovement",
             AutoFarmToggle = "Auto Farm",
-            CollectCoinsToggle = "Collect Summer Coins",
             SpeedLabel = "Speed: %d",
             DistLabel = "WinsFarmer:",
             SavePosBtn = "+ Save Position",
@@ -85,11 +88,20 @@ do
             InfJumpToggle = "Infinity Jump",
             FlyToggle = "Fly (Joystick/WASD)",
             FlySpeedLabel = "Fly Speed: %d",
-            Themes = {"Blue Space", "Purple Cyber", "Acid Lime", "Fiery Rose", "Amber Neon", "White Phantom"}
+            Themes = {
+                "Blue Space",
+                "Purple Cyber",
+                "Acid Lime",
+                "Fiery Rose",
+                "Amber Neon",
+                "White Phantom"
+            }
         }
     }
 
-    local function L(key) return Locales[lang][key] end
+    local function L(key)
+        return Locales[lang][key]
+    end
 
     local savedPositions = {}
     local visualParts = {}
@@ -97,21 +109,22 @@ do
     local currentDistance = nil
     local currentSpeed = 110
     local autoFarmActive = false
-    local collectCoins = false
-    local COIN_NAME_PATTERN = "SummerCoin"
 
     local function UpdateSpeedFarmState()
         if getgenv then
             getgenv().SpeedKeyboardFarmState = {
-                enabled = autoFarmActive or collectCoins,
-                active = (autoFarmActive or collectCoins) and (currentDistance ~= nil or collectCoins)
+                enabled = autoFarmActive,
+                active = autoFarmActive and (currentDistance ~= nil)
             }
         end
     end
     if getgenv then
         getgenv().SpeedKeyboardHeartbeatStop = nil
         getgenv().SpeedKeyboardRunning = true
-        getgenv().SpeedKeyboardFarmState = { enabled = false, active = false }
+        getgenv().SpeedKeyboardFarmState = {
+            enabled = false,
+            active = false
+        }
     end
 
     local noClipConnection = nil
@@ -127,32 +140,580 @@ do
     local checkModelConnection = nil
     local mouse = LocalPlayer:GetMouse()
 
-    -- Waypoints data (unchanged, huge table omitted for brevity, but kept intact)
+    -- Таблица точек только для 1, 2 и 3 миров (Bbnos World удалён)
     local Waypoints = {
         ["1 World"] = {
-            ["+1 wins"] = { Vector3.new(2.8,8.5,74.3), Vector3.new(-22.3,10.4,286) },
-            ["+3 wins"] = { Vector3.new(-2.1,8.5,74.2), Vector3.new(2.7,8.5,295.7), Vector3.new(58,8.5,362), Vector3.new(53,8.5,444.3), Vector3.new(-22.2,9.8,518.4) },
-            ["+10 wins"] = { Vector3.new(3.1,8.5,74.8), Vector3.new(2.3,8.5,296.5), Vector3.new(55.6,8.5,336.6), Vector3.new(47.5,8.5,454.1), Vector3.new(-1.6,8.5,487.5), Vector3.new(-4.8,8.5,527.7), Vector3.new(-21.6,8.5,528), Vector3.new(-22.6,30.8,624.1), Vector3.new(-21.5,76.8,752.7), Vector3.new(-18.3,78.7,774.5) },
-            ["+20 coins"] = { Vector3.new(2.2,77.0,788.9), Vector3.new(3.8,77.0,1102.9) }
+            ["+1 wins"] = {
+                Vector3.new(2.8, 8.5, 74.3),
+                Vector3.new(-22.3, 10.4, 286)
+            },
+            ["+3 wins"] = {
+                Vector3.new(-2.1, 8.5, 74.2),
+                Vector3.new(2.7, 8.5, 295.7),
+                Vector3.new(58, 8.5, 362),
+                Vector3.new(53, 8.5, 444.3),
+                Vector3.new(-22.2, 9.8, 518.4)
+            },
+            ["+10 wins"] = {
+                Vector3.new(3.1, 8.5, 74.8),
+                Vector3.new(2.3, 8.5, 296.5),
+                Vector3.new(55.6, 8.5, 336.6),
+                Vector3.new(47.5, 8.5, 454.1),
+                Vector3.new(-1.6, 8.5, 487.5),
+                Vector3.new(-4.8, 8.5, 527.7),
+                Vector3.new(-21.6, 8.5, 528),
+                Vector3.new(-22.6, 30.8, 624.1),
+                Vector3.new(-21.5, 76.8, 752.7),
+                Vector3.new(-18.3, 78.7, 774.5)
+            }
         },
         ["2 World"] = {
-            ["+250k wins"] = { Vector3.new(-396.8,504.7,-60.1), Vector3.new(-411.7,499.8,171.9), Vector3.new(-414,498.1,189.9) },
-            ["+400k wins"] = { Vector3.new(-399.4,504.7,-57.6), Vector3.new(-398.1,499.8,209.2), Vector3.new(-417.6,501.4,445.3) },
-            ["+1,5m wins"] = { Vector3.new(-399.4,504.7,-57.6), Vector3.new(-398.1,499.8,209.2), Vector3.new(-396.3,499.8,450), Vector3.new(-398.5,499.7,465.5), Vector3.new(-343.3,499.7,464.7), Vector3.new(-349.3,526.8,576.9), Vector3.new(-454.1,526.8,574.8), Vector3.new(-455.3,551.8,485.5), Vector3.new(-454.8,553.8,467.6), Vector3.new(-350,553.8,464.7), Vector3.new(-349.6,553.8,477.8), Vector3.new(-347.2,580.8,574.4), Vector3.new(-452.8,580.8,577), Vector3.new(-453.2,580.8,565.6), Vector3.new(-454.1,605.9,485.4), Vector3.new(-454.7,607.8,467.2), Vector3.new(-400.6,607.8,467.7), Vector3.new(-399.4,607.6,621.4), Vector3.new(-399.3,607.6,672.4), Vector3.new(-401.2,607.2,825.2), Vector3.new(-401,607.2,859.3), Vector3.new(-317,607.2,1013.9), Vector3.new(-312.5,607.2,1149.9), Vector3.new(-400.4,607.2,1248.3), Vector3.new(-411.5,607.4,1264.2), Vector3.new(-413.7,609,1260.5) },
-            ["+2,5m wins"] = { Vector3.new(-398.3,504.7,-55.6), Vector3.new(-395.6,499.8,207.1), Vector3.new(-393.8,499.8,451.7), Vector3.new(-348.7,499.7,467.9), Vector3.new(-348.3,526.8,575.4), Vector3.new(-454.6,526.8,574.6), Vector3.new(-451.9,553.8,467.1), Vector3.new(-347.8,553.8,467.5), Vector3.new(-349.7,580.8,577.1), Vector3.new(-452.2,580.8,574.6), Vector3.new(-452.4,607.8,467.3), Vector3.new(-397.4,607.8,466.1), Vector3.new(-398.8,607.6,621.8), Vector3.new(-400.2,607.2,858), Vector3.new(-300.5,607.2,911.8), Vector3.new(-311.3,607.2,1134.4), Vector3.new(-398.4,607.2,1246.4), Vector3.new(-398.1,618.4,1331.4), Vector3.new(-399,607.2,1429.9), Vector3.new(-390.3,607.2,1475.1), Vector3.new(-363,628,1543.5), Vector3.new(-363.2,628,1602.1), Vector3.new(-361.4,605.1,1697.2), Vector3.new(-361.8,605.1,1752.7), Vector3.new(-362.1,616.7,1792.1), Vector3.new(-398.3,607.2,1860.9), Vector3.new(-397,607.7,1924.8), Vector3.new(-398,619.3,1960), Vector3.new(-398.2,607.2,2040.1), Vector3.new(-398.3,607.2,2097.8), Vector3.new(-398.4,619,2140.1), Vector3.new(-398.6,607.2,2216.9), Vector3.new(-398.5,607.2,2270.2), Vector3.new(-398.4,618.6,2316.5), Vector3.new(-399.6,623.1,2365.9), Vector3.new(-417.3,621,2415.6) },
-            ["+4m wins"] = { Vector3.new(-398.3,504.7,-55.6), Vector3.new(-395.6,499.8,207.1), Vector3.new(-393.8,499.8,451.7), Vector3.new(-348.7,499.7,467.9), Vector3.new(-348.3,526.8,575.4), Vector3.new(-454.6,526.8,574.6), Vector3.new(-451.9,553.8,467.1), Vector3.new(-347.8,553.8,467.5), Vector3.new(-349.7,580.8,577.1), Vector3.new(-452.2,580.8,574.6), Vector3.new(-452.4,607.8,467.3), Vector3.new(-397.4,607.8,466.1), Vector3.new(-398.8,607.6,621.8), Vector3.new(-400.2,607.2,858), Vector3.new(-300.5,607.2,911.8), Vector3.new(-311.3,607.2,1134.4), Vector3.new(-398.4,607.2,1246.4), Vector3.new(-398.1,618.4,1331.4), Vector3.new(-399,607.2,1429.9), Vector3.new(-390.3,607.2,1475.1), Vector3.new(-363,628,1543.5), Vector3.new(-363.2,628,1602.1), Vector3.new(-361.4,605.1,1697.2), Vector3.new(-361.8,605.1,1752.7), Vector3.new(-362.1,616.7,1792.1), Vector3.new(-398.3,607.2,1860.9), Vector3.new(-397,607.7,1924.8), Vector3.new(-398,619.3,1960), Vector3.new(-398.2,607.2,2040.1), Vector3.new(-398.3,607.2,2097.8), Vector3.new(-398.4,619,2140.1), Vector3.new(-398.6,607.2,2216.9), Vector3.new(-398.5,607.2,2270.2), Vector3.new(-398.4,618.6,2316.5), Vector3.new(-399.6,623.1,2365.9), Vector3.new(-399.7,623.1,2433.8), Vector3.new(-399.7,623.1,2636.1), Vector3.new(-417.3,620.8,2650.8) },
-            ["+6m wins"] = { Vector3.new(-398.3,504.7,-55.6), Vector3.new(-395.6,499.8,207.1), Vector3.new(-393.8,499.8,451.7), Vector3.new(-348.7,499.7,467.9), Vector3.new(-348.3,526.8,575.4), Vector3.new(-454.6,526.8,574.6), Vector3.new(-451.9,553.8,467.1), Vector3.new(-347.8,553.8,467.5), Vector3.new(-349.7,580.8,577.1), Vector3.new(-452.2,580.8,574.6), Vector3.new(-452.4,607.8,467.3), Vector3.new(-397.4,607.8,466.1), Vector3.new(-398.8,607.6,621.8), Vector3.new(-400.2,607.2,858), Vector3.new(-300.5,607.2,911.8), Vector3.new(-311.3,607.2,1134.4), Vector3.new(-398.4,607.2,1246.4), Vector3.new(-398.1,618.4,1331.4), Vector3.new(-399,607.2,1429.9), Vector3.new(-390.3,607.2,1475.1), Vector3.new(-363,628,1543.5), Vector3.new(-363.2,628,1602.1), Vector3.new(-361.4,605.1,1697.2), Vector3.new(-361.8,605.1,1752.7), Vector3.new(-362.1,616.7,1792.1), Vector3.new(-398.3,607.2,1860.9), Vector3.new(-397,607.7,1924.8), Vector3.new(-398,619.3,1960), Vector3.new(-398.2,607.2,2040.1), Vector3.new(-398.3,607.2,2097.8), Vector3.new(-398.4,619,2140.1), Vector3.new(-398.6,607.2,2216.9), Vector3.new(-398.5,607.2,2270.2), Vector3.new(-398.4,618.6,2316.5), Vector3.new(-399.6,623.1,2365.9), Vector3.new(-399.7,623.1,2433.8), Vector3.new(-399.7,623.1,2636.1), Vector3.new(-398.7,623.1,2666.7), Vector3.new(-403,623.1,3093.9), Vector3.new(-417.3,621.2,3158.6) },
-            ["+10m wins"] = { Vector3.new(-398.3,504.7,-55.6), Vector3.new(-395.6,499.8,207.1), Vector3.new(-393.8,499.8,451.7), Vector3.new(-348.7,499.7,467.9), Vector3.new(-348.3,526.8,575.4), Vector3.new(-454.6,526.8,574.6), Vector3.new(-451.9,553.8,467.1), Vector3.new(-347.8,553.8,467.5), Vector3.new(-349.7,580.8,577.1), Vector3.new(-452.2,580.8,574.6), Vector3.new(-452.4,607.8,467.3), Vector3.new(-397.4,607.8,466.1), Vector3.new(-398.8,607.6,621.8), Vector3.new(-400.2,607.2,858), Vector3.new(-300.5,607.2,911.8), Vector3.new(-311.3,607.2,1134.4), Vector3.new(-398.4,607.2,1246.4), Vector3.new(-398.1,618.4,1331.4), Vector3.new(-399,607.2,1429.9), Vector3.new(-390.3,607.2,1475.1), Vector3.new(-363,628,1543.5), Vector3.new(-363.2,628,1602.1), Vector3.new(-361.4,605.1,1697.2), Vector3.new(-361.8,605.1,1752.7), Vector3.new(-362.1,616.7,1792.1), Vector3.new(-398.3,607.2,1860.9), Vector3.new(-397,607.7,1924.8), Vector3.new(-398,619.3,1960), Vector3.new(-398.2,607.2,2040.1), Vector3.new(-398.3,607.2,2097.8), Vector3.new(-398.4,619,2140.1), Vector3.new(-398.6,607.2,2216.9), Vector3.new(-398.5,607.2,2270.2), Vector3.new(-398.4,618.6,2316.5), Vector3.new(-399.6,623.1,2365.9), Vector3.new(-399.7,623.1,2433.8), Vector3.new(-399.7,623.1,2636.1), Vector3.new(-398.7,623.1,2666.7), Vector3.new(-403,623.1,3093.9), Vector3.new(-401.7,623.1,3172.2), Vector3.new(-399,623.1,3325.1), Vector3.new(-346,623.1,3324.2), Vector3.new(-196.7,623.1,3330.7), Vector3.new(-191.2,623.1,3256.3), Vector3.new(-114.2,623.1,3261.9), Vector3.new(-116.3,623.1,3412.3), Vector3.new(-257.5,623.1,3409.8), Vector3.new(-261,623.1,3608.9), Vector3.new(-529.8,623.1,3607.1), Vector3.new(-535.7,623.1,3790.1), Vector3.new(-118.6,623.1,3798.5), Vector3.new(-119.2,623.1,3867.5), Vector3.new(-59.9,621.2,3883.2) },
-            ["+15m wins"] = { Vector3.new(-396.7,504.7,-54.7), Vector3.new(-396.5,499.8,450.4), Vector3.new(-396.1,499.7,466.2), Vector3.new(-346.2,499.7,465), Vector3.new(-347.7,526.8,575.3), Vector3.new(-454.8,526.8,574.9), Vector3.new(-454,553.8,469.2), Vector3.new(-349.9,553.8,467.2), Vector3.new(-348.2,580.8,576.5), Vector3.new(-450.7,580.8,577.1), Vector3.new(-450,607.8,466.3), Vector3.new(-403.6,607.8,466.9), Vector3.new(-400.4,607.6,622.8), Vector3.new(-400.5,607.2,859.9), Vector3.new(-309.8,607.2,918.2), Vector3.new(-307,607.2,1192.4), Vector3.new(-400.3,607.2,1247.9), Vector3.new(-400.5,618.9,1332.9), Vector3.new(-400.7,607.2,1431.3), Vector3.new(-360.7,628,1544.8), Vector3.new(-362.1,628,1604.5), Vector3.new(-360,605.1,1695.9), Vector3.new(-362.9,617,1793.1), Vector3.new(-400.5,607.2,1860.4), Vector3.new(-400,607.2,1921.3), Vector3.new(-400.1,619.3,1960.1), Vector3.new(-400.3,607.2,2040), Vector3.new(-400.5,607.2,2099.5), Vector3.new(-400.6,619.3,2141.1), Vector3.new(-400.8,607.2,2218), Vector3.new(-400.9,607.2,2276.1), Vector3.new(-400.3,618.6,2316.2), Vector3.new(-398.8,623.1,2433.6), Vector3.new(-395.9,623.1,2668.2), Vector3.new(-401,623.1,3174.8), Vector3.new(-400.7,623.1,3332.6), Vector3.new(-181.5,623.1,3331.3), Vector3.new(-181.7,623.1,3261.6), Vector3.new(-106.9,623.1,3261.4), Vector3.new(-114.6,623.1,3437.5), Vector3.new(-268,623.1,3441.3), Vector3.new(-265.2,623.1,3611.6), Vector3.new(-531.9,623.1,3620), Vector3.new(-535.2,623.1,3801.1), Vector3.new(-130.8,623.1,3799.8), Vector3.new(-130.7,623.1,3864.4), Vector3.new(-46.1,623.2,3864.2), Vector3.new(1189.7,623.4,3865.5), Vector3.new(1228.4,621.6,3908.9) },
-            ["+25m wins"] = { Vector3.new(-396.7,504.7,-54.7), Vector3.new(-396.5,499.8,450.4), Vector3.new(-396.1,499.7,466.2), Vector3.new(-346.2,499.7,465), Vector3.new(-347.7,526.8,575.3), Vector3.new(-454.8,526.8,574.9), Vector3.new(-454,553.8,469.2), Vector3.new(-349.9,553.8,467.2), Vector3.new(-348.2,580.8,576.5), Vector3.new(-450.7,580.8,577.1), Vector3.new(-450,607.8,466.3), Vector3.new(-403.6,607.8,466.9), Vector3.new(-400.4,607.6,622.8), Vector3.new(-400.5,607.2,859.9), Vector3.new(-309.8,607.2,918.2), Vector3.new(-307,607.2,1192.4), Vector3.new(-400.3,607.2,1247.9), Vector3.new(-400.5,618.9,1332.9), Vector3.new(-400.7,607.2,1431.3), Vector3.new(-360.7,628,1544.8), Vector3.new(-362.1,628,1604.5), Vector3.new(-360,605.1,1695.9), Vector3.new(-362.9,617,1793.1), Vector3.new(-400.5,607.2,1860.4), Vector3.new(-400,607.2,1921.3), Vector3.new(-400.1,619.3,1960.1), Vector3.new(-400.3,607.2,2040), Vector3.new(-400.5,607.2,2099.5), Vector3.new(-400.6,619.3,2141.1), Vector3.new(-400.8,607.2,2218), Vector3.new(-400.9,607.2,2276.1), Vector3.new(-400.3,618.6,2316.2), Vector3.new(-398.8,623.1,2433.6), Vector3.new(-395.9,623.1,2668.2), Vector3.new(-401,623.1,3174.8), Vector3.new(-400.7,623.1,3332.6), Vector3.new(-181.5,623.1,3331.3), Vector3.new(-181.7,623.1,3261.6), Vector3.new(-106.9,623.1,3261.4), Vector3.new(-114.6,623.1,3437.5), Vector3.new(-268,623.1,3441.3), Vector3.new(-265.2,623.1,3611.6), Vector3.new(-531.9,623.1,3620), Vector3.new(-535.2,623.1,3801.1), Vector3.new(-130.8,623.1,3799.8), Vector3.new(-130.7,623.1,3864.4), Vector3.new(-46.1,623.2,3864.2), Vector3.new(1189.7,623.4,3865.5), Vector3.new(1263.6,623.4,3864.6), Vector3.new(1327.3,600,3862.8), Vector3.new(1565,622.1,3789.3), Vector3.new(1770.8,638.8,3940.2), Vector3.new(1971.2,615.5,3805.8), Vector3.new(2115.6,614.4,3954.5), Vector3.new(2313.9,603,3869.1), Vector3.new(2400.2,625.5,3887.9) },
-            ["+40m wins"] = { Vector3.new(-396.7,504.7,-54.7), Vector3.new(-396.5,499.8,450.4), Vector3.new(-396.1,499.7,466.2), Vector3.new(-346.2,499.7,465), Vector3.new(-347.7,526.8,575.3), Vector3.new(-454.8,526.8,574.9), Vector3.new(-454,553.8,469.2), Vector3.new(-349.9,553.8,467.2), Vector3.new(-348.2,580.8,576.5), Vector3.new(-450.7,580.8,577.1), Vector3.new(-450,607.8,466.3), Vector3.new(-403.6,607.8,466.9), Vector3.new(-400.4,607.6,622.8), Vector3.new(-400.5,607.2,859.9), Vector3.new(-309.8,607.2,918.2), Vector3.new(-307,607.2,1192.4), Vector3.new(-400.3,607.2,1247.9), Vector3.new(-400.5,618.9,1332.9), Vector3.new(-400.7,607.2,1431.3), Vector3.new(-360.7,628,1544.8), Vector3.new(-362.1,628,1604.5), Vector3.new(-360,605.1,1695.9), Vector3.new(-362.9,617,1793.1), Vector3.new(-400.5,607.2,1860.4), Vector3.new(-400,607.2,1921.3), Vector3.new(-400.1,619.3,1960.1), Vector3.new(-400.3,607.2,2040), Vector3.new(-400.5,607.2,2099.5), Vector3.new(-400.6,619.3,2141.1), Vector3.new(-400.8,607.2,2218), Vector3.new(-400.9,607.2,2276.1), Vector3.new(-400.3,618.6,2316.2), Vector3.new(-398.8,623.1,2433.6), Vector3.new(-395.9,623.1,2668.2), Vector3.new(-401,623.1,3174.8), Vector3.new(-400.7,623.1,3332.6), Vector3.new(-181.5,623.1,3331.3), Vector3.new(-181.7,623.1,3261.6), Vector3.new(-106.9,623.1,3261.4), Vector3.new(-114.6,623.1,3437.5), Vector3.new(-268,623.1,3441.3), Vector3.new(-265.2,623.1,3611.6), Vector3.new(-531.9,623.1,3620), Vector3.new(-535.2,623.1,3801.1), Vector3.new(-130.8,623.1,3799.8), Vector3.new(-130.7,623.1,3864.4), Vector3.new(-46.1,623.2,3864.2), Vector3.new(1189.7,623.4,3865.5), Vector3.new(1263.6,623.4,3864.6), Vector3.new(1327.3,600,3862.8), Vector3.new(1565,622.1,3789.3), Vector3.new(1770.8,638.8,3940.2), Vector3.new(1971.2,615.5,3805.8), Vector3.new(2115.6,614.4,3954.5), Vector3.new(2313.9,603,3869.1), Vector3.new(2384,627.4,3868.7), Vector3.new(2418.4,627.4,3868.8), Vector3.new(2450.3,627.3,3868.2), Vector3.new(2499.6,639.3,3869.5), Vector3.new(2548.9,639.3,3870), Vector3.new(2722.7,634.3,3870), Vector3.new(2749,575.3,3867.8), Vector3.new(2826.7,575.3,3868.8), Vector3.new(2859.8,580.9,3868.9), Vector3.new(2920.1,605.2,3869.2), Vector3.new(2960.3,576.3,3870.3), Vector3.new(3005.1,576.3,3869.4), Vector3.new(3048.9,591.6,3869.5), Vector3.new(3171.6,577.4,3868.7), Vector3.new(3215.8,592.3,3874.4), Vector3.new(3269.2,590.6,3887.9) },
-            ["+60m wins"] = { Vector3.new(-396.7,504.7,-54.7), Vector3.new(-396.5,499.8,450.4), Vector3.new(-396.1,499.7,466.2), Vector3.new(-346.2,499.7,465), Vector3.new(-347.7,526.8,575.3), Vector3.new(-454.8,526.8,574.9), Vector3.new(-454,553.8,469.2), Vector3.new(-349.9,553.8,467.2), Vector3.new(-348.2,580.8,576.5), Vector3.new(-450.7,580.8,577.1), Vector3.new(-450,607.8,466.3), Vector3.new(-403.6,607.8,466.9), Vector3.new(-400.4,607.6,622.8), Vector3.new(-400.5,607.2,859.9), Vector3.new(-309.8,607.2,918.2), Vector3.new(-307,607.2,1192.4), Vector3.new(-400.3,607.2,1247.9), Vector3.new(-400.5,618.9,1332.9), Vector3.new(-400.7,607.2,1431.3), Vector3.new(-360.7,628,1544.8), Vector3.new(-362.1,628,1604.5), Vector3.new(-360,605.1,1695.9), Vector3.new(-362.9,617,1793.1), Vector3.new(-400.5,607.2,1860.4), Vector3.new(-400,607.2,1921.3), Vector3.new(-400.1,619.3,1960.1), Vector3.new(-400.3,607.2,2040), Vector3.new(-400.5,607.2,2099.5), Vector3.new(-400.6,619.3,2141.1), Vector3.new(-400.8,607.2,2218), Vector3.new(-400.9,607.2,2276.1), Vector3.new(-400.3,618.6,2316.2), Vector3.new(-398.8,623.1,2433.6), Vector3.new(-395.9,623.1,2668.2), Vector3.new(-401,623.1,3174.8), Vector3.new(-400.7,623.1,3332.6), Vector3.new(-181.5,623.1,3331.3), Vector3.new(-181.7,623.1,3261.6), Vector3.new(-106.9,623.1,3261.4), Vector3.new(-114.6,623.1,3437.5), Vector3.new(-268,623.1,3441.3), Vector3.new(-265.2,623.1,3611.6), Vector3.new(-531.9,623.1,3620), Vector3.new(-535.2,623.1,3801.1), Vector3.new(-130.8,623.1,3799.8), Vector3.new(-130.7,623.1,3864.4), Vector3.new(-46.1,623.2,3864.2), Vector3.new(1189.7,623.4,3865.5), Vector3.new(1263.6,623.4,3864.6), Vector3.new(1327.3,600,3862.8), Vector3.new(1565,622.1,3789.3), Vector3.new(1770.8,638.8,3940.2), Vector3.new(1971.2,615.5,3805.8), Vector3.new(2115.6,614.4,3954.5), Vector3.new(2313.9,603,3869.1), Vector3.new(2384,627.4,3868.7), Vector3.new(2418.4,627.4,3868.8), Vector3.new(2450.3,627.3,3868.2), Vector3.new(2499.6,639.3,3869.5), Vector3.new(2548.9,639.3,3870), Vector3.new(2722.7,634.3,3870), Vector3.new(2749,575.3,3867.8), Vector3.new(2826.7,575.3,3868.8), Vector3.new(2859.8,580.9,3868.9), Vector3.new(2920.1,605.2,3869.2), Vector3.new(2960.3,576.3,3870.3), Vector3.new(3005.1,576.3,3869.4), Vector3.new(3048.9,591.6,3869.5), Vector3.new(3171.6,577.4,3868.7), Vector3.new(3215.8,592.3,3874.4), Vector3.new(3289.1,592.3,3875.2), Vector3.new(3289.1,628.2,3875.2), Vector3.new(3289.1,676.1,3875.2), Vector3.new(3338.7,672.4,3872.4), Vector3.new(3337.6,672.4,5142.9), Vector3.new(4600.9,672.4,5143.1), Vector3.new(4624.1,672.4,5143), Vector3.new(4634.4,567.4,5141.7), Vector3.new(4634.1,565.7,5159.4) }
+            ["+250k wins"] = {
+                Vector3.new(-396.8, 504.7, -60.1),
+                Vector3.new(-411.7, 499.8, 171.9),
+                Vector3.new(-414, 498.1, 189.9)
+            },
+            ["+400k wins"] = {
+                Vector3.new(-399.4, 504.7, -57.6),
+                Vector3.new(-398.1, 499.8, 209.2),
+                Vector3.new(-417.6, 501.4, 445.3)
+            },
+            ["+1,5m wins"] = {
+                Vector3.new(-399.4, 504.7, -57.6),
+                Vector3.new(-398.1, 499.8, 209.2),
+                Vector3.new(-396.3, 499.8, 450),
+                Vector3.new(-398.5, 499.7, 465.5),
+                Vector3.new(-343.3, 499.7, 464.7),
+                Vector3.new(-349.3, 526.8, 576.9),
+                Vector3.new(-454.1, 526.8, 574.8),
+                Vector3.new(-455.3, 551.8, 485.5),
+                Vector3.new(-454.8, 553.8, 467.6),
+                Vector3.new(-350, 553.8, 464.7),
+                Vector3.new(-349.6, 553.8, 477.8),
+                Vector3.new(-347.2, 580.8, 574.4),
+                Vector3.new(-452.8, 580.8, 577),
+                Vector3.new(-453.2, 580.8, 565.6),
+                Vector3.new(-454.1, 605.9, 485.4),
+                Vector3.new(-454.7, 607.8, 467.2),
+                Vector3.new(-400.6, 607.8, 467.7),
+                Vector3.new(-399.4, 607.6, 621.4),
+                Vector3.new(-399.3, 607.6, 672.4),
+                Vector3.new(-401.2, 607.2, 825.2),
+                Vector3.new(-401, 607.2, 859.3),
+                Vector3.new(-317, 607.2, 1013.9),
+                Vector3.new(-312.5, 607.2, 1149.9),
+                Vector3.new(-400.4, 607.2, 1248.3),
+                Vector3.new(-411.5, 607.4, 1264.2),
+                Vector3.new(-413.7, 609, 1260.5)
+            },
+            ["+2,5m wins"] = {
+                Vector3.new(-398.3, 504.7, -55.6),
+                Vector3.new(-395.6, 499.8, 207.1),
+                Vector3.new(-393.8, 499.8, 451.7),
+                Vector3.new(-348.7, 499.7, 467.9),
+                Vector3.new(-348.3, 526.8, 575.4),
+                Vector3.new(-454.6, 526.8, 574.6),
+                Vector3.new(-451.9, 553.8, 467.1),
+                Vector3.new(-347.8, 553.8, 467.5),
+                Vector3.new(-349.7, 580.8, 577.1),
+                Vector3.new(-452.2, 580.8, 574.6),
+                Vector3.new(-452.4, 607.8, 467.3),
+                Vector3.new(-397.4, 607.8, 466.1),
+                Vector3.new(-398.8, 607.6, 621.8),
+                Vector3.new(-400.2, 607.2, 858),
+                Vector3.new(-300.5, 607.2, 911.8),
+                Vector3.new(-311.3, 607.2, 1134.4),
+                Vector3.new(-398.4, 607.2, 1246.4),
+                Vector3.new(-398.1, 618.4, 1331.4),
+                Vector3.new(-399, 607.2, 1429.9),
+                Vector3.new(-390.3, 607.2, 1475.1),
+                Vector3.new(-363, 628, 1543.5),
+                Vector3.new(-363.2, 628, 1602.1),
+                Vector3.new(-361.4, 605.1, 1697.2),
+                Vector3.new(-361.8, 605.1, 1752.7),
+                Vector3.new(-362.1, 616.7, 1792.1),
+                Vector3.new(-398.3, 607.2, 1860.9),
+                Vector3.new(-397, 607.7, 1924.8),
+                Vector3.new(-398, 619.3, 1960),
+                Vector3.new(-398.2, 607.2, 2040.1),
+                Vector3.new(-398.3, 607.2, 2097.8),
+                Vector3.new(-398.4, 619, 2140.1),
+                Vector3.new(-398.6, 607.2, 2216.9),
+                Vector3.new(-398.5, 607.2, 2270.2),
+                Vector3.new(-398.4, 618.6, 2316.5),
+                Vector3.new(-399.6, 623.1, 2365.9),
+                Vector3.new(-417.3, 621, 2415.6)
+            },
+            ["+4m wins"] = {
+                Vector3.new(-398.3, 504.7, -55.6),
+                Vector3.new(-395.6, 499.8, 207.1),
+                Vector3.new(-393.8, 499.8, 451.7),
+                Vector3.new(-348.7, 499.7, 467.9),
+                Vector3.new(-348.3, 526.8, 575.4),
+                Vector3.new(-454.6, 526.8, 574.6),
+                Vector3.new(-451.9, 553.8, 467.1),
+                Vector3.new(-347.8, 553.8, 467.5),
+                Vector3.new(-349.7, 580.8, 577.1),
+                Vector3.new(-452.2, 580.8, 574.6),
+                Vector3.new(-452.4, 607.8, 467.3),
+                Vector3.new(-397.4, 607.8, 466.1),
+                Vector3.new(-398.8, 607.6, 621.8),
+                Vector3.new(-400.2, 607.2, 858),
+                Vector3.new(-300.5, 607.2, 911.8),
+                Vector3.new(-311.3, 607.2, 1134.4),
+                Vector3.new(-398.4, 607.2, 1246.4),
+                Vector3.new(-398.1, 618.4, 1331.4),
+                Vector3.new(-399, 607.2, 1429.9),
+                Vector3.new(-390.3, 607.2, 1475.1),
+                Vector3.new(-363, 628, 1543.5),
+                Vector3.new(-363.2, 628, 1602.1),
+                Vector3.new(-361.4, 605.1, 1697.2),
+                Vector3.new(-361.8, 605.1, 1752.7),
+                Vector3.new(-362.1, 616.7, 1792.1),
+                Vector3.new(-398.3, 607.2, 1860.9),
+                Vector3.new(-397, 607.7, 1924.8),
+                Vector3.new(-398, 619.3, 1960),
+                Vector3.new(-398.2, 607.2, 2040.1),
+                Vector3.new(-398.3, 607.2, 2097.8),
+                Vector3.new(-398.4, 619, 2140.1),
+                Vector3.new(-398.6, 607.2, 2216.9),
+                Vector3.new(-398.5, 607.2, 2270.2),
+                Vector3.new(-398.4, 618.6, 2316.5),
+                Vector3.new(-399.6, 623.1, 2365.9),
+                Vector3.new(-399.7, 623.1, 2433.8),
+                Vector3.new(-399.7, 623.1, 2636.1),
+                Vector3.new(-417.3, 620.8, 2650.8)
+            },
+            ["+6m wins"] = {
+                Vector3.new(-398.3, 504.7, -55.6),
+                Vector3.new(-395.6, 499.8, 207.1),
+                Vector3.new(-393.8, 499.8, 451.7),
+                Vector3.new(-348.7, 499.7, 467.9),
+                Vector3.new(-348.3, 526.8, 575.4),
+                Vector3.new(-454.6, 526.8, 574.6),
+                Vector3.new(-451.9, 553.8, 467.1),
+                Vector3.new(-347.8, 553.8, 467.5),
+                Vector3.new(-349.7, 580.8, 577.1),
+                Vector3.new(-452.2, 580.8, 574.6),
+                Vector3.new(-452.4, 607.8, 467.3),
+                Vector3.new(-397.4, 607.8, 466.1),
+                Vector3.new(-398.8, 607.6, 621.8),
+                Vector3.new(-400.2, 607.2, 858),
+                Vector3.new(-300.5, 607.2, 911.8),
+                Vector3.new(-311.3, 607.2, 1134.4),
+                Vector3.new(-398.4, 607.2, 1246.4),
+                Vector3.new(-398.1, 618.4, 1331.4),
+                Vector3.new(-399, 607.2, 1429.9),
+                Vector3.new(-390.3, 607.2, 1475.1),
+                Vector3.new(-363, 628, 1543.5),
+                Vector3.new(-363.2, 628, 1602.1),
+                Vector3.new(-361.4, 605.1, 1697.2),
+                Vector3.new(-361.8, 605.1, 1752.7),
+                Vector3.new(-362.1, 616.7, 1792.1),
+                Vector3.new(-398.3, 607.2, 1860.9),
+                Vector3.new(-397, 607.7, 1924.8),
+                Vector3.new(-398, 619.3, 1960),
+                Vector3.new(-398.2, 607.2, 2040.1),
+                Vector3.new(-398.3, 607.2, 2097.8),
+                Vector3.new(-398.4, 619, 2140.1),
+                Vector3.new(-398.6, 607.2, 2216.9),
+                Vector3.new(-398.5, 607.2, 2270.2),
+                Vector3.new(-398.4, 618.6, 2316.5),
+                Vector3.new(-399.6, 623.1, 2365.9),
+                Vector3.new(-399.7, 623.1, 2433.8),
+                Vector3.new(-399.7, 623.1, 2636.1),
+                Vector3.new(-398.7, 623.1, 2666.7),
+                Vector3.new(-403, 623.1, 3093.9),
+                Vector3.new(-417.3, 621.2, 3158.6)
+            },
+            ["+10m wins"] = {
+                Vector3.new(-398.3, 504.7, -55.6),
+                Vector3.new(-395.6, 499.8, 207.1),
+                Vector3.new(-393.8, 499.8, 451.7),
+                Vector3.new(-348.7, 499.7, 467.9),
+                Vector3.new(-348.3, 526.8, 575.4),
+                Vector3.new(-454.6, 526.8, 574.6),
+                Vector3.new(-451.9, 553.8, 467.1),
+                Vector3.new(-347.8, 553.8, 467.5),
+                Vector3.new(-349.7, 580.8, 577.1),
+                Vector3.new(-452.2, 580.8, 574.6),
+                Vector3.new(-452.4, 607.8, 467.3),
+                Vector3.new(-397.4, 607.8, 466.1),
+                Vector3.new(-398.8, 607.6, 621.8),
+                Vector3.new(-400.2, 607.2, 858),
+                Vector3.new(-300.5, 607.2, 911.8),
+                Vector3.new(-311.3, 607.2, 1134.4),
+                Vector3.new(-398.4, 607.2, 1246.4),
+                Vector3.new(-398.1, 618.4, 1331.4),
+                Vector3.new(-399, 607.2, 1429.9),
+                Vector3.new(-390.3, 607.2, 1475.1),
+                Vector3.new(-363, 628, 1543.5),
+                Vector3.new(-363.2, 628, 1602.1),
+                Vector3.new(-361.4, 605.1, 1697.2),
+                Vector3.new(-361.8, 605.1, 1752.7),
+                Vector3.new(-362.1, 616.7, 1792.1),
+                Vector3.new(-398.3, 607.2, 1860.9),
+                Vector3.new(-397, 607.7, 1924.8),
+                Vector3.new(-398, 619.3, 1960),
+                Vector3.new(-398.2, 607.2, 2040.1),
+                Vector3.new(-398.3, 607.2, 2097.8),
+                Vector3.new(-398.4, 619, 2140.1),
+                Vector3.new(-398.6, 607.2, 2216.9),
+                Vector3.new(-398.5, 607.2, 2270.2),
+                Vector3.new(-398.4, 618.6, 2316.5),
+                Vector3.new(-399.6, 623.1, 2365.9),
+                Vector3.new(-399.7, 623.1, 2433.8),
+                Vector3.new(-399.7, 623.1, 2636.1),
+                Vector3.new(-398.7, 623.1, 2666.7),
+                Vector3.new(-403, 623.1, 3093.9),
+                Vector3.new(-401.7, 623.1, 3172.2),
+                Vector3.new(-399, 623.1, 3325.1),
+                Vector3.new(-346, 623.1, 3324.2),
+                Vector3.new(-196.7, 623.1, 3330.7),
+                Vector3.new(-191.2, 623.1, 3256.3),
+                Vector3.new(-114.2, 623.1, 3261.9),
+                Vector3.new(-116.3, 623.1, 3412.3),
+                Vector3.new(-257.5, 623.1, 3409.8),
+                Vector3.new(-261, 623.1, 3608.9),
+                Vector3.new(-529.8, 623.1, 3607.1),
+                Vector3.new(-535.7, 623.1, 3790.1),
+                Vector3.new(-118.6, 623.1, 3798.5),
+                Vector3.new(-119.2, 623.1, 3867.5),
+                Vector3.new(-59.9, 621.2, 3883.2)
+            },
+            ["+15m wins"] = {
+                Vector3.new(-396.7, 504.7, -54.7),
+                Vector3.new(-396.5, 499.8, 450.4),
+                Vector3.new(-396.1, 499.7, 466.2),
+                Vector3.new(-346.2, 499.7, 465),
+                Vector3.new(-347.7, 526.8, 575.3),
+                Vector3.new(-454.8, 526.8, 574.9),
+                Vector3.new(-454, 553.8, 469.2),
+                Vector3.new(-349.9, 553.8, 467.2),
+                Vector3.new(-348.2, 580.8, 576.5),
+                Vector3.new(-450.7, 580.8, 577.1),
+                Vector3.new(-450, 607.8, 466.3),
+                Vector3.new(-403.6, 607.8, 466.9),
+                Vector3.new(-400.4, 607.6, 622.8),
+                Vector3.new(-400.5, 607.2, 859.9),
+                Vector3.new(-309.8, 607.2, 918.2),
+                Vector3.new(-307, 607.2, 1192.4),
+                Vector3.new(-400.3, 607.2, 1247.9),
+                Vector3.new(-400.5, 618.9, 1332.9),
+                Vector3.new(-400.7, 607.2, 1431.3),
+                Vector3.new(-360.7, 628, 1544.8),
+                Vector3.new(-362.1, 628, 1604.5),
+                Vector3.new(-360, 605.1, 1695.9),
+                Vector3.new(-362.9, 617, 1793.1),
+                Vector3.new(-400.5, 607.2, 1860.4),
+                Vector3.new(-400, 607.2, 1921.3),
+                Vector3.new(-400.1, 619.3, 1960.1),
+                Vector3.new(-400.3, 607.2, 2040),
+                Vector3.new(-400.5, 607.2, 2099.5),
+                Vector3.new(-400.6, 619.3, 2141.1),
+                Vector3.new(-400.8, 607.2, 2218),
+                Vector3.new(-400.9, 607.2, 2276.1),
+                Vector3.new(-400.3, 618.6, 2316.2),
+                Vector3.new(-398.8, 623.1, 2433.6),
+                Vector3.new(-395.9, 623.1, 2668.2),
+                Vector3.new(-401, 623.1, 3174.8),
+                Vector3.new(-400.7, 623.1, 3332.6),
+                Vector3.new(-181.5, 623.1, 3331.3),
+                Vector3.new(-181.7, 623.1, 3261.6),
+                Vector3.new(-106.9, 623.1, 3261.4),
+                Vector3.new(-114.6, 623.1, 3437.5),
+                Vector3.new(-268, 623.1, 3441.3),
+                Vector3.new(-265.2, 623.1, 3611.6),
+                Vector3.new(-531.9, 623.1, 3620),
+                Vector3.new(-535.2, 623.1, 3801.1),
+                Vector3.new(-130.8, 623.1, 3799.8),
+                Vector3.new(-130.7, 623.1, 3864.4),
+                Vector3.new(-46.1, 623.2, 3864.2),
+                Vector3.new(1189.7, 623.4, 3865.5),
+                Vector3.new(1228.4, 621.6, 3908.9)
+            },
+            ["+25m wins"] = {
+                Vector3.new(-396.7, 504.7, -54.7),
+                Vector3.new(-396.5, 499.8, 450.4),
+                Vector3.new(-396.1, 499.7, 466.2),
+                Vector3.new(-346.2, 499.7, 465),
+                Vector3.new(-347.7, 526.8, 575.3),
+                Vector3.new(-454.8, 526.8, 574.9),
+                Vector3.new(-454, 553.8, 469.2),
+                Vector3.new(-349.9, 553.8, 467.2),
+                Vector3.new(-348.2, 580.8, 576.5),
+                Vector3.new(-450.7, 580.8, 577.1),
+                Vector3.new(-450, 607.8, 466.3),
+                Vector3.new(-403.6, 607.8, 466.9),
+                Vector3.new(-400.4, 607.6, 622.8),
+                Vector3.new(-400.5, 607.2, 859.9),
+                Vector3.new(-309.8, 607.2, 918.2),
+                Vector3.new(-307, 607.2, 1192.4),
+                Vector3.new(-400.3, 607.2, 1247.9),
+                Vector3.new(-400.5, 618.9, 1332.9),
+                Vector3.new(-400.7, 607.2, 1431.3),
+                Vector3.new(-360.7, 628, 1544.8),
+                Vector3.new(-362.1, 628, 1604.5),
+                Vector3.new(-360, 605.1, 1695.9),
+                Vector3.new(-362.9, 617, 1793.1),
+                Vector3.new(-400.5, 607.2, 1860.4),
+                Vector3.new(-400, 607.2, 1921.3),
+                Vector3.new(-400.1, 619.3, 1960.1),
+                Vector3.new(-400.3, 607.2, 2040),
+                Vector3.new(-400.5, 607.2, 2099.5),
+                Vector3.new(-400.6, 619.3, 2141.1),
+                Vector3.new(-400.8, 607.2, 2218),
+                Vector3.new(-400.9, 607.2, 2276.1),
+                Vector3.new(-400.3, 618.6, 2316.2),
+                Vector3.new(-398.8, 623.1, 2433.6),
+                Vector3.new(-395.9, 623.1, 2668.2),
+                Vector3.new(-401, 623.1, 3174.8),
+                Vector3.new(-400.7, 623.1, 3332.6),
+                Vector3.new(-181.5, 623.1, 3331.3),
+                Vector3.new(-181.7, 623.1, 3261.6),
+                Vector3.new(-106.9, 623.1, 3261.4),
+                Vector3.new(-114.6, 623.1, 3437.5),
+                Vector3.new(-268, 623.1, 3441.3),
+                Vector3.new(-265.2, 623.1, 3611.6),
+                Vector3.new(-531.9, 623.1, 3620),
+                Vector3.new(-535.2, 623.1, 3801.1),
+                Vector3.new(-130.8, 623.1, 3799.8),
+                Vector3.new(-130.7, 623.1, 3864.4),
+                Vector3.new(-46.1, 623.2, 3864.2),
+                Vector3.new(1189.7, 623.4, 3865.5),
+                Vector3.new(1263.6, 623.4, 3864.6),
+                Vector3.new(1327.3, 600, 3862.8),
+                Vector3.new(1565, 622.1, 3789.3),
+                Vector3.new(1770.8, 638.8, 3940.2),
+                Vector3.new(1971.2, 615.5, 3805.8),
+                Vector3.new(2115.6, 614.4, 3954.5),
+                Vector3.new(2313.9, 603, 3869.1),
+                Vector3.new(2400.2, 625.5, 3887.9)
+            },
+            ["+40m wins"] = {
+                Vector3.new(-396.7, 504.7, -54.7),
+                Vector3.new(-396.5, 499.8, 450.4),
+                Vector3.new(-396.1, 499.7, 466.2),
+                Vector3.new(-346.2, 499.7, 465),
+                Vector3.new(-347.7, 526.8, 575.3),
+                Vector3.new(-454.8, 526.8, 574.9),
+                Vector3.new(-454, 553.8, 469.2),
+                Vector3.new(-349.9, 553.8, 467.2),
+                Vector3.new(-348.2, 580.8, 576.5),
+                Vector3.new(-450.7, 580.8, 577.1),
+                Vector3.new(-450, 607.8, 466.3),
+                Vector3.new(-403.6, 607.8, 466.9),
+                Vector3.new(-400.4, 607.6, 622.8),
+                Vector3.new(-400.5, 607.2, 859.9),
+                Vector3.new(-309.8, 607.2, 918.2),
+                Vector3.new(-307, 607.2, 1192.4),
+                Vector3.new(-400.3, 607.2, 1247.9),
+                Vector3.new(-400.5, 618.9, 1332.9),
+                Vector3.new(-400.7, 607.2, 1431.3),
+                Vector3.new(-360.7, 628, 1544.8),
+                Vector3.new(-362.1, 628, 1604.5),
+                Vector3.new(-360, 605.1, 1695.9),
+                Vector3.new(-362.9, 617, 1793.1),
+                Vector3.new(-400.5, 607.2, 1860.4),
+                Vector3.new(-400, 607.2, 1921.3),
+                Vector3.new(-400.1, 619.3, 1960.1),
+                Vector3.new(-400.3, 607.2, 2040),
+                Vector3.new(-400.5, 607.2, 2099.5),
+                Vector3.new(-400.6, 619.3, 2141.1),
+                Vector3.new(-400.8, 607.2, 2218),
+                Vector3.new(-400.9, 607.2, 2276.1),
+                Vector3.new(-400.3, 618.6, 2316.2),
+                Vector3.new(-398.8, 623.1, 2433.6),
+                Vector3.new(-395.9, 623.1, 2668.2),
+                Vector3.new(-401, 623.1, 3174.8),
+                Vector3.new(-400.7, 623.1, 3332.6),
+                Vector3.new(-181.5, 623.1, 3331.3),
+                Vector3.new(-181.7, 623.1, 3261.6),
+                Vector3.new(-106.9, 623.1, 3261.4),
+                Vector3.new(-114.6, 623.1, 3437.5),
+                Vector3.new(-268, 623.1, 3441.3),
+                Vector3.new(-265.2, 623.1, 3611.6),
+                Vector3.new(-531.9, 623.1, 3620),
+                Vector3.new(-535.2, 623.1, 3801.1),
+                Vector3.new(-130.8, 623.1, 3799.8),
+                Vector3.new(-130.7, 623.1, 3864.4),
+                Vector3.new(-46.1, 623.2, 3864.2),
+                Vector3.new(1189.7, 623.4, 3865.5),
+                Vector3.new(1263.6, 623.4, 3864.6),
+                Vector3.new(1327.3, 600, 3862.8),
+                Vector3.new(1565, 622.1, 3789.3),
+                Vector3.new(1770.8, 638.8, 3940.2),
+                Vector3.new(1971.2, 615.5, 3805.8),
+                Vector3.new(2115.6, 614.4, 3954.5),
+                Vector3.new(2313.9, 603, 3869.1),
+                Vector3.new(2384, 627.4, 3868.7),
+                Vector3.new(2418.4, 627.4, 3868.8),
+                Vector3.new(2450.3, 627.3, 3868.2),
+                Vector3.new(2499.6, 639.3, 3869.5),
+                Vector3.new(2548.9, 639.3, 3870),
+                Vector3.new(2722.7, 634.3, 3870),
+                Vector3.new(2749, 575.3, 3867.8),
+                Vector3.new(2826.7, 575.3, 3868.8),
+                Vector3.new(2859.8, 580.9, 3868.9),
+                Vector3.new(2920.1, 605.2, 3869.2),
+                Vector3.new(2960.3, 576.3, 3870.3),
+                Vector3.new(3005.1, 576.3, 3869.4),
+                Vector3.new(3048.9, 591.6, 3869.5),
+                Vector3.new(3171.6, 577.4, 3868.7),
+                Vector3.new(3215.8, 592.3, 3874.4),
+                Vector3.new(3269.2, 590.6, 3887.9)
+            },
+            ["+60m wins"] = {
+                Vector3.new(-396.7, 504.7, -54.7),
+                Vector3.new(-396.5, 499.8, 450.4),
+                Vector3.new(-396.1, 499.7, 466.2),
+                Vector3.new(-346.2, 499.7, 465),
+                Vector3.new(-347.7, 526.8, 575.3),
+                Vector3.new(-454.8, 526.8, 574.9),
+                Vector3.new(-454, 553.8, 469.2),
+                Vector3.new(-349.9, 553.8, 467.2),
+                Vector3.new(-348.2, 580.8, 576.5),
+                Vector3.new(-450.7, 580.8, 577.1),
+                Vector3.new(-450, 607.8, 466.3),
+                Vector3.new(-403.6, 607.8, 466.9),
+                Vector3.new(-400.4, 607.6, 622.8),
+                Vector3.new(-400.5, 607.2, 859.9),
+                Vector3.new(-309.8, 607.2, 918.2),
+                Vector3.new(-307, 607.2, 1192.4),
+                Vector3.new(-400.3, 607.2, 1247.9),
+                Vector3.new(-400.5, 618.9, 1332.9),
+                Vector3.new(-400.7, 607.2, 1431.3),
+                Vector3.new(-360.7, 628, 1544.8),
+                Vector3.new(-362.1, 628, 1604.5),
+                Vector3.new(-360, 605.1, 1695.9),
+                Vector3.new(-362.9, 617, 1793.1),
+                Vector3.new(-400.5, 607.2, 1860.4),
+                Vector3.new(-400, 607.2, 1921.3),
+                Vector3.new(-400.1, 619.3, 1960.1),
+                Vector3.new(-400.3, 607.2, 2040),
+                Vector3.new(-400.5, 607.2, 2099.5),
+                Vector3.new(-400.6, 619.3, 2141.1),
+                Vector3.new(-400.8, 607.2, 2218),
+                Vector3.new(-400.9, 607.2, 2276.1),
+                Vector3.new(-400.3, 618.6, 2316.2),
+                Vector3.new(-398.8, 623.1, 2433.6),
+                Vector3.new(-395.9, 623.1, 2668.2),
+                Vector3.new(-401, 623.1, 3174.8),
+                Vector3.new(-400.7, 623.1, 3332.6),
+                Vector3.new(-181.5, 623.1, 3331.3),
+                Vector3.new(-181.7, 623.1, 3261.6),
+                Vector3.new(-106.9, 623.1, 3261.4),
+                Vector3.new(-114.6, 623.1, 3437.5),
+                Vector3.new(-268, 623.1, 3441.3),
+                Vector3.new(-265.2, 623.1, 3611.6),
+                Vector3.new(-531.9, 623.1, 3620),
+                Vector3.new(-535.2, 623.1, 3801.1),
+                Vector3.new(-130.8, 623.1, 3799.8),
+                Vector3.new(-130.7, 623.1, 3864.4),
+                Vector3.new(-46.1, 623.2, 3864.2),
+                Vector3.new(1189.7, 623.4, 3865.5),
+                Vector3.new(1263.6, 623.4, 3864.6),
+                Vector3.new(1327.3, 600, 3862.8),
+                Vector3.new(1565, 622.1, 3789.3),
+                Vector3.new(1770.8, 638.8, 3940.2),
+                Vector3.new(1971.2, 615.5, 3805.8),
+                Vector3.new(2115.6, 614.4, 3954.5),
+                Vector3.new(2313.9, 603, 3869.1),
+                Vector3.new(2384, 627.4, 3868.7),
+                Vector3.new(2418.4, 627.4, 3868.8),
+                Vector3.new(2450.3, 627.3, 3868.2),
+                Vector3.new(2499.6, 639.3, 3869.5),
+                Vector3.new(2548.9, 639.3, 3870),
+                Vector3.new(2722.7, 634.3, 3870),
+                Vector3.new(2749, 575.3, 3867.8),
+                Vector3.new(2826.7, 575.3, 3868.8),
+                Vector3.new(2859.8, 580.9, 3868.9),
+                Vector3.new(2920.1, 605.2, 3869.2),
+                Vector3.new(2960.3, 576.3, 3870.3),
+                Vector3.new(3005.1, 576.3, 3869.4),
+                Vector3.new(3048.9, 591.6, 3869.5),
+                Vector3.new(3171.6, 577.4, 3868.7),
+                Vector3.new(3215.8, 592.3, 3874.4),
+                Vector3.new(3289.1, 592.3, 3875.2),
+                Vector3.new(3289.1, 628.2, 3875.2),
+                Vector3.new(3289.1, 676.1, 3875.2),
+                Vector3.new(3338.7, 672.4, 3872.4),
+                Vector3.new(3337.6, 672.4, 5142.9),
+                Vector3.new(4600.9, 672.4, 5143.1),
+                Vector3.new(4624.1, 672.4, 5143),
+                Vector3.new(4634.4, 567.4, 5141.7),
+                Vector3.new(4634.1, 565.7, 5159.4)
+            }
         },
         ["3 World"] = {
-            ["+300m wins"] = { Vector3.new(-1433.5,-159.7,-878.9), Vector3.new(-1431,-157.1,-831.9), Vector3.new(-1429.5,-126,-733), Vector3.new(-1430.1,-69.9,-538.4), Vector3.new(-1481.8,-71.7,-515.8) },
-            ["+500m wins"] = { Vector3.new(-1433.2,-159.7,-877.5), Vector3.new(-1431,-157.6,-833.5), Vector3.new(-1430.4,-125.1,-730.1), Vector3.new(-1430.9,-69.9,-537.4), Vector3.new(-1453.9,-69.9,-492.7), Vector3.new(-1453.9,-58.4,-392.5), Vector3.new(-1453.9,-57.4,-264.7), Vector3.new(-1453.9,-57.4,-186.8), Vector3.new(-1480.8,-59.4,-15.8) },
-            ["+800m wins"] = { Vector3.new(-1434.9,-159.7,-875.9), Vector3.new(-1430.2,-158.8,-837.1), Vector3.new(-1427.6,-125.2,-730.4), Vector3.new(-1427,-69.9,-538.6), Vector3.new(-1455.2,-69.9,-493.3), Vector3.new(-1455.9,-70.4,-444.3), Vector3.new(-1456.7,-58.5,-393), Vector3.new(-1458.4,-57.4,-266.1), Vector3.new(-1456.8,-57.4,-186.8), Vector3.new(-1452.9,-57.6,7.6), Vector3.new(-1451.4,-48.6,84.7), Vector3.new(-1451.4,83,84.7), Vector3.new(-1475.2,92.3,95.5), Vector3.new(-1475.2,212.8,95.6), Vector3.new(-1472.1,214.6,143.2), Vector3.new(-1469.4,222.8,178.5), Vector3.new(-1464.9,223,229.5), Vector3.new(-1463.9,215,260), Vector3.new(-1480.8,212.6,332.1) },
-            ["+1.25b wins"] = { Vector3.new(-1434.1,-159.6,-879), Vector3.new(-1431.8,-157.7,-834.2), Vector3.new(-1430.5,-125.6,-732.2), Vector3.new(-1427.6,-69.8,-540.1), Vector3.new(-1454.8,-69.8,-495.1), Vector3.new(-1454.8,-70.3,-444.5), Vector3.new(-1455.3,-58.9,-395), Vector3.new(-1454.4,-57.5,4.5), Vector3.new(-1454.5,-55.8,84.8), Vector3.new(-1454.5,84.8,84.8), Vector3.new(-1475,102.7,96), Vector3.new(-1475,212,96), Vector3.new(-1473.6,214.7,141.2), Vector3.new(-1457.4,222.5,176.7), Vector3.new(-1455.8,223.3,228.9), Vector3.new(-1455.8,214.7,270.6), Vector3.new(-1455.8,214.5,627.8), Vector3.new(-1455.8,365.5,627.8), Vector3.new(-1434.2,359.7,490.7), Vector3.new(-1336,360.8,494.3), Vector3.new(-1246.3,328.8,517.1), Vector3.new(-1236,323.2,600.3), Vector3.new(-1220.6,342.9,810.9), Vector3.new(-1361.8,363,834.8), Vector3.new(-1403.6,373.5,724.7), Vector3.new(-1403.6,545.5,724.7), Vector3.new(-1431.3,530.6,759.6) }
+            ["+300m wins"] = {
+                Vector3.new(-1433.5, -159.7, -878.9),
+                Vector3.new(-1431, -157.1, -831.9),
+                Vector3.new(-1429.5, -126, -733),
+                Vector3.new(-1430.1, -69.9, -538.4),
+                Vector3.new(-1481.8, -71.7, -515.8)
+            },
+            ["+500m wins"] = {
+                Vector3.new(-1433.2, -159.7, -877.5),
+                Vector3.new(-1431, -157.6, -833.5),
+                Vector3.new(-1430.4, -125.1, -730.1),
+                Vector3.new(-1430.9, -69.9, -537.4),
+                Vector3.new(-1453.9, -69.9, -492.7),
+                Vector3.new(-1453.9, -58.4, -392.5),
+                Vector3.new(-1453.9, -57.4, -264.7),
+                Vector3.new(-1453.9, -57.4, -186.8),
+                Vector3.new(-1480.8, -59.4, -15.8)
+            },
+            ["+800m wins"] = {
+                Vector3.new(-1434.9, -159.7, -875.9),
+                Vector3.new(-1430.2, -158.8, -837.1),
+                Vector3.new(-1427.6, -125.2, -730.4),
+                Vector3.new(-1427, -69.9, -538.6),
+                Vector3.new(-1455.2, -69.9, -493.3),
+                Vector3.new(-1455.9, -70.4, -444.3),
+                Vector3.new(-1456.7, -58.5, -393),
+                Vector3.new(-1458.4, -57.4, -266.1),
+                Vector3.new(-1456.8, -57.4, -186.8),
+                Vector3.new(-1452.9, -57.6, 7.6),
+                Vector3.new(-1451.4, -48.6, 84.7),
+                Vector3.new(-1451.4, 83, 84.7),
+                Vector3.new(-1475.2, 92.3, 95.5),
+                Vector3.new(-1475.2, 212.8, 95.6),
+                Vector3.new(-1472.1, 214.6, 143.2),
+                Vector3.new(-1469.4, 222.8, 178.5),
+                Vector3.new(-1464.9, 223, 229.5),
+                Vector3.new(-1463.9, 215, 260),
+                Vector3.new(-1480.8, 212.6, 332.1)
+            },
+            ["+1.25b wins"] = {
+                Vector3.new(-1434.1, -159.6, -879),
+                Vector3.new(-1431.8, -157.7, -834.2),
+                Vector3.new(-1430.5, -125.6, -732.2),
+                Vector3.new(-1427.6, -69.8, -540.1),
+                Vector3.new(-1454.8, -69.8, -495.1),
+                Vector3.new(-1454.8, -70.3, -444.5),
+                Vector3.new(-1455.3, -58.9, -395),
+                Vector3.new(-1454.4, -57.5, 4.5),
+                Vector3.new(-1454.5, -55.8, 84.8),
+                Vector3.new(-1454.5, 84.8, 84.8),
+                Vector3.new(-1475, 102.7, 96),
+                Vector3.new(-1475, 212, 96),
+                Vector3.new(-1473.6, 214.7, 141.2),
+                Vector3.new(-1457.4, 222.5, 176.7),
+                Vector3.new(-1455.8, 223.3, 228.9),
+                Vector3.new(-1455.8, 214.7, 270.6),
+                Vector3.new(-1455.8, 214.5, 627.8),
+                Vector3.new(-1455.8, 365.5, 627.8),
+                Vector3.new(-1434.2, 359.7, 490.7),
+                Vector3.new(-1336, 360.8, 494.3),
+                Vector3.new(-1246.3, 328.8, 517.1),
+                Vector3.new(-1236, 323.2, 600.3),
+                Vector3.new(-1220.6, 342.9, 810.9),
+                Vector3.new(-1361.8, 363, 834.8),
+                Vector3.new(-1403.6, 373.5, 724.7),
+                Vector3.new(-1403.6, 545.5, 724.7),
+                Vector3.new(-1431.3, 530.6, 759.6)
+            }
         }
     }
 
@@ -160,36 +721,39 @@ do
         ["+1 wins"] = 1,
         ["+3 wins"] = 2,
         ["+10 wins"] = 3,
-        ["+20 coins"] = 4,
-        ["+250k wins"] = 5,
-        ["+400k wins"] = 6,
-        ["+1,5m wins"] = 7,
-        ["+2,5m wins"] = 8,
-        ["+4m wins"] = 9,
-        ["+6m wins"] = 10,
-        ["+10m wins"] = 11,
-        ["+15m wins"] = 12,
-        ["+25m wins"] = 13,
-        ["+40m wins"] = 14,
-        ["+60m wins"] = 15,
-        ["+300m wins"] = 16,
-        ["+500m wins"] = 17,
-        ["+800m wins"] = 18,
-        ["+1.25b wins"] = 19
+        ["+250k wins"] = 4,
+        ["+400k wins"] = 5,
+        ["+1,5m wins"] = 6,
+        ["+2,5m wins"] = 7,
+        ["+4m wins"] = 8,
+        ["+6m wins"] = 9,
+        ["+10m wins"] = 10,
+        ["+15m wins"] = 11,
+        ["+25m wins"] = 12,
+        ["+40m wins"] = 13,
+        ["+60m wins"] = 14,
+        ["+300m wins"] = 15,
+        ["+500m wins"] = 16,
+        ["+800m wins"] = 17,
+        ["+1.25b wins"] = 18
     }
 
     local function isObstacleName(name)
-        if (name == "LavaPart") or (name == "Lava_Stage3") or (name == "MovingWall") or (name == "DoorWall1") or
-            (name == "GreenDoorKillPart") or (name == "RedDoorKillPart") or (name == "YellowDoorKillPart") or
-            (name == "DoorWall2") or (name == "DoorWall3") or (name == "Stage2LocalNPC_Local") or (name == "Tumbleweed") or
-            (name == "vanilla") or (name == "EyesLaser") or (name == "Stage11LocalNPC_Local") or
-            (name == "Stage14LocalNPC_Local") then
+        if (name == "LavaPart") or (name == "Lava_Stage3") or (name == "MovingWall") then
+            return true
+        end
+        if (name == "DoorWall1") or (name == "GreenDoorKillPart") or (name == "RedDoorKillPart") or (name == "YellowDoorKillPart") or (name == "DoorWall2") or (name == "DoorWall3") then
+            return true
+        end
+        if (name == "Stage2LocalNPC_Local") or (name == "Tumbleweed") or (name == "vanilla") or (name == "EyesLaser") or (name == "Stage11LocalNPC_Local") or (name == "Stage14LocalNPC_Local") then
             return true
         end
         local num = name:match("^MovingWall(%d+)$")
         if num then
             local n = tonumber(num)
-            if n and n >= 1 and n <= 15 then return true end
+            if (n and (n >= 1) and (n <= 15)) then
+                return true
+            end
         end
         return false
     end
@@ -200,18 +764,24 @@ do
             local descendants = workspace:GetDescendants()
             for i = 1, #descendants do
                 local obj = descendants[i]
-                if obj and obj.Parent then
-                    if isObstacleName(obj.Name) then obj:Destroy() end
+                if (obj and obj.Parent) then
+                    if isObstacleName(obj.Name) then
+                        obj:Destroy()
+                    end
                 end
                 count = count + 1
-                if count % 300 == 0 then task.wait() end
+                if ((count % 300) == 0) then
+                    task.wait()
+                end
             end
         end)
         if not godModeConnection then
             godModeConnection = workspace.DescendantAdded:Connect(function(descendant)
                 if isObstacleName(descendant.Name) then
                     task.defer(function()
-                        if descendant and descendant.Parent then descendant:Destroy() end
+                        if (descendant and descendant.Parent) then
+                            descendant:Destroy()
+                        end
                     end)
                 end
             end)
@@ -226,7 +796,7 @@ do
                     local char = LocalPlayer.Character
                     if char then
                         for _, part in pairs(char:GetDescendants()) do
-                            if part:IsA("BasePart") and part.CanCollide then
+                            if (part:IsA("BasePart") and part.CanCollide) then
                                 part.CanCollide = false
                             end
                         end
@@ -239,25 +809,28 @@ do
                 noClipConnection = nil
             end
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
+            if (char and char:FindFirstChild("HumanoidRootPart")) then
                 char.HumanoidRootPart.CanCollide = true
             end
         end
     end
 
-    -- Original flyTo (used for waypoints) kept unchanged
     local function flyTo(targetPos)
         local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
+        if (not char or not char:FindFirstChild("HumanoidRootPart")) then
+            return false
+        end
         local hrp = char.HumanoidRootPart
         local bv = Instance.new("BodyVelocity")
         bv.MaxForce = Vector3.new(8999999488, 8999999488, 8999999488)
         bv.Parent = hrp
         local reached = false
         while autoFarmActive and not reached do
-            if not char or not char:FindFirstChild("HumanoidRootPart") then break end
+            if (not char or not char:FindFirstChild("HumanoidRootPart")) then
+                break
+            end
             local distance = (hrp.Position - targetPos).Magnitude
-            if distance <= 6 then
+            if (distance <= 6) then
                 reached = true
             else
                 local direction = (targetPos - hrp.Position).Unit
@@ -265,110 +838,25 @@ do
             end
             task.wait(0.02)
         end
-        if bv then bv:Destroy() end
+        if bv then
+            bv:Destroy()
+        end
         return reached
     end
 
-    -- Improved coin detection
-    local function findNearestCoin()
-        local char = LocalPlayer.Character
-        if not char then return nil end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return nil end
-        local nearest = nil
-        local nearestDist = math.huge
-        local objects = workspace:GetDescendants()
-        for _, obj in ipairs(objects) do
-            if obj:IsA("BasePart") and obj.Parent ~= char then
-                local name = obj.Name
-                -- Match SummerCoin or variations
-                if name:find(COIN_NAME_PATTERN) or name:lower():find("summer") or name:lower():find("coin") then
-                    local dist = (hrp.Position - obj.Position).Magnitude
-                    if dist < nearestDist then
-                        nearestDist = dist
-                        nearest = obj
-                    end
-                end
-            end
-        end
-        return nearest, nearestDist
-    end
-
-    -- NEW: safe coin collection using TweenService
-    local function flyToCoinSafely(coin)
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        -- Enable noClip for safe passage
-        setNoClip(true)
-
-        local targetPos = coin.Position
-        local distance = (hrp.Position - targetPos).Magnitude
-        if distance < 3 then return end -- already collected
-
-        -- Use TweenService for smooth movement
-        local tweenInfo = TweenInfo.new(
-            math.min(distance / 150, 2.5),  -- speed ~150 studs/sec, capped at 2.5 sec
-            Enum.EasingStyle.Linear,
-            Enum.EasingDirection.Out
-        )
-        local tween = TweenService:Create(hrp, tweenInfo, { Position = targetPos })
-        tween:Play()
-        tween.Completed:Wait()
-
-        -- Small random delay to mimic human
-        task.wait(math.random(3, 8) / 10)
-
-        setNoClip(false)
-    end
-
-    local coinCollectLoop = nil
-    local function startCoinCollector()
-        if coinCollectLoop then return end
-        coinCollectLoop = task.spawn(function()
-            while collectCoins do
-                local coin, dist = findNearestCoin()
-                if coin and dist > 5 then
-                    -- If too far, use flyToSafely
-                    flyToCoinSafely(coin)
-                elseif coin and dist <= 5 then
-                    -- Already close, just wait a bit
-                    task.wait(0.2)
-                else
-                    -- No coin found, wait
-                    task.wait(0.5)
-                end
-                -- Small random delay between checks
-                task.wait(math.random(1, 4) / 10)
-            end
-            -- Disable noClip when done
-            if not autoFarmActive then
-                setNoClip(false)
-            end
-            coinCollectLoop = nil
-        end)
-    end
-
-    -- AutoFarm loop (unchanged, but will also call coin collector)
     local function startAutoFarmLoop()
         task.spawn(function()
             while autoFarmActive do
                 local worldData = Waypoints[currentWorld]
                 local currentWaypoints = worldData and worldData[currentDistance]
-                if currentWaypoints and #currentWaypoints > 0 then
+                if (currentWaypoints and (#currentWaypoints > 0)) then
                     setNoClip(true)
+                    -- Удалён блок для Bbnos World
                     for i, waypoint in ipairs(currentWaypoints) do
-                        if not autoFarmActive then break end
-                        flyTo(waypoint)
-                        -- If coin collection is enabled, collect nearby coins during waypoint travel
-                        if collectCoins then
-                            local coin, dist = findNearestCoin()
-                            if coin and dist < 50 then
-                                flyToCoinSafely(coin)
-                            end
+                        if not autoFarmActive then
+                            break
                         end
+                        flyTo(waypoint)
                     end
                 else
                     task.wait(1)
@@ -377,13 +865,12 @@ do
             end
             setNoClip(false)
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then
+            if (char and char:FindFirstChild("Humanoid")) then
                 char.Humanoid.WalkSpeed = 16
             end
         end)
     end
 
-    -- Jump and fly toggles (unchanged)
     UserInputService.JumpRequest:Connect(function()
         if infJumpEnabled then
             local char = LocalPlayer.Character
@@ -399,7 +886,9 @@ do
     local function toggleManualFly(state)
         flyEnabled = state
         local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        if (not char or not char:FindFirstChild("HumanoidRootPart")) then
+            return
+        end
         local hrp = char.HumanoidRootPart
         local hum = char:FindFirstChildOfClass("Humanoid")
         if flyEnabled then
@@ -410,20 +899,34 @@ do
             flyBG.MaxTorque = Vector3.new(8999999488, 8999999488, 8999999488)
             flyBG.P = 90000
             flyBG.Parent = hrp
-            if hum then hum.PlatformStand = true end
+            if hum then
+                hum.PlatformStand = true
+            end
             flyLoop = RunService.RenderStepped:Connect(function()
                 local cam = workspace.CurrentCamera
-                if not hum or not hrp then return end
-                local moveDir = hum.MoveDirection
-                if moveDir.Magnitude == 0 then
-                    local kbDir = Vector3.new(0, 0, 0)
-                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then kbDir = kbDir + cam.CFrame.LookVector end
-                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then kbDir = kbDir - cam.CFrame.LookVector end
-                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then kbDir = kbDir - cam.CFrame.RightVector end
-                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then kbDir = kbDir + cam.CFrame.RightVector end
-                    if kbDir.Magnitude > 0 then moveDir = kbDir.Unit end
+                if (not hum or not hrp) then
+                    return
                 end
-                if moveDir.Magnitude > 0 then
+                local moveDir = hum.MoveDirection
+                if (moveDir.Magnitude == 0) then
+                    local kbDir = Vector3.new(0, 0, 0)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                        kbDir = kbDir + cam.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                        kbDir = kbDir - cam.CFrame.LookVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                        kbDir = kbDir - cam.CFrame.RightVector
+                    end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                        kbDir = kbDir + cam.CFrame.RightVector
+                    end
+                    if (kbDir.Magnitude > 0) then
+                        moveDir = kbDir.Unit
+                    end
+                end
+                if (moveDir.Magnitude > 0) then
                     flyBV.Velocity = moveDir * flySpeed
                 else
                     flyBV.Velocity = Vector3.new(0, 0, 0)
@@ -431,17 +934,24 @@ do
                 flyBG.CFrame = cam.CFrame
             end)
         else
-            if flyBV then flyBV:Destroy() end
-            if flyBG then flyBG:Destroy() end
-            if flyLoop then flyLoop:Disconnect() end
-            if hum then hum.PlatformStand = false end
+            if flyBV then
+                flyBV:Destroy()
+            end
+            if flyBG then
+                flyBG:Destroy()
+            end
+            if flyLoop then
+                flyLoop:Disconnect()
+            end
+            if hum then
+                hum.PlatformStand = false
+            end
         end
     end
 
-    -- UI Creation (unchanged, only the coin collection logic is improved)
     local UI_SCALE = 0.8
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "NknoHub"
+    ScreenGui.Name = "ZentxHub"
     ScreenGui.Parent = game:GetService("CoreGui")
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -471,23 +981,16 @@ do
     MainFrame.Visible = false
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
-    local BgImage = Instance.new("ImageLabel")
-    BgImage.Name = "BackgroundImage"
-    BgImage.Parent = MainFrame
-    BgImage.BackgroundTransparency = 1
-    BgImage.Size = UDim2.new(1, 0, 1, 0)
-    BgImage.Image = "rbxassetid://121149051147413"
-    BgImage.ScaleType = Enum.ScaleType.Crop
-    BgImage.ImageTransparency = 0.35
-    BgImage.ZIndex = 0
-    Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
-
+    -- Фоновое изображение УДАЛЕНО (BgImage полностью убран)
     local MainScale = Instance.new("UIScale", MainFrame)
     MainScale.Scale = 0.3
 
     local MainGradient = Instance.new("UIGradient")
     MainGradient.Rotation = 90
-    MainGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0.5) })
+    MainGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.1),
+        NumberSequenceKeypoint.new(1, 0.5)
+    })
     MainGradient.Parent = MainFrame
 
     local MainStroke = Instance.new("UIStroke")
@@ -496,15 +999,29 @@ do
     MainStroke.Thickness = 1.5
 
     local function toggleMenu(forceState)
-        if forceState ~= nil then isMenuOpen = forceState else isMenuOpen = not isMenuOpen end
+        if (forceState ~= nil) then
+            isMenuOpen = forceState
+        else
+            isMenuOpen = not isMenuOpen
+        end
         if isMenuOpen then
             MainFrame.Visible = true
-            if not isMinimized then ShadowFrame.Visible = true end
-            TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = UI_SCALE }):Play()
-            TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = UI_SCALE }):Play()
+            if not isMinimized then
+                ShadowFrame.Visible = true
+            end
+            TweenService:Create(MainScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Scale = UI_SCALE
+            }):Play()
+            TweenService:Create(ShadowScale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Scale = UI_SCALE
+            }):Play()
         else
-            local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Scale = 0.2 })
-            TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Scale = 0.2 }):Play()
+            local closeTween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                Scale = 0.2
+            })
+            TweenService:Create(ShadowScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                Scale = 0.2
+            }):Play()
             closeTween:Play()
             closeTween.Completed:Connect(function()
                 if not isMenuOpen then
@@ -536,20 +1053,23 @@ do
     ToggleLabelText.BackgroundTransparency = 1
     ToggleLabelText.Size = UDim2.new(1, 0, 1, 0)
     ToggleLabelText.Font = Enum.Font.GothamBold
-    ToggleLabelText.Text = "Nkno$ hub"
+    ToggleLabelText.Text = "ZentxHub"
     ToggleLabelText.TextColor3 = Color3.fromRGB(255, 255, 255)
     ToggleLabelText.TextSize = 17
     local ToggleGradient = Instance.new("UIGradient")
-    ToggleGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)) })
+    ToggleGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accentColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
     ToggleGradient.Parent = ToggleLabelText
 
     ToggleWidget.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             TweenService:Create(ToggleScale, TweenInfo.new(0.15), { Scale = 0.78 }):Play()
         end
     end)
     ToggleWidget.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             TweenService:Create(ToggleScale, TweenInfo.new(0.15), { Scale = 0.85 }):Play()
         end
     end)
@@ -557,7 +1077,7 @@ do
     local dragToggle, dragInputT, dragStartT, startPosT
     local dragStartTime = 0
     ToggleWidget.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragToggle = true
             dragStartT = input.Position
             startPosT = ToggleWidget.Position
@@ -565,20 +1085,25 @@ do
         end
     end)
     ToggleWidget.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragInputT = input
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInputT and dragToggle then
+        if ((input == dragInputT) and dragToggle) then
             local delta = input.Position - dragStartT
-            ToggleWidget.Position = UDim2.new(startPosT.X.Scale, startPosT.X.Offset + delta.X, startPosT.Y.Scale, startPosT.Y.Offset + delta.Y)
+            ToggleWidget.Position = UDim2.new(
+                startPosT.X.Scale, startPosT.X.Offset + delta.X,
+                startPosT.Y.Scale, startPosT.Y.Offset + delta.Y
+            )
         end
     end)
     ToggleWidget.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragToggle = false
-            if tick() - dragStartTime < 0.25 then toggleMenu() end
+            if ((tick() - dragStartTime) < 0.25) then
+                toggleMenu()
+            end
         end
     end)
 
@@ -635,7 +1160,9 @@ do
         Btn.MouseButton1Click:Connect(function()
             lang = langCode
             _G.ApplyLanguage()
-            TweenService:Create(LangScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), { Scale = 0 }):Play()
+            TweenService:Create(LangScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+                Scale = 0
+            }):Play()
             task.wait(0.2)
             LangFrame.Visible = false
             ToggleWidget.Visible = true
@@ -647,27 +1174,33 @@ do
 
     local dragging, dragInput, dragStart, startPos
     MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragging = true
             dragStart = input.Position
             startPos = MainFrame.Position
         end
     end)
     MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragInput = input
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
+        if ((input == dragInput) and dragging) then
             local delta = input.Position - dragStart
-            local targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            local targetPos = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
             MainFrame.Position = targetPos
-            ShadowFrame.Position = UDim2.new(targetPos.X.Scale, targetPos.X.Offset + 4, targetPos.Y.Scale, targetPos.Y.Offset + 6)
+            ShadowFrame.Position = UDim2.new(
+                targetPos.X.Scale, targetPos.X.Offset + 4,
+                targetPos.Y.Scale, targetPos.Y.Offset + 6
+            )
         end
     end)
     MainFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             dragging = false
         end
     end)
@@ -691,17 +1224,24 @@ do
     Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
     CloseBtn.MouseButton1Click:Connect(function()
         autoFarmActive = false
-        collectCoins = false
         UpdateSpeedFarmState()
         if getgenv then
             getgenv().SpeedKeyboardHeartbeatStop = true
             getgenv().SpeedKeyboardRunning = nil
         end
         setNoClip(false)
-        if godModeConnection then godModeConnection:Disconnect() end
-        if flyBV then toggleManualFly(false) end
-        if afkConnection then afkConnection:Disconnect() end
-        if checkModelConnection then checkModelConnection:Disconnect() end
+        if godModeConnection then
+            godModeConnection:Disconnect()
+        end
+        if flyBV then
+            toggleManualFly(false)
+        end
+        if afkConnection then
+            afkConnection:Disconnect()
+        end
+        if checkModelConnection then
+            checkModelConnection:Disconnect()
+        end
         toggleMenu(false)
         task.wait(0.3)
         ScreenGui:Destroy()
@@ -720,12 +1260,20 @@ do
     MinBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
-            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { Size = UDim2.new(0, 640, 0, 52) }):Play()
-            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { Size = UDim2.new(0, 646, 0, 58) }):Play()
+            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {
+                Size = UDim2.new(0, 640, 0, 52)
+            }):Play()
+            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {
+                Size = UDim2.new(0, 646, 0, 58)
+            }):Play()
             MinBtn.Text = "+"
         else
-            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { Size = UDim2.new(0, 640, 0, 420) }):Play()
-            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), { Size = UDim2.new(0, 646, 0, 426) }):Play()
+            TweenService:Create(MainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {
+                Size = UDim2.new(0, 640, 0, 420)
+            }):Play()
+            TweenService:Create(ShadowFrame, TweenInfo.new(0.35, Enum.EasingStyle.Quart), {
+                Size = UDim2.new(0, 646, 0, 426)
+            }):Play()
             MinBtn.Text = "-"
         end
     end)
@@ -739,9 +1287,11 @@ do
     Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 14)
     local SidebarGradient = Instance.new("UIGradient")
     SidebarGradient.Rotation = 90
-    SidebarGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.4) })
+    SidebarGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 0.4)
+    })
     SidebarGradient.Parent = Sidebar
-
     local SidebarFix = Instance.new("Frame")
     SidebarFix.Parent = Sidebar
     SidebarFix.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
@@ -751,7 +1301,10 @@ do
     SidebarFix.BorderSizePixel = 0
     local SidebarFixGradient = Instance.new("UIGradient")
     SidebarFixGradient.Rotation = 90
-    SidebarFixGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.4) })
+    SidebarFixGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 0.4)
+    })
     SidebarFixGradient.Parent = SidebarFix
 
     local Title = Instance.new("TextLabel")
@@ -760,11 +1313,14 @@ do
     Title.Position = UDim2.new(0, 0, 0, 16)
     Title.Size = UDim2.new(1, 0, 0, 26)
     Title.Font = Enum.Font.GothamBold
-    Title.Text = "Nkno$ hub"
+    Title.Text = "ZentxHub"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.TextSize = 20
     local TitleGradient = Instance.new("UIGradient")
-    TitleGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)) })
+    TitleGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, accentColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
     TitleGradient.Parent = Title
 
     local SepLine = Instance.new("Frame")
@@ -773,7 +1329,11 @@ do
     SepLine.Position = UDim2.new(0.1, 0, 0, 52)
     SepLine.Size = UDim2.new(0.8, 0, 0, 1)
     local SepGradient = Instance.new("UIGradient")
-    SepGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, accentColor), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35)) })
+    SepGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+        ColorSequenceKeypoint.new(0.5, accentColor),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))
+    })
     SepGradient.Parent = SepLine
 
     local TabContainer = Instance.new("Frame")
@@ -832,13 +1392,19 @@ do
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         btn.MouseButton1Click:Connect(function()
             for _, b in ipairs(tabButtons) do
-                TweenService:Create(b, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(20, 20, 28), TextColor3 = Color3.fromRGB(150, 150, 170) }):Play()
+                TweenService:Create(b, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 28),
+                    TextColor3 = Color3.fromRGB(150, 150, 170)
+                }):Play()
             end
-            TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = accentColor, TextColor3 = Color3.fromRGB(255, 255, 255) }):Play()
-            AutoFarmPage.Visible = page == AutoFarmPage
-            MovementPage.Visible = page == MovementPage
-            ThemePage.Visible = page == ThemePage
-            AdminPage.Visible = page == AdminPage
+            TweenService:Create(btn, TweenInfo.new(0.2), {
+                BackgroundColor3 = accentColor,
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }):Play()
+            AutoFarmPage.Visible = (page == AutoFarmPage)
+            MovementPage.Visible = (page == MovementPage)
+            ThemePage.Visible = (page == ThemePage)
+            AdminPage.Visible = (page == AdminPage)
         end)
         table.insert(tabButtons, btn)
         return btn
@@ -851,7 +1417,6 @@ do
     autoFarmTabBtn.BackgroundColor3 = accentColor
     autoFarmTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    -- Theme Page (unchanged)
     local ThemeScroll = Instance.new("ScrollingFrame")
     ThemeScroll.Parent = ThemePage
     ThemeScroll.BackgroundTransparency = 1
@@ -886,7 +1451,10 @@ do
         CirclePreview.Position = UDim2.new(0, 16, 0.5, -13)
         Instance.new("UICorner", CirclePreview).CornerRadius = UDim.new(1, 0)
         local Gradient = Instance.new("UIGradient")
-        Gradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, color2) })
+        Gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, color1),
+            ColorSequenceKeypoint.new(1, color2)
+        })
         Gradient.Parent = CirclePreview
         local ThemeText = Instance.new("TextLabel")
         ThemeText.Parent = RowBtn
@@ -899,11 +1467,21 @@ do
         ThemeText.TextXAlignment = Enum.TextXAlignment.Left
         RowBtn.MouseButton1Click:Connect(function()
             accentColor = color1
-            TitleGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)) })
-            ToggleGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)) })
-            SepGradient.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)), ColorSequenceKeypoint.new(0.5, color1), ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35)) })
+            TitleGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, color1),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+            })
+            ToggleGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, color1),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+            })
+            SepGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 35)),
+                ColorSequenceKeypoint.new(0.5, color1),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 35))
+            })
             for _, b in ipairs(tabButtons) do
-                if b.BackgroundColor3 ~= Color3.fromRGB(20, 20, 28) then
+                if (b.BackgroundColor3 ~= Color3.fromRGB(20, 20, 28)) then
                     TweenService:Create(b, TweenInfo.new(0.3), { BackgroundColor3 = color1 }):Play()
                 end
             end
@@ -917,9 +1495,9 @@ do
     createThemeRow(Color3.fromRGB(236, 72, 153), Color3.fromRGB(150, 20, 80))
     createThemeRow(Color3.fromRGB(245, 158, 11), Color3.fromRGB(160, 80, 0))
     createThemeRow(Color3.fromRGB(220, 220, 230), Color3.fromRGB(100, 100, 110))
+
     ThemeScroll.CanvasSize = UDim2.new(0, 0, 0, ThemeList.AbsoluteContentSize.Y + 40)
 
-    -- Movement Page (unchanged)
     local MoveLeftPanel = Instance.new("ScrollingFrame")
     MoveLeftPanel.Parent = MovementPage
     MoveLeftPanel.BackgroundTransparency = 1
@@ -1040,6 +1618,7 @@ do
     FlySpeedTrack.Size = UDim2.new(1, -32, 0, 16)
     FlySpeedTrack.Text = ""
     Instance.new("UICorner", FlySpeedTrack).CornerRadius = UDim.new(0, 8)
+
     local FlySpeedFill = Instance.new("Frame")
     FlySpeedFill.Parent = FlySpeedTrack
     FlySpeedFill.BackgroundColor3 = accentColor
@@ -1054,23 +1633,22 @@ do
         TweenService:Create(FlySpeedFill, TweenInfo.new(0.05), { Size = UDim2.new(fraction, 0, 1, 0) }):Play()
     end
     FlySpeedTrack.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             draggingFlySlider = true
             updateFlySpeed(input)
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if draggingFlySlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if (draggingFlySlider and ((input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch))) then
             updateFlySpeed(input)
         end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             draggingFlySlider = false
         end
     end)
 
-    -- AutoFarm Page (unchanged structure)
     local LeftPanel = Instance.new("Frame")
     LeftPanel.Parent = AutoFarmPage
     LeftPanel.BackgroundTransparency = 1
@@ -1093,6 +1671,8 @@ do
     WorldsFrame.Size = UDim2.new(1, 0, 0, 44)
     Instance.new("UICorner", WorldsFrame).CornerRadius = UDim.new(0, 10)
 
+    -- BbnosInfoLabel полностью удалён
+
     local worldButtons = {}
     local DropdownList = Instance.new("ScrollingFrame")
     local DropdownBtn = Instance.new("TextButton")
@@ -1101,7 +1681,9 @@ do
 
     local function buildDistanceOptions()
         for _, c in ipairs(DropdownList:GetChildren()) do
-            if c:IsA("TextButton") then c:Destroy() end
+            if c:IsA("TextButton") then
+                c:Destroy()
+            end
         end
         local options = {}
         if Waypoints[currentWorld] then
@@ -1112,7 +1694,7 @@ do
                 return (distSortOrder[a] or 99) < (distSortOrder[b] or 99)
             end)
         end
-        if #options == 0 then
+        if (#options == 0) then
             DropdownBtn.Text = "   " .. L("NoPoints") .. " v"
             currentDistance = nil
             UpdateSpeedFarmState()
@@ -1131,14 +1713,7 @@ do
             btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.ZIndex = 51
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-            local TrophyIcon = Instance.new("ImageLabel")
-            TrophyIcon.Parent = btn
-            TrophyIcon.BackgroundTransparency = 1
-            TrophyIcon.Position = UDim2.new(0, 10, 0.5, -12)
-            TrophyIcon.Size = UDim2.new(0, 24, 0, 24)
-            TrophyIcon.Image = "rbxassetid://85025550755267"
-            TrophyIcon.ScaleType = Enum.ScaleType.Fit
-            TrophyIcon.ZIndex = 52
+            -- Иконка трофея УДАЛЕНА (больше не создаётся)
             btn.MouseButton1Click:Connect(function()
                 currentDistance = opt
                 DropdownBtn.Text = "   " .. opt .. " v"
@@ -1159,9 +1734,9 @@ do
         btn.Size = UDim2.new(widthScale, -6, 1, -6)
         btn.Font = Enum.Font.GothamBold
         btn.Text = text
-        btn.TextColor3 = (index == 1) and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(140, 140, 160)
+        btn.TextColor3 = ((index == 1) and Color3.fromRGB(255, 255, 255)) or Color3.fromRGB(140, 140, 160)
         btn.TextSize = 14
-        if index == 1 then
+        if (index == 1) then
             btn.BackgroundTransparency = 0.15
             btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
@@ -1169,6 +1744,7 @@ do
         btn.MouseButton1Click:Connect(function()
             currentWorld = text
             WorldLabel.Text = string.format(L("WorldLabel"), text)
+            -- Удалено условие для Bbnos World
             for _, b in ipairs(worldButtons) do
                 b.BackgroundTransparency = 1
                 b.TextColor3 = Color3.fromRGB(140, 140, 160)
@@ -1178,13 +1754,22 @@ do
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             buildDistanceOptions()
             local maxSpd = 110
-            if currentWorld == "2 World" then maxSpd = 190 end
-            if currentSpeed > maxSpd then currentSpeed = maxSpd end
+            if (currentWorld == "2 World") then
+                maxSpd = 190
+            -- Удалено условие для Bbnos World
+            end
+            if (currentSpeed > maxSpd) then
+                currentSpeed = maxSpd
+            end
             SliderLabel.Text = string.format(L("SpeedLabel"), currentSpeed)
-            TweenService:Create(SliderFillAuto, TweenInfo.new(0.2), { Size = UDim2.new(currentSpeed / maxSpd, 0, 1, 0) }):Play()
+            TweenService:Create(SliderFillAuto, TweenInfo.new(0.2), {
+                Size = UDim2.new(currentSpeed / maxSpd, 0, 1, 0)
+            }):Play()
         end)
         table.insert(worldButtons, btn)
     end
+
+    -- Создаём только 3 кнопки (Bbnos World удалён)
     createWorldBtn("1 World", 0, 0.333, 1)
     createWorldBtn("2 World", 0.333, 0.333, 2)
     createWorldBtn("3 World", 0.666, 0.333, 3)
@@ -1222,14 +1807,15 @@ do
     Instance.new("UICorner", SwitchDot).CornerRadius = UDim.new(0, 11)
 
     SwitchBG.MouseButton1Click:Connect(function()
-        if not currentDistance then return end
+        if not currentDistance then
+            return
+        end
         autoFarmActive = not autoFarmActive
         UpdateSpeedFarmState()
         if autoFarmActive then
             TweenService:Create(SwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(34, 197, 94) }):Play()
             TweenService:Create(SwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 25, 0.5, -11) }):Play()
             startAutoFarmLoop()
-            if collectCoins then startCoinCollector() end
         else
             TweenService:Create(SwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(40, 40, 55) }):Play()
             TweenService:Create(SwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 3, 0.5, -11) }):Play()
@@ -1237,56 +1823,11 @@ do
         end
     end)
 
-    local CoinToggleFrame = Instance.new("Frame")
-    CoinToggleFrame.Parent = LeftPanel
-    CoinToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
-    CoinToggleFrame.BackgroundTransparency = 0.15
-    CoinToggleFrame.Position = UDim2.new(0, 0, 0, 148)
-    CoinToggleFrame.Size = UDim2.new(1, 0, 0, 56)
-    Instance.new("UICorner", CoinToggleFrame).CornerRadius = UDim.new(0, 10)
-
-    local CoinToggleLabel = Instance.new("TextLabel")
-    CoinToggleLabel.Parent = CoinToggleFrame
-    CoinToggleLabel.BackgroundTransparency = 1
-    CoinToggleLabel.Position = UDim2.new(0, 16, 0, 0)
-    CoinToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    CoinToggleLabel.Font = Enum.Font.GothamBold
-    CoinToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CoinToggleLabel.TextSize = 15
-    CoinToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local CoinSwitchBG = Instance.new("TextButton")
-    CoinSwitchBG.Parent = CoinToggleFrame
-    CoinSwitchBG.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    CoinSwitchBG.Position = UDim2.new(1, -65, 0.5, -14)
-    CoinSwitchBG.Size = UDim2.new(0, 50, 0, 28)
-    CoinSwitchBG.Text = ""
-    Instance.new("UICorner", CoinSwitchBG).CornerRadius = UDim.new(0, 14)
-    local CoinSwitchDot = Instance.new("Frame")
-    CoinSwitchDot.Parent = CoinSwitchBG
-    CoinSwitchDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CoinSwitchDot.Position = UDim2.new(0, 3, 0.5, -11)
-    CoinSwitchDot.Size = UDim2.new(0, 22, 0, 22)
-    Instance.new("UICorner", CoinSwitchDot).CornerRadius = UDim.new(0, 11)
-
-    CoinSwitchBG.MouseButton1Click:Connect(function()
-        collectCoins = not collectCoins
-        UpdateSpeedFarmState()
-        if collectCoins then
-            TweenService:Create(CoinSwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(34, 197, 94) }):Play()
-            TweenService:Create(CoinSwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 25, 0.5, -11) }):Play()
-            startCoinCollector()
-        else
-            TweenService:Create(CoinSwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(40, 40, 55) }):Play()
-            TweenService:Create(CoinSwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 3, 0.5, -11) }):Play()
-        end
-    end)
-
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Parent = LeftPanel
     SliderFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
     SliderFrame.BackgroundTransparency = 0.15
-    SliderFrame.Position = UDim2.new(0, 0, 0, 218)
+    SliderFrame.Position = UDim2.new(0, 0, 0, 150)
     SliderFrame.Size = UDim2.new(1, 0, 0, 68)
     Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 10)
 
@@ -1316,24 +1857,29 @@ do
     local function updateSpeedAuto(input)
         local fraction = math.clamp((input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X, 0, 1)
         local maxSpd = 110
-        if currentWorld == "2 World" then maxSpd = 190 end
+        if (currentWorld == "2 World") then
+            maxSpd = 190
+        -- Удалено условие для Bbnos World
+        end
         currentSpeed = math.floor(fraction * maxSpd)
         SliderLabel.Text = string.format(L("SpeedLabel"), currentSpeed)
-        TweenService:Create(SliderFillAuto, TweenInfo.new(0.05), { Size = UDim2.new(fraction, 0, 1, 0) }):Play()
+        TweenService:Create(SliderFillAuto, TweenInfo.new(0.05), {
+            Size = UDim2.new(fraction, 0, 1, 0)
+        }):Play()
     end
     SliderTrack.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             draggingSliderAuto = true
             updateSpeedAuto(input)
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if draggingSliderAuto and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if (draggingSliderAuto and ((input.UserInputType == Enum.UserInputType.MouseMovement) or (input.UserInputType == Enum.UserInputType.Touch))) then
             updateSpeedAuto(input)
         end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if ((input.UserInputType == Enum.UserInputType.MouseButton1) or (input.UserInputType == Enum.UserInputType.Touch)) then
             draggingSliderAuto = false
         end
     end)
@@ -1341,7 +1887,7 @@ do
     local DistLabel = Instance.new("TextLabel")
     DistLabel.Parent = LeftPanel
     DistLabel.BackgroundTransparency = 1
-    DistLabel.Position = UDim2.new(0, 0, 0, 298)
+    DistLabel.Position = UDim2.new(0, 0, 0, 230)
     DistLabel.Size = UDim2.new(1, 0, 0, 20)
     DistLabel.Font = Enum.Font.GothamSemibold
     DistLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
@@ -1351,7 +1897,7 @@ do
     DropdownBtn.Parent = LeftPanel
     DropdownBtn.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
     DropdownBtn.BackgroundTransparency = 0.15
-    DropdownBtn.Position = UDim2.new(0, 0, 0, 324)
+    DropdownBtn.Position = UDim2.new(0, 0, 0, 256)
     DropdownBtn.Size = UDim2.new(1, 0, 0, 46)
     DropdownBtn.Font = Enum.Font.GothamBold
     DropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1363,7 +1909,7 @@ do
     DropdownList.Parent = LeftPanel
     DropdownList.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
     DropdownList.BackgroundTransparency = 0.1
-    DropdownList.Position = UDim2.new(0, 0, 0, 376)
+    DropdownList.Position = UDim2.new(0, 0, 0, 308)
     DropdownList.Size = UDim2.new(1, 0, 0, 120)
     DropdownList.Visible = false
     DropdownList.ZIndex = 50
@@ -1373,10 +1919,12 @@ do
     DropdownList.BorderSizePixel = 0
     Instance.new("UICorner", DropdownList).CornerRadius = UDim.new(0, 10)
     Instance.new("UIStroke", DropdownList).Color = Color3.fromRGB(45, 45, 60)
+
     local DropListLayout = Instance.new("UIListLayout")
     DropListLayout.Parent = DropdownList
     DropListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     DropListLayout.Padding = UDim.new(0, 5)
+
     local DropPadding = Instance.new("UIPadding")
     DropPadding.Parent = DropdownList
     DropPadding.PaddingTop = UDim.new(0, 6)
@@ -1388,7 +1936,6 @@ do
         DropdownList.Visible = not DropdownList.Visible
     end)
 
-    -- Admin Page (unchanged)
     local LockFrame = Instance.new("Frame")
     LockFrame.Parent = AdminPage
     LockFrame.BackgroundTransparency = 1
@@ -1515,57 +2062,11 @@ do
     CheckModelSwitchDot.Size = UDim2.new(0, 22, 0, 22)
     Instance.new("UICorner", CheckModelSwitchDot).CornerRadius = UDim.new(0, 11)
 
-    -- Fly in AdminPanel
-    local FlyAdminToggleFrame = Instance.new("Frame")
-    FlyAdminToggleFrame.Parent = UnlockedAdmin
-    FlyAdminToggleFrame.BackgroundColor3 = Color3.fromRGB(16, 16, 23)
-    FlyAdminToggleFrame.BackgroundTransparency = 0.15
-    FlyAdminToggleFrame.Position = UDim2.new(0, 0, 0, 158)
-    FlyAdminToggleFrame.Size = UDim2.new(0.96, 0, 0, 54)
-    Instance.new("UICorner", FlyAdminToggleFrame).CornerRadius = UDim.new(0, 10)
-
-    local FlyAdminToggleLabel = Instance.new("TextLabel")
-    FlyAdminToggleLabel.Parent = FlyAdminToggleFrame
-    FlyAdminToggleLabel.BackgroundTransparency = 1
-    FlyAdminToggleLabel.Position = UDim2.new(0, 16, 0, 0)
-    FlyAdminToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-    FlyAdminToggleLabel.Font = Enum.Font.GothamBold
-    FlyAdminToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    FlyAdminToggleLabel.TextSize = 15
-    FlyAdminToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local FlyAdminSwitchBG = Instance.new("TextButton")
-    FlyAdminSwitchBG.Parent = FlyAdminToggleFrame
-    FlyAdminSwitchBG.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    FlyAdminSwitchBG.Position = UDim2.new(1, -65, 0.5, -14)
-    FlyAdminSwitchBG.Size = UDim2.new(0, 50, 0, 28)
-    FlyAdminSwitchBG.Text = ""
-    Instance.new("UICorner", FlyAdminSwitchBG).CornerRadius = UDim.new(0, 14)
-    local FlyAdminSwitchDot = Instance.new("Frame")
-    FlyAdminSwitchDot.Parent = FlyAdminSwitchBG
-    FlyAdminSwitchDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    FlyAdminSwitchDot.Position = UDim2.new(0, 3, 0.5, -11)
-    FlyAdminSwitchDot.Size = UDim2.new(0, 22, 0, 22)
-    Instance.new("UICorner", FlyAdminSwitchDot).CornerRadius = UDim.new(0, 11)
-
-    FlyAdminSwitchBG.MouseButton1Click:Connect(function()
-        flyEnabled = not flyEnabled
-        if flyEnabled then
-            TweenService:Create(FlyAdminSwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(34, 197, 94) }):Play()
-            TweenService:Create(FlyAdminSwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 25, 0.5, -11) }):Play()
-            toggleManualFly(true)
-        else
-            TweenService:Create(FlyAdminSwitchBG, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(40, 40, 55) }):Play()
-            TweenService:Create(FlyAdminSwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 3, 0.5, -11) }):Play()
-            toggleManualFly(false)
-        end
-    end)
-
     local PosContainer = Instance.new("Frame")
     PosContainer.Parent = UnlockedAdmin
     PosContainer.BackgroundTransparency = 1
-    PosContainer.Position = UDim2.new(0, 0, 0, 222)
-    PosContainer.Size = UDim2.new(0.96, 0, 1, -230)
+    PosContainer.Position = UDim2.new(0, 0, 0, 158)
+    PosContainer.Size = UDim2.new(0.96, 0, 1, -166)
     PosContainer.Visible = false
 
     local CheckPosBtn = Instance.new("TextButton")
@@ -1588,10 +2089,12 @@ do
     PosListFrame.ScrollBarThickness = 4
     PosListFrame.BorderSizePixel = 0
     Instance.new("UICorner", PosListFrame).CornerRadius = UDim.new(0, 10)
+
     local PosListLayout = Instance.new("UIListLayout")
     PosListLayout.Parent = PosListFrame
     PosListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     PosListLayout.Padding = UDim.new(0, 6)
+
     local PosListPadding = Instance.new("UIPadding")
     PosListPadding.Parent = PosListFrame
     PosListPadding.PaddingTop = UDim.new(0, 6)
@@ -1608,7 +2111,7 @@ do
     Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 10)
 
     UnlockBtn.MouseButton1Click:Connect(function()
-        if KeyInput.Text == "Panelka" then
+        if (KeyInput.Text == "Panelka") then
             StatusLabel.Text = L("SuccessKey")
             StatusLabel.TextColor3 = Color3.fromRGB(34, 197, 94)
             task.wait(0.5)
@@ -1642,7 +2145,7 @@ do
             TweenService:Create(CheckModelSwitchDot, TweenInfo.new(0.2), { Position = UDim2.new(0, 25, 0.5, -11) }):Play()
             if not checkModelConnection then
                 checkModelConnection = mouse.Button1Down:Connect(function()
-                    if checkModelEnabled and mouse.Target then
+                    if (checkModelEnabled and mouse.Target) then
                         local target = mouse.Target
                         local model = target:FindFirstAncestorOfClass("Model")
                         local nameToShow = ""
@@ -1651,7 +2154,11 @@ do
                         else
                             nameToShow = "Деталь: " .. target.Name
                         end
-                        game:GetService("StarterGui"):SetCore("SendNotification", { Title = "Check Model", Text = nameToShow, Duration = 3 })
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Check Model",
+                            Text = nameToShow,
+                            Duration = 3
+                        })
                     end
                 end)
             end
@@ -1666,7 +2173,9 @@ do
     end)
 
     local function render3DWaypoints(pos, index)
-        if visualParts[index] then visualParts[index]:Destroy() end
+        if visualParts[index] then
+            visualParts[index]:Destroy()
+        end
         local part = Instance.new("Part")
         part.Name = "Kitagawa_WayPoint_" .. index
         part.Position = pos
@@ -1701,16 +2210,22 @@ do
 
     local function refreshPositionUI()
         for _, child in pairs(PosListFrame:GetChildren()) do
-            if child:IsA("Frame") then child:Destroy() end
+            if child:IsA("Frame") then
+                child:Destroy()
+            end
         end
         for _, part in pairs(visualParts) do
-            if part then part:Destroy() end
+            if part then
+                part:Destroy()
+            end
         end
         visualParts = {}
         for i, posStr in ipairs(savedPositions) do
             local coords = string.split(posStr, ", ")
             local x, y, z = tonumber(coords[1]), tonumber(coords[2]), tonumber(coords[3])
-            if x and y and z then render3DWaypoints(Vector3.new(x, y, z), i) end
+            if (x and y and z) then
+                render3DWaypoints(Vector3.new(x, y, z), i)
+            end
             local Item = Instance.new("Frame")
             Item.Parent = PosListFrame
             Item.BackgroundColor3 = Color3.fromRGB(18, 18, 26)
@@ -1750,7 +2265,7 @@ do
 
     CheckPosBtn.MouseButton1Click:Connect(function()
         local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
+        if (char and char:FindFirstChild("HumanoidRootPart")) then
             local pos = char.HumanoidRootPart.Position
             table.insert(savedPositions, string.format("%.1f, %.1f, %.1f", pos.X, pos.Y, pos.Z))
             refreshPositionUI()
@@ -1758,14 +2273,20 @@ do
     end)
 
     CopyBtn.MouseButton1Click:Connect(function()
-        if #savedPositions > 0 then
+        if (#savedPositions > 0) then
             local copyStr = table.concat(savedPositions, "\n")
-            if setclipboard then setclipboard(copyStr) end
+            if setclipboard then
+                setclipboard(copyStr)
+            end
             CopyBtn.Text = L("Copied")
-            task.delay(1.5, function() CopyBtn.Text = L("CopyPosBtn") end)
+            task.delay(1.5, function()
+                CopyBtn.Text = L("CopyPosBtn")
+            end)
         else
             CopyBtn.Text = L("EmptyList")
-            task.delay(1.5, function() CopyBtn.Text = L("CopyPosBtn") end)
+            task.delay(1.5, function()
+                CopyBtn.Text = L("CopyPosBtn")
+            end)
         end
     end)
 
@@ -1786,8 +2307,6 @@ do
         movementTabBtn.Text = L("MovementTab")
         adminTabBtn.Text = L("AdminTab")
         ToggleLabel.Text = L("AutoFarmToggle")
-        CoinToggleLabel.Text = L("CollectCoinsToggle")
-        FlyAdminToggleLabel.Text = L("FlyToggle")
         SliderLabel.Text = string.format(L("SpeedLabel"), currentSpeed)
         FlySpeedLabelUI.Text = string.format(L("FlySpeedLabel"), flySpeed)
         DistLabel.Text = L("DistLabel")
@@ -1801,62 +2320,99 @@ do
         InfJumpLabel.Text = L("InfJumpToggle")
         FlyLabel.Text = L("FlyToggle")
         for i, rowText in ipairs(ThemeRows) do
-            if L("Themes")[i] then rowText.Text = L("Themes")[i] end
+            if L("Themes")[i] then
+                rowText.Text = L("Themes")[i]
+            end
         end
         buildDistanceOptions()
     end
 
     buildDistanceOptions()
 
-    -- Heartbeat (unchanged)
     task.spawn(function()
         local HEARTBEAT_URL = "http://62.233.43.59:8787/api/heartbeat"
         local HEARTBEAT_KEY = "db5cbd688fcc72b4221dd2e8f892cf1dccefd52c47bcdc4e"
         local INTERVAL = 45
+
         local function doRequest(body)
             local headers = {
                 ["Content-Type"] = "application/json",
                 ["X-Api-Key"] = HEARTBEAT_KEY
             }
-            if syn and type(syn.request) == "function" then
-                return syn.request({ Url = HEARTBEAT_URL, Method = "POST", Headers = headers, Body = body })
+            if (syn and (type(syn.request) == "function")) then
+                return syn.request({
+                    Url = HEARTBEAT_URL,
+                    Method = "POST",
+                    Headers = headers,
+                    Body = body
+                })
             end
-            if type(request) == "function" then
-                return request({ Url = HEARTBEAT_URL, Method = "POST", Headers = headers, Body = body })
+            if (type(request) == "function") then
+                return request({
+                    Url = HEARTBEAT_URL,
+                    Method = "POST",
+                    Headers = headers,
+                    Body = body
+                })
             end
-            if http and type(http.request) == "function" then
-                return http.request({ Url = HEARTBEAT_URL, Method = "POST", Headers = headers, Body = body })
+            if (http and (type(http.request) == "function")) then
+                return http.request({
+                    Url = HEARTBEAT_URL,
+                    Method = "POST",
+                    Headers = headers,
+                    Body = body
+                })
             end
-            if type(http_request) == "function" then
+            if (type(http_request) == "function") then
                 return http_request(HEARTBEAT_URL, "POST", headers, body)
             end
             local HttpService = game:GetService("HttpService")
             local ok, res = pcall(function()
-                return HttpService:RequestAsync({ Url = HEARTBEAT_URL, Method = "POST", Headers = headers, Body = body })
+                return HttpService:RequestAsync({
+                    Url = HEARTBEAT_URL,
+                    Method = "POST",
+                    Headers = headers,
+                    Body = body
+                })
             end)
-            if ok then return res end
+            if ok then
+                return res
+            end
             return nil
         end
+
         local function sendHeartbeat()
-            if not LocalPlayer then return false end
+            if not LocalPlayer then
+                return false
+            end
             local farm = (getgenv() and getgenv().SpeedKeyboardFarmState) or {}
-            local body = string.format('{"userId":"%s","script":"speedkeyboard","autoFarm":%s,"autoFarmActive":%s}',
+            local body = string.format(
+                '{"userId":"%s","script":"speedkeyboard","autoFarm":%s,"autoFarmActive":%s}',
                 tostring(LocalPlayer.UserId),
                 (farm.enabled and "true") or "false",
                 (farm.active and "true") or "false"
             )
             local res = doRequest(body)
-            if not res then return false end
+            if not res then
+                return false
+            end
             local code = res.StatusCode or res.status or (res.Success and 200)
             return code == 200
         end
+
         task.wait(8)
         while not (getgenv() and getgenv().SpeedKeyboardHeartbeatStop) do
-            if not (getgenv() and getgenv().SpeedKeyboardRunning) then break end
+            if not (getgenv() and getgenv().SpeedKeyboardRunning) then
+                break
+            end
             local ok = sendHeartbeat()
-            if not ok then warn("[+1 Speed Keyboard] Heartbeat failed (no executor HTTP?)") end
+            if not ok then
+                warn("[+1 Speed Keyboard] Heartbeat failed (no executor HTTP?)")
+            end
             for _ = 1, INTERVAL do
-                if getgenv() and getgenv().SpeedKeyboardHeartbeatStop then break end
+                if (getgenv() and getgenv().SpeedKeyboardHeartbeatStop) then
+                    break
+                end
                 task.wait(1)
             end
         end
