@@ -151,6 +151,16 @@ local Scripts = {
             Hub:RunWithLoading("https://raw.githubusercontent.com/Kai-Script/NKNO-HUB/refs/heads/main/zentx.hub.mm2.lua", true)
         end
     },
+    -- ===== НОВЫЙ СКРИПТ FLY PANEL =====
+    {
+        Name = "✈️ FLY PANEL",
+        Category = "Утилиты",
+        Description = "Панель управления полётом",
+        Icon = "✈️",
+        Run = function()
+            Hub:RunWithLoading("https://raw.githubusercontent.com/Kai-Script/NKNO-HUB/refs/heads/main/Fly.lua")
+        end
+    },
 }
 
 -- ===== ВЫБОР ЯЗЫКА (ЭКРАН ПРИВЕТСТВИЯ) =====
